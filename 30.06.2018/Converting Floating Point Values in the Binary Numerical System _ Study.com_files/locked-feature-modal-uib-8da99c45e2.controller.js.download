@@ -1,0 +1,44 @@
+define(["require", "exports", "angularDependency", "angular/modal/study-modal.service", "angular/modal/study-modal.service"], function (require, exports, angular, study_modal_service_1) {
+    "use strict";
+    exports.__esModule = true;
+    var app = angular.module("locked-feature-modal.controller", ["study.modal"]);
+    var LockedFeatureModalController = (function () {
+        function LockedFeatureModalController(title, content, iconUrl) {
+            this.title = title;
+            this.content = content;
+            this.iconUrl = iconUrl;
+        }
+        LockedFeatureModalController.$inject = ["title", "content", "iconUrl"];
+        return LockedFeatureModalController;
+    }());
+    exports.LockedFeatureModalController = LockedFeatureModalController;
+    var NavController = (function () {
+        function NavController(studyModalService) {
+            this.studyModalService = studyModalService;
+        }
+        NavController.prototype.showLockedFeatureModal = function (title, content, iconUrl) {
+            var modalSettings = {
+                backdrop: true,
+                controller: LockedFeatureModalController,
+                controllerAs: "lockedFeatureModalController",
+                templateUrl: "/templates/dashboard/promo/locked-feature-modal.tpl",
+                size: study_modal_service_1.StudyModalService.SIZE_MEDIUM,
+                windowClass: "locked-feature",
+                resolve: {
+                    title: function () { return title; },
+                    content: function () { return content + NavController.PREMIUM_FEATURES_TEXT; },
+                    iconUrl: function () { return iconUrl; }
+                }
+            };
+            this.studyModalService.openModalByConfig(modalSettings);
+        };
+        NavController.PREMIUM_FEATURES_TEXT = ' You\'ll also get access to quizzes, chapter tests, certificates of completion, and the ability to enroll in courses!';
+        NavController.$inject = ["studyModalService"];
+        return NavController;
+    }());
+    exports.NavController = NavController;
+    app.controller("LockedFeatureModalController", LockedFeatureModalController);
+    app.controller("NavController", NavController);
+});
+
+//# sourceMappingURL=locked-feature-modal-uib.controller.js.map

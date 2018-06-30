@@ -1,0 +1,96 @@
+(function () {
+    "use strict";
+
+    /**
+     * @param angular
+     * @param eventLogging
+     */
+    function init(angular, eventLogging) {
+
+        function truncateLog(text) {
+            return (text && text.length > 4000) ? text.substring(0, 4000) + "....[truncated]" : text;
+        }
+
+        var _angularModule = angular.module;
+        angular.module = function module() {
+            try {
+                return _angularModule.apply(this, arguments);
+            }
+            catch (exception) {
+                var loggableEvent = new eventLogging.LoggableEvent("javascriptError", true);
+                loggableEvent.message = truncateLog(exception.message);
+                loggableEvent.url = window.location.href;
+                loggableEvent.type = "angularModuleError";
+                loggableEvent.name = exception.name;
+                loggableEvent.stacktrace = truncateLog(exception.stack);
+                eventLogging.queueEvent(loggableEvent);
+                throw exception;
+            }
+        };
+
+        var _moduleName = "AngularErrorLogger";
+
+        angular.module(_moduleName, []).config
+        (['$provide', function ($provide) {
+            $provide.decorator('$exceptionHandler', ['$delegate', function ($delegate) {
+                return function (exception, cause) {
+                    var loggableEvent = new eventLogging.LoggableEvent("javascriptError", true);
+                    try {
+
+                        //cause is an optional param angular doesnt appear to be using
+                        $delegate(exception, cause);
+                        //an attempt at parsing some log messages -- this is really hard exceptions have to many formats
+                        //this one works for some angular messages
+                        var urlCapture = /\((.+?):(\d+):(\d+)/g;
+                        var matchUrl = urlCapture.exec(exception.stack);
+                        if (matchUrl && matchUrl.length == 4) {
+                            var url = matchUrl[1];
+                            var line = matchUrl[2];
+                            var col = matchUrl[3];
+
+                            loggableEvent.sourceJavascript = url;
+                            loggableEvent.lineNumber = line + ':' + col;
+                        }
+                    }
+                    catch (e) {
+                        // loggableEvent.sourceJavascript = url;
+                        // loggableEvent.lineNumber = line;
+                    }
+
+                    loggableEvent.message = truncateLog(exception.message);
+                    loggableEvent.url = window.location.href;
+                    loggableEvent.type = "angular";
+                    loggableEvent.name = exception.name;
+                    loggableEvent.stacktrace = truncateLog(exception.stack);
+                    eventLogging.queueEvent(loggableEvent);
+                };
+            }]);
+        }]);
+
+        var _angularBootstrap = angular.bootstrap;
+        angular.bootstrap = function () {
+            if (arguments.length > 1) {
+                var modules = arguments[1];
+                if (typeof modules !== 'undefined' && Array.isArray(modules))
+                    modules.unshift(_moduleName);
+            }
+            try {
+                return _angularBootstrap.apply(this, arguments);
+            }
+            catch (exception) {
+                var loggableEvent = new eventLogging.LoggableEvent("javascriptError", true);
+                loggableEvent.message = truncateLog(exception.message);
+                loggableEvent.url = window.location.href;
+                loggableEvent.type = "angularBootstrapError";
+                loggableEvent.name = exception.name;
+                loggableEvent.stacktrace = truncateLog(exception.stack);
+                eventLogging.queueEvent(loggableEvent);
+                throw exception;
+            }
+        };
+
+        return angular;
+    }
+
+    define(["angularDependency", "eventLogging"], init);
+})();

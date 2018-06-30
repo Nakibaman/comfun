@@ -1,0 +1,58 @@
+define(["require", "exports", "angularDependency", "angularDependency", "member/info/member-info.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("account-type.directive", ["member-info.service"]);
+    module.factory("showOrHideByAccountType", ["MemberInfoService", function (memberInfoService) {
+            return function (element, attrs, transclude) {
+                var desiredAccountTypes = [];
+                var undesiredAccountTypes = [];
+                if (attrs.accountTypeIs) {
+                    desiredAccountTypes = attrs.accountTypeIs.split(",");
+                }
+                else if (attrs.is) {
+                    desiredAccountTypes = attrs.is.split(",");
+                }
+                if (attrs.accountTypeIsNot) {
+                    undesiredAccountTypes = attrs.accountTypeIsNot.split(",");
+                }
+                else if (attrs.isNot) {
+                    undesiredAccountTypes = attrs.isNot.split(",");
+                }
+                memberInfoService.memberInfoProxy.getValue()
+                    .then(function (memberInfo) {
+                    var isDesiredAccountType = true;
+                    var isUndesiredAccountType = false;
+                    if (desiredAccountTypes.length > 0) {
+                        isDesiredAccountType = desiredAccountTypes.indexOf(memberInfo.accountType) !== -1;
+                    }
+                    if (undesiredAccountTypes.length > 0) {
+                        isUndesiredAccountType = undesiredAccountTypes.indexOf(memberInfo.accountType) !== -1;
+                    }
+                    if (isDesiredAccountType && !isUndesiredAccountType) {
+                        transclude(function (clone) {
+                            element.append(clone);
+                        });
+                    }
+                })["catch"](function () {
+                    console.log("failed to get account type info for account type directive");
+                });
+            };
+        }]);
+    var directiveFactory = function (restrict) {
+        return ["showOrHideByAccountType",
+            function (showOrHideByAccountType) {
+                return {
+                    restrict: restrict,
+                    transclude: true,
+                    link: function (scope, element, attrs, ctrl, transclude) {
+                        showOrHideByAccountType(element, attrs, transclude);
+                    }
+                };
+            }];
+    };
+    module.directive("accountType", directiveFactory('E'));
+    module.directive("accountTypeIs", directiveFactory('A'));
+    module.directive("accountTypeNot", directiveFactory('A'));
+});
+
+//# sourceMappingURL=account-type.directive.js.map

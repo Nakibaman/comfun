@@ -1,0 +1,58 @@
+define(["require", "exports", "angularDependency", "lib/toastr", "angularDependency", "classroom/teacher/classroom/google-classroom.service", "lib/toastr"], function (require, exports, angular, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("google-classroom-import-modal.controller", ["google-classroom.service"]);
+    var ImportGoogleClassroomModalState;
+    (function (ImportGoogleClassroomModalState) {
+        ImportGoogleClassroomModalState["IMPORT"] = "IMPORT";
+        ImportGoogleClassroomModalState["SUCCESS"] = "SUCCESS";
+    })(ImportGoogleClassroomModalState || (ImportGoogleClassroomModalState = {}));
+    var GoogleClassroomImportModalController = (function () {
+        function GoogleClassroomImportModalController($scope, authCode, classroomToEdit, googleClassroomService) {
+            this.isImporting = false;
+            this.googleClassrooms = [];
+            this.isLoading = false;
+            this.state = ImportGoogleClassroomModalState.IMPORT;
+            this.$scope = $scope;
+            this.authCode = authCode;
+            this.classroom = classroomToEdit;
+            this.googleClassroomService = googleClassroomService;
+            this.isLoading = true;
+            this.googleClassroomService.lookupGoogleClassroomsByAuthCode(authCode)
+                .then(function (googleClassrooms) {
+                angular.extend(this.googleClassrooms, googleClassrooms);
+            }.bind(this))["catch"](function (error) {
+                this.handleError(error);
+                this.$scope.$close();
+            }.bind(this))["finally"](function () {
+                this.isLoading = false;
+            }.bind(this));
+        }
+        GoogleClassroomImportModalController.prototype.importSelectedClassroom = function () {
+            this.isImporting = true;
+            this.googleClassroomService.importGoogleClassroom(this.selectedClassroom.id)
+                .then(function (createdClassroom) {
+                angular.extend(this.classroom, createdClassroom);
+                this.state = ImportGoogleClassroomModalState.SUCCESS;
+            }.bind(this))["catch"](function (error) {
+                this.handleError(error);
+                this.$scope.$close();
+            }.bind(this))["finally"](function () {
+                this.isImporting = false;
+            }.bind(this));
+        };
+        GoogleClassroomImportModalController.prototype.handleError = function (errorMessage) {
+            if (errorMessage) {
+                toastr.error(errorMessage, "A problem occurred", {
+                    positionClass: 'toast-top-center'
+                });
+            }
+        };
+        GoogleClassroomImportModalController.$inject = ["$scope", "authCode", "classroomToEdit", "GoogleClassroomService"];
+        return GoogleClassroomImportModalController;
+    }());
+    exports.GoogleClassroomImportModalController = GoogleClassroomImportModalController;
+    module.controller("GoogleClassroomImportModalController", GoogleClassroomImportModalController);
+});
+
+//# sourceMappingURL=google-classroom-import-modal.controller.js.map

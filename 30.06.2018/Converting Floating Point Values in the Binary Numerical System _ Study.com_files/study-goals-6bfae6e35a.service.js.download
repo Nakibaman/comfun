@@ -1,0 +1,182 @@
+define(["require", "exports", "angularDependency", "lib/jstz", "lib/moment", "lib/toastr", "angularDependency", "lib/jstz", "lib/moment", "lib/toastr", "member/profile/profile.service", "redesign/dashboard/services/StudyTrainerService"], function (require, exports, angular, jstz, moment, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("study-goals.service", ["profile.service", "studyTrainer.service"]);
+    var StudyGoalsService = (function () {
+        function StudyGoalsService($timeout, profileService, studyTrainerService) {
+            this.$timeout = $timeout;
+            this.profileService = profileService;
+            this.studyTrainerService = studyTrainerService;
+            this.profile = profileService.profileProxy.value;
+            profileService.profileProxy.getValue().then(function () {
+                if (!this.profile.timeZone) {
+                    this.profile.timeZone = jstz.determine().name();
+                }
+            }.bind(this));
+        }
+        StudyGoalsService.prototype.deleteSchedule = function (studyPlanId) {
+            return this.studyTrainerService.deleteSchedule(studyPlanId);
+        };
+        StudyGoalsService.prototype.saveSchedule = function (endDate, courseId) {
+            var planData = this.getPlanDataToSave(endDate, courseId);
+            return this.studyTrainerService.saveSchedule(planData);
+        };
+        StudyGoalsService.prototype.saveReminderSettings = function () {
+            var profileForUpdate = {
+                allowReminderEmail: this.profile.allowReminderEmail,
+                allowSms: this.profile.allowSms,
+                phoneNumber: this.profile.phoneNumber,
+                timeZone: this.profile.timeZone
+            };
+            this.profileService.updateProfile(profileForUpdate)["catch"](function () {
+                var errorMessage = "error updating profile";
+                toastr.error(errorMessage, "A problem occurred", {
+                    positionClass: 'toast-top-center'
+                });
+            });
+        };
+        StudyGoalsService.prototype.getDefaultEndDate = function () {
+            var endDate = new Date();
+            endDate.setDate(endDate.getDate() + 60);
+            return moment(endDate);
+        };
+        StudyGoalsService.prototype.getPlanDataToSave = function (endDate, courseId) {
+            if (!endDate) {
+                endDate = this.getDefaultEndDate();
+            }
+            var data = {
+                timezone: this.profile.timeZone,
+                schedule: {},
+                dateCreated: new Date(),
+                endDate: endDate,
+                optOut: false,
+                courseId: courseId,
+                studyPlanType: 'STUDY_GOAL'
+            };
+            return data;
+        };
+        StudyGoalsService.prototype.showCalendar = function (uniqueId) {
+            var dateTimePicker = $('#' + uniqueId).data("DateTimePicker");
+            if (!dateTimePicker) {
+                this.$timeout(this.initCalendar.bind(this, uniqueId), 0);
+            }
+            else {
+                $('#' + uniqueId + ' input').data("DateTimePicker").show();
+            }
+        };
+        StudyGoalsService.prototype.initCalendar = function (uniqueId) {
+            $('#' + uniqueId + ' input').datetimepicker({
+                format: 'MMM D, YYYY',
+                icons: {
+                    date: "icon icon-calendar",
+                    previous: "icon icon-chevron-left",
+                    next: "icon icon-chevron-right"
+                }
+            });
+            this.$timeout(function () {
+                $('#' + uniqueId + ' input').data("DateTimePicker").show();
+            }.bind(this), 0);
+        };
+        StudyGoalsService.prototype.selectDateAndSave = function (event, courseAssetId) {
+            if (event.date && event.oldDate && event.date !== event.oldDate) {
+                var endDate = this.convertDate(event.date);
+                if (this.isDateValid(endDate)) {
+                    this.updateStudyPlan(endDate, courseAssetId);
+                }
+            }
+        };
+        StudyGoalsService.prototype.updateStudyPlan = function (endDate, courseAssetId) {
+            this.saveSchedule(endDate, courseAssetId)["catch"](function (response) {
+                var errorMessage = response.headers().studyplanerror;
+                toastr.error(errorMessage, "A problem occurred", {
+                    positionClass: 'toast-top-center'
+                });
+            });
+        };
+        StudyGoalsService.prototype.isDateValid = function (date) {
+            if (date) {
+                if (date.isAfter(moment())) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        StudyGoalsService.prototype.convertDate = function (date) {
+            var endDate = null;
+            if (typeof date === 'string') {
+                endDate = moment(date, StudyGoalsService.END_DATE_FORMAT);
+            }
+            else if (typeof date === 'object') {
+                endDate = date;
+            }
+            return endDate;
+        };
+        StudyGoalsService.prototype.toggleEmail = function () {
+            this.profile.allowReminderEmail = !this.profile.allowReminderEmail;
+            this.saveReminderSettings();
+        };
+        StudyGoalsService.prototype.toggleSms = function () {
+            this.profile.allowSms = !this.profile.allowSms;
+            if (this.profile.allowSms) {
+                if (this.phoneNumberIsValid()) {
+                    this.saveReminderSettings();
+                }
+            }
+            else {
+                this.saveReminderSettings();
+            }
+        };
+        StudyGoalsService.prototype.phoneNumberIsValid = function () {
+            if (!this.profile) {
+                return false;
+            }
+            var phoneNumber = this.profile.phoneNumber;
+            if (!phoneNumber) {
+                return false;
+            }
+            var regex = new RegExp("^[2-9]\\d{9}$");
+            return phoneNumber.match(regex) != null;
+        };
+        StudyGoalsService.prototype.formatChapters = function (studyPlan) {
+            studyPlan.chapters = [[], [], []];
+            var hiddenChapters = 0;
+            var totalChapters = studyPlan.chaptersCompletedThisWeek.length + studyPlan.chaptersToCompleteThisWeek.length;
+            if (totalChapters > 9) {
+                hiddenChapters = totalChapters - 8;
+                totalChapters = 9;
+            }
+            studyPlan.totalChapters = totalChapters;
+            var chapterCounts = [0, 0, 0];
+            chapterCounts[0] = Math.ceil(totalChapters / 3);
+            chapterCounts[1] = Math.ceil((totalChapters - chapterCounts[0]) / 2);
+            chapterCounts[2] = totalChapters - chapterCounts[0] - chapterCounts[1];
+            [studyPlan.chaptersCompletedThisWeek, studyPlan.chaptersToCompleteThisWeek].forEach(function (chapterList) {
+                chapterList.forEach(function (chapterNum) {
+                    var formattedChapter = {
+                        isComplete: chapterList == studyPlan.chaptersCompletedThisWeek,
+                        num: chapterNum
+                    };
+                    for (var column = 0; column < 3; column++) {
+                        if (studyPlan.chapters[column].length < chapterCounts[column]) {
+                            if (hiddenChapters > 0 && column == 2 && studyPlan.chapters[column].length == chapterCounts[column] - 1) {
+                                studyPlan.chapters[column].push({ hiddenCount: hiddenChapters });
+                            }
+                            else {
+                                studyPlan.chapters[column].push(formattedChapter);
+                            }
+                            break;
+                        }
+                    }
+                });
+            });
+        };
+        ;
+        StudyGoalsService.END_DATE_FORMAT = "MMM D, YYYY";
+        StudyGoalsService.$inject = ["$timeout", "profileService", "StudyTrainerService"];
+        return StudyGoalsService;
+    }());
+    exports.StudyGoalsService = StudyGoalsService;
+    module.service("studyGoalsService", StudyGoalsService);
+});
+
+//# sourceMappingURL=study-goals.service.js.map

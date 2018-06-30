@@ -1,0 +1,72 @@
+define(["require", "exports"], function (require, exports) {
+    "use strict";
+    var WindowLocationService = (function () {
+        function WindowLocationService() {
+            this.searchParams = null;
+        }
+        WindowLocationService.prototype.parseSearchParams = function () {
+            this.searchParams = {};
+            var searchString = window.location.search.substr(1).trim();
+            if (searchString.length > 0) {
+                var keyValuePairStrings = searchString.split("&");
+                for (var _i = 0, keyValuePairStrings_1 = keyValuePairStrings; _i < keyValuePairStrings_1.length; _i++) {
+                    var keyValuePairString = keyValuePairStrings_1[_i];
+                    var keyValuePair = keyValuePairString.split("=");
+                    var value = true;
+                    if (keyValuePair.length > 1) {
+                        value = keyValuePair[1];
+                    }
+                    this.searchParams[keyValuePair[0]] = value;
+                }
+            }
+        };
+        WindowLocationService.prototype.updateSearchParams = function () {
+            var keyValuePairs = [];
+            for (var key in this.searchParams) {
+                var value = this.searchParams[key];
+                keyValuePairs.push(key + "=" + value);
+            }
+            window.location.search = keyValuePairs.join("&");
+        };
+        WindowLocationService.prototype.getPathParts = function () {
+            return window.location.pathname.split("/");
+        };
+        WindowLocationService.prototype.getHash = function () {
+            var hashString = window.location.hash;
+            if (hashString && hashString.length > 1 && hashString[0] === "#") {
+                return window.location.hash.substr(1);
+            }
+            else {
+                return "";
+            }
+        };
+        WindowLocationService.prototype.setHash = function (value) {
+            window.location.hash = value;
+        };
+        WindowLocationService.prototype.getSearchParam = function (key) {
+            if (!this.searchParams) {
+                this.parseSearchParams();
+            }
+            return this.searchParams[key];
+        };
+        WindowLocationService.prototype.setSearchParam = function (key, value) {
+            if (!this.searchParams) {
+                this.parseSearchParams();
+            }
+            this.searchParams[key] = value;
+            this.updateSearchParams();
+        };
+        WindowLocationService.prototype.deleteSearchParam = function (key) {
+            if (!this.searchParams) {
+                this.parseSearchParams();
+            }
+            delete this.searchParams[key];
+            this.updateSearchParams();
+        };
+        return WindowLocationService;
+    }());
+    var service = new WindowLocationService();
+    return service;
+});
+
+//# sourceMappingURL=window-location.service.js.map

@@ -1,0 +1,36 @@
+define(["require", "exports", "angular/modal/study-modal.service", "classroom/share/share-assignment-modal.controller", "angular/modal/study-modal.service", "classroom/share/share-assignment-modal.controller"], function (require, exports, study_modal_service_1, share_assignment_modal_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var ClassroomShareController = (function () {
+        function ClassroomShareController(studyModalService, shareMode) {
+            this.studyModalService = studyModalService;
+            this.shareMode = shareMode;
+            this.shareModalScopeParams = {
+                academyAssetId: this.academyAssetId,
+                assignmentContentType: this.assignmentContentType,
+                assignmentId: this.assignmentId,
+                assignmentResourceType: this.assignmentResourceType,
+                classroomCode: this.classroomCode,
+                courseAssetId: this.courseAssetId,
+                shareMode: this.shareMode
+            };
+        }
+        ClassroomShareController.prototype.openShareModal = function () {
+            var modalSettings = {
+                controller: share_assignment_modal_controller_1.ShareAssignmentModalController,
+                controllerAs: "shareAssignmentModalCtrl",
+                templateUrl: "/templates/classrooms/share/share-assignment-modal.tpl",
+                size: study_modal_service_1.StudyModalService.SIZE_MEDIUM,
+                windowClass: "share-with-google-classroom-modal",
+                resolve: {
+                    shareModalScopeParams: this.shareModalScopeParams
+                }
+            };
+            return this.studyModalService.openModalByConfig(modalSettings);
+        };
+        return ClassroomShareController;
+    }());
+    exports.ClassroomShareController = ClassroomShareController;
+});
+
+//# sourceMappingURL=classroom-share.controller.js.map

@@ -1,0 +1,366 @@
+define(["require", "exports", "angularDependency", "lib/moment", "util/value-pro", "angularDependency", "angular/util/http-post-params-as-form.provider", "classroom/classroom.service", "compatibility/polyfills", "lib/moment", "util/value-proxy"], function (require, exports, angular, moment, ValueProxy) {
+    "use strict";
+    exports.__esModule = true;
+    var AssignmentContentType;
+    (function (AssignmentContentType) {
+        AssignmentContentType["EXAM"] = "EXAM";
+        AssignmentContentType["LESSON"] = "LESSON";
+    })(AssignmentContentType = exports.AssignmentContentType || (exports.AssignmentContentType = {}));
+    var AssignmentResourceType;
+    (function (AssignmentResourceType) {
+        AssignmentResourceType["LESSON"] = "LESSON";
+        AssignmentResourceType["TOPIC"] = "TOPIC";
+    })(AssignmentResourceType = exports.AssignmentResourceType || (exports.AssignmentResourceType = {}));
+    var CompletionStatus;
+    (function (CompletionStatus) {
+        CompletionStatus["NOT_STARTED"] = "NOT_STARTED";
+        CompletionStatus["INCOMPLETE_PAST_DUE_DATE"] = "INCOMPLETE_PAST_DUE_DATE";
+        CompletionStatus["IN_PROGRESS"] = "IN_PROGRESS";
+        CompletionStatus["COMPLETE_BEFORE_ASSIGNMENT_DATE"] = "COMPLETE_BEFORE_ASSIGNMENT_DATE";
+        CompletionStatus["COMPLETE"] = "COMPLETE";
+        CompletionStatus["COMPLETE_PAST_DUE_DATE"] = "COMPLETE_PAST_DUE_DATE";
+    })(CompletionStatus = exports.CompletionStatus || (exports.CompletionStatus = {}));
+    var AssignmentType;
+    (function (AssignmentType) {
+        AssignmentType["CLASSROOM"] = "CLASSROOM";
+        AssignmentType["INDIVIDUAL"] = "INDIVIDUAL";
+    })(AssignmentType = exports.AssignmentType || (exports.AssignmentType = {}));
+    var AssignmentSortType;
+    (function (AssignmentSortType) {
+        AssignmentSortType["SENT_DATE_ASC"] = "SENT_DATE_ASC";
+        AssignmentSortType["SENT_DATE_DESC"] = "SENT_DATE_DESC";
+        AssignmentSortType["DUE_DATE_ASC"] = "DUE_DATE_ASC";
+        AssignmentSortType["DUE_DATE_DESC"] = "DUE_DATE_DESC";
+    })(AssignmentSortType = exports.AssignmentSortType || (exports.AssignmentSortType = {}));
+    var AssignmentCreateResponse = (function () {
+        function AssignmentCreateResponse() {
+            this.error = false;
+            this.message = "";
+            this.assignment = null;
+        }
+        return AssignmentCreateResponse;
+    }());
+    exports.AssignmentCreateResponse = AssignmentCreateResponse;
+    var module = angular.module("assignment.service", ["classroom.service", "study.http-post-params-as-form"]);
+    var AssignmentService = (function () {
+        function AssignmentService($http, $q, classroomService, httpPostParamsAsFormConfig) {
+            this.COMPLETION_STATUS_TRANSLATION_ARRAY = [
+                { "displayName": AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[CompletionStatus.NOT_STARTED] },
+                { "displayName": AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[CompletionStatus.IN_PROGRESS] },
+                { "displayName": AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[CompletionStatus.INCOMPLETE_PAST_DUE_DATE] },
+                { "displayName": AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[CompletionStatus.COMPLETE] },
+                { "displayName": AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[CompletionStatus.COMPLETE_PAST_DUE_DATE] }
+            ];
+            this.completionStatusTranslationMap = AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP;
+            this.$http = $http;
+            this.$q = $q;
+            this.classroomService = classroomService;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            this.teacherAssignmentsProxy = new ValueProxy([], this.getAssignmentsForTeacher.bind(this));
+            this.studentAssignmentsProxy = new ValueProxy([], function () {
+                return this.$http.get("/member/assignments/student/list.ajax")
+                    .then(function (response) {
+                    this.convertAssignmentDateStringsToDates(response.data);
+                    AssignmentService.calculateDaysUntilDueDate(response.data);
+                    AssignmentService.addIsCompleteFlags(response.data);
+                    return response.data;
+                }.bind(this))["catch"](function (response) {
+                    var error = "Unknown Error";
+                    return this.$q.reject(error);
+                }.bind(this));
+            }.bind(this));
+        }
+        AssignmentService.prototype.processTeacherAssignmentList = function (assignmentList) {
+            this.convertAssignmentDateStringsToDates(assignmentList);
+            AssignmentService.calculateDaysUntilDueDate(assignmentList);
+            angular.forEach(assignmentList, function (assignment) {
+                this.classroomService.addDisplayNameToStudentList(assignment.students);
+            }.bind(this));
+        };
+        AssignmentService.prototype.getAssignmentsForTeacher = function (params) {
+            var _this = this;
+            var config = {
+                params: {}
+            };
+            if (params) {
+                angular.extend(config.params, params);
+            }
+            return this.$http.get("/member/assignments/list.ajax", config)
+                .then(function (response) {
+                var assignmentList = response.data;
+                _this.processTeacherAssignmentList(assignmentList);
+                return assignmentList;
+            })["catch"](function (response) {
+                var error = "Unknown Error";
+                return _this.$q.reject(error);
+            });
+        };
+        AssignmentService.prototype.getAssignmentsForStudent = function (studentId, classroomId) {
+            var config = {
+                params: {
+                    studentId: studentId,
+                    classroomId: classroomId
+                }
+            };
+            return this.$http.get("/member/assignments/list-for-student.ajax", config);
+        };
+        AssignmentService.prototype.createAssignments = function (classroomIds, memberIdsAndEmails, assignment) {
+            if (typeof classroomIds === "number") {
+                classroomIds = [classroomIds];
+            }
+            var memberIdsAndEmailsString = JSON.stringify(memberIdsAndEmails);
+            var deferred = this.$q.defer();
+            var numClassroomsLeft = classroomIds.length;
+            var responseMap = {};
+            angular.forEach(classroomIds, function (classroomId) {
+                var postData = angular.copy(assignment);
+                postData.classroomId = classroomId;
+                postData.memberIdsAndEmails = memberIdsAndEmailsString;
+                this.$http.post("/member/assignments/create.ajax", postData, this.httpPostParamsAsFormConfig)
+                    .then(function (response) {
+                    var creationResponse = new AssignmentCreateResponse();
+                    creationResponse.assignment = response.data;
+                    responseMap[classroomId] = creationResponse;
+                }.bind(this))["catch"](function (response) {
+                    var creationResponse = new AssignmentCreateResponse();
+                    creationResponse.error = true;
+                    creationResponse.message = this.getErrorMessageFromCode(response.status);
+                    responseMap[classroomId] = creationResponse;
+                }.bind(this))["finally"](function () {
+                    numClassroomsLeft--;
+                    if (numClassroomsLeft === 0) {
+                        this.teacherAssignmentsProxy.reloadValue();
+                        deferred.resolve(responseMap);
+                    }
+                }.bind(this));
+            }, this);
+            return deferred.promise;
+        };
+        AssignmentService.prototype.deleteAssignment = function (assignment) {
+            var assignmentForPost = {
+                id: assignment.id
+            };
+            return this.$http.post("/member/assignments/delete.ajax", assignmentForPost, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                this.teacherAssignmentsProxy.reloadValue();
+                return response;
+            }.bind(this))["catch"](this.transformError.bind(this));
+        };
+        AssignmentService.prototype.updateAssignment = function (assignment) {
+            var postData = {
+                id: assignment.id,
+                instructions: assignment.instructions,
+                dueDateMillis: assignment.dueDate.getTime()
+            };
+            return this.$http.post("/member/assignments/update.ajax", postData, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                return null;
+            }.bind(this))["catch"](function (response) {
+                var errorMessage = response.data;
+                if (!errorMessage) {
+                    var responseCode = response.status;
+                    if (responseCode === 400) {
+                        throw "Missing required parameter";
+                    }
+                    else if (responseCode === 403) {
+                        throw "You may not update another teacher's assignments.";
+                    }
+                    else if (responseCode === 404) {
+                        throw "Unable to find resource.";
+                    }
+                    else if (responseCode === 500) {
+                        throw "Sorry, there seems to be a problem with our servers. Please try again later.";
+                    }
+                }
+                throw errorMessage;
+            });
+        };
+        AssignmentService.prototype.convertAssignmentDateStringsToDates = function (assignments) {
+            angular.forEach(assignments, function (assignment) {
+                assignment.assignmentDate = new Date(assignment.assignmentDate);
+                assignment.dueDate = new Date(assignment.dueDate);
+                assignment.expirationDate = new Date(assignment.expirationDate);
+            });
+        };
+        AssignmentService.numberOfDaysBetween = function (date1, date2) {
+            var first = moment(date1);
+            var second = moment(date2);
+            var returnFloat = true;
+            var daysBetween = first.diff(second, 'days', returnFloat);
+            daysBetween = Math.floor(daysBetween);
+            return daysBetween;
+        };
+        AssignmentService.calculateDaysUntilDueDate = function (assignments) {
+            var now = new Date();
+            angular.forEach(assignments, function (assignment) {
+                var daysUntilDueDate = AssignmentService.numberOfDaysBetween(assignment.dueDate, now);
+                assignment.daysUntilDueDate = daysUntilDueDate;
+            });
+        };
+        AssignmentService.addIsCompleteFlags = function (assignments) {
+            angular.forEach(assignments, function (assignment) {
+                assignment.isComplete = this.isAssignmentComplete(assignment);
+            }.bind(this));
+        };
+        AssignmentService.prototype.copyStudentProfilesFromTopicAssignmentToLessonAssignment = function (topicAssignment, lessonAssignment) {
+            var lessonAssignmentStudentById = {};
+            angular.forEach(lessonAssignment.students, function (student) {
+                lessonAssignmentStudentById[student.studentMemberId] = student;
+            });
+            angular.forEach(topicAssignment.students, function (student) {
+                var lessonAssignmentStudent = lessonAssignmentStudentById[student.studentMemberId];
+                if (lessonAssignmentStudent) {
+                    lessonAssignmentStudent.profile = student.profile;
+                    lessonAssignmentStudent.emailAddress = student.emailAddress;
+                }
+            });
+        };
+        AssignmentService.createAssignmentShareLinkFromAssignment = function (assignment) {
+            return AssignmentService.createAssignmentShareLink(assignment.classroom.code, assignment.id);
+        };
+        AssignmentService.createAssignmentShareLink = function (classroomCode, assignmentId) {
+            var hostName = window.location.host;
+            var shareLink = "https://" + hostName + "/member/classrooms/share.html?classroom=" + classroomCode + "&assignment=" + assignmentId;
+            return shareLink;
+        };
+        AssignmentService.getErrorMessageFromCode = function (responseCode) {
+            if (responseCode === 400) {
+                return "Missing required parameter";
+            }
+            else if (responseCode === 403) {
+                return "You may not update another teacher's assignments.";
+            }
+            else if (responseCode === 404) {
+                return "Unable to find resource.";
+            }
+            else if (responseCode === 409) {
+                return "You have already created that assignment.";
+            }
+            else if (responseCode === 500) {
+                return "Sorry, there seems to be a problem with our servers. Please try again later.";
+            }
+            else {
+                return null;
+            }
+        };
+        AssignmentService.prototype.transformError = function (response) {
+            var errorMessage = AssignmentService.getErrorMessageFromCode(response.status);
+            return this.$q.reject(errorMessage);
+        };
+        AssignmentService.prototype.isAssignmentComplete = function (assignment) {
+            return AssignmentService.isAssignmentComplete(assignment);
+        };
+        AssignmentService.isAssignmentComplete = function (assignment) {
+            if (!assignment || !assignment.completionStatus) {
+                return false;
+            }
+            return assignment.completionStatus.startsWith(AssignmentService.COMPLETE_PREFIX);
+        };
+        AssignmentService.COMPLETE_PREFIX = "COMPLETE";
+        AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP = {
+            "NOT_STARTED": "To Do",
+            "IN_PROGRESS": "In Progress",
+            "INCOMPLETE_PAST_DUE_DATE": "Overdue",
+            "COMPLETE_BEFORE_ASSIGNMENT_DATE": "Complete",
+            "COMPLETE": "Complete",
+            "COMPLETE_PAST_DUE_DATE": "Done Late"
+        };
+        AssignmentService.$inject = ['$http', '$q', 'classroomService', 'httpPostParamsAsFormConfig'];
+        return AssignmentService;
+    }());
+    exports.AssignmentService = AssignmentService;
+    module.service("AssignmentService", AssignmentService);
+    module.filter("readableCompletionStatus", function () {
+        return function (completionStatus) {
+            var readableStatus = AssignmentService.COMPLETION_STATUS_TRANSLATION_MAP[completionStatus];
+            if (readableStatus) {
+                return readableStatus;
+            }
+            return completionStatus;
+        };
+    });
+    module.filter("formatAssignmentDueDate", ["$filter", "$sce", function ($filter, $sce) {
+            return function (dueDate) {
+                var today = moment(new Date());
+                var tomorrow = moment(new Date()).add(1, "days");
+                var dueDateMoment = moment(dueDate);
+                var iconSpan = "<span class='icon-warning-sign'></span>";
+                var formattedDueDate = "";
+                if (dueDateMoment.isSame(today, "day") || dueDateMoment.isSame(tomorrow, "day")) {
+                    formattedDueDate = iconSpan;
+                }
+                formattedDueDate += $filter("date")(dueDate, "M/d/yy");
+                return $sce.trustAsHtml(formattedDueDate);
+            };
+        }]);
+    module.filter("orderByDueDateAndCompletionStatus", function () {
+        return function (arr) {
+            var sortedArr = arr.slice(0);
+            sortedArr.sort(function (firstAssignmentBean, secondAssignmentBean) {
+                var firstAssignmentDaysUntilDueDate = firstAssignmentBean.daysUntilDueDate;
+                var secondAssignmentDaysUntilDueDate = secondAssignmentBean.daysUntilDueDate;
+                var firstAssignmentIsOverdue = firstAssignmentDaysUntilDueDate < 0;
+                var secondAssignmentIsOverdue = secondAssignmentDaysUntilDueDate < 0;
+                var neitherAssignmentsAreOverdue = !firstAssignmentIsOverdue && !secondAssignmentIsOverdue;
+                if (neitherAssignmentsAreOverdue) {
+                    return firstAssignmentBean.dueDate.getTime() - secondAssignmentBean.dueDate.getTime();
+                }
+                return secondAssignmentBean.dueDate.getTime() - firstAssignmentBean.dueDate.getTime();
+            });
+            return sortedArr;
+        };
+    });
+    module.filter("dueDateTransformer", function () {
+        return function (daysUntilDueDate) {
+            if (daysUntilDueDate == -1) {
+                return "Due yesterday";
+            }
+            else if (daysUntilDueDate == 0) {
+                return "Due today";
+            }
+            else if (daysUntilDueDate == 1) {
+                return "Due tomorrow";
+            }
+            else if (daysUntilDueDate > 1) {
+                return "Due in " + daysUntilDueDate + " days";
+            }
+            else {
+                return "Due " + Math.abs(daysUntilDueDate) + " days ago";
+            }
+        };
+    });
+    module.filter("quizScoreAsPercent", function () {
+        return function (quizScore) {
+            if (!quizScore || isNaN(quizScore.correct) || !quizScore.questions || quizScore.questions == 0) {
+                return "--";
+            }
+            return Math.round(quizScore.correct / quizScore.questions * 100) + "%";
+        };
+    });
+    module.filter("asPercentDefaultZero", function () {
+        return function (score) {
+            if (!score || isNaN(score)) {
+                score = 0;
+            }
+            return score + "%";
+        };
+    });
+    module.filter("asPercentDefaultDashes", function () {
+        return function (score) {
+            if (score === undefined || isNaN(score)) {
+                return "--";
+            }
+            return score + "%";
+        };
+    });
+    module.filter("paginateAssignmentList", function () {
+        return function (assignmentList, currentPage, pageSize) {
+            if (!assignmentList) {
+                return [];
+            }
+            return assignmentList.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
+        };
+    });
+});
+
+//# sourceMappingURL=assignment.service.js.map

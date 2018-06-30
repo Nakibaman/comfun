@@ -1,0 +1,72 @@
+define(["require", "exports", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    var ValueProxy = (function () {
+        function ValueProxy(initialValue, valueLoader) {
+            this.value = initialValue;
+            this.valueLoader = valueLoader;
+            this.callbacks = [];
+            this.isLoading = false;
+            this.promiseToLoadData = null;
+        }
+        ValueProxy.prototype.getValue = function () {
+            if (this.promiseToLoadData) {
+                return this.promiseToLoadData;
+            }
+            return this.reloadValue();
+        };
+        ;
+        ValueProxy.prototype.reloadValue = function () {
+            if (this.isLoading) {
+                return this.promiseToLoadData.then(function () {
+                    return this.reloadValue();
+                }.bind(this));
+            }
+            this.isLoading = true;
+            this.promiseToLoadData = this.valueLoader()
+                .then(function (value) {
+                this.clearValue();
+                angular.extend(this.value, value);
+                for (var _i = 0, _a = this.callbacks; _i < _a.length; _i++) {
+                    var callback = _a[_i];
+                    callback(this.value);
+                }
+                return this.value;
+            }.bind(this));
+            this.promiseToLoadData = this.promiseToLoadData["finally"](function () {
+                this.isLoading = false;
+            }.bind(this));
+            return this.promiseToLoadData;
+        };
+        ;
+        ValueProxy.prototype.addValueListener = function (callback) {
+            this.callbacks.push(callback);
+            if (!this.isLoading) {
+                callback(this.value);
+            }
+            return this.callbacks.length - 1;
+        };
+        ValueProxy.prototype.removeValueListener = function (index) {
+            this.callbacks.splice(index, 1);
+        };
+        ValueProxy.prototype.clearValue = function () {
+            if (this.value) {
+                if (this.value instanceof Array) {
+                    this.value.length = 0;
+                }
+                else {
+                    var valueObject = this.value;
+                    for (var member in valueObject) {
+                        if (valueObject.hasOwnProperty(member)) {
+                            delete valueObject[member];
+                        }
+                    }
+                }
+            }
+        };
+        ;
+        return ValueProxy;
+    }());
+    return ValueProxy;
+});
+
+//# sourceMappingURL=value-pro.js.map

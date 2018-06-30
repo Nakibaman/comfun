@@ -1,0 +1,17 @@
+define(["require", "exports", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    angular.module("pluralize.directive", []).directive("pluralize", function () {
+        return {
+            restrict: "E",
+            scope: {
+                count: "=",
+                singular: "@",
+                plural: "@"
+            },
+            template: "<span ng-show='count === 1'>{{singular}}</span><span ng-show='count !== 1'>{{plural}}</span>"
+        };
+    });
+});
+
+//# sourceMappingURL=pluralize.directive.js.map

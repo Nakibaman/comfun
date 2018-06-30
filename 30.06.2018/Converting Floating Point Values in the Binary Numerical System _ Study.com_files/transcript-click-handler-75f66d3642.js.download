@@ -1,0 +1,32 @@
+define(["require", "exports", "jquery"], function (require, exports, $) {
+    "use strict";
+    var TranscriptClickHandler = (function () {
+        function TranscriptClickHandler() {
+        }
+        TranscriptClickHandler.prototype.initialize = function () {
+            $(document).ready(function () {
+                $("[data-transcript-trigger]").click(function () {
+                    var urlWithTranscript = $(this).data(TranscriptClickHandler.TRANSCRIPT_TRIGGER_DATA_ATTR);
+                    var isTranscriptOnCurrentPage = (window.location.pathname === urlWithTranscript);
+                    if (!isTranscriptOnCurrentPage) {
+                        window.location.assign(urlWithTranscript + "#" + TranscriptClickHandler.TRANSCRIPT_ELEMENT_ID);
+                    }
+                    else {
+                        window.location.hash = TranscriptClickHandler.LESSON_TAB_ID;
+                        setTimeout(function () {
+                            window.location.hash = TranscriptClickHandler.TRANSCRIPT_ELEMENT_ID;
+                        }, TranscriptClickHandler.SCROLL_TO_TRANSCRIPT_DELAY);
+                    }
+                });
+            });
+        };
+        TranscriptClickHandler.LESSON_TAB_ID = "lesson";
+        TranscriptClickHandler.SCROLL_TO_TRANSCRIPT_DELAY = 500;
+        TranscriptClickHandler.TRANSCRIPT_ELEMENT_ID = "transcriptHeader";
+        TranscriptClickHandler.TRANSCRIPT_TRIGGER_DATA_ATTR = "transcript-trigger";
+        return TranscriptClickHandler;
+    }());
+    return TranscriptClickHandler;
+});
+
+//# sourceMappingURL=transcript-click-handler.js.map

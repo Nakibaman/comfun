@@ -1,0 +1,53 @@
+define(["require", "exports", "angularDependency", "util/value-proxy", "angularDependency", "util/value-proxy"], function (require, exports, angular, ValueProxy) {
+    "use strict";
+    exports.__esModule = true;
+    var MemberInfo = (function () {
+        function MemberInfo() {
+            this.hasInstitutionLicense = false;
+            this.isLoggedIn = false;
+        }
+        return MemberInfo;
+    }());
+    exports.MemberInfo = MemberInfo;
+    var MemberInfoService = (function () {
+        function MemberInfoService($q) {
+            this.$q = $q;
+            this.memberInfoProxy = new ValueProxy(new MemberInfo(), this.memberInfoLoader.bind(this));
+        }
+        MemberInfoService.prototype.memberInfoLoader = function () {
+            var deferred = this.$q.defer();
+            var memberInfo = new MemberInfo();
+            var memberDataElement = document.querySelector("#memberData");
+            if (memberDataElement) {
+                memberInfo.memberId = this.getNumberAttribute(memberDataElement, "data-member-id");
+                memberInfo.isLoggedIn = !isNaN(memberInfo.memberId);
+                memberInfo.paymentProviderStatus = memberDataElement.getAttribute("data-member-status");
+                memberInfo.productKey = memberDataElement.getAttribute("data-member-product-key");
+                memberInfo.accountType = memberDataElement.getAttribute("data-member-account-type");
+                memberInfo.persona = memberDataElement.getAttribute("data-member-persona");
+                memberInfo.firstName = memberDataElement.getAttribute("data-member-first-name");
+                memberInfo.hasInstitutionLicense = this.getBooleanAttribute(memberDataElement, "data-member-has-institution-license");
+            }
+            deferred.resolve(memberInfo);
+            return deferred.promise;
+        };
+        MemberInfoService.prototype.getNumberAttribute = function (memberDataElement, attributeName) {
+            var attrValueStr = memberDataElement.getAttribute(attributeName);
+            return parseInt(attrValueStr, 10);
+        };
+        MemberInfoService.prototype.getBooleanAttribute = function (memberDataElement, attributeName) {
+            var attrValueStr = memberDataElement.getAttribute(attributeName);
+            if (!attrValueStr) {
+                return false;
+            }
+            return attrValueStr.toLowerCase() === "true";
+        };
+        MemberInfoService.$inject = ["$q"];
+        return MemberInfoService;
+    }());
+    exports.MemberInfoService = MemberInfoService;
+    var module = angular.module("member-info.service", []);
+    module.service("MemberInfoService", MemberInfoService);
+});
+
+//# sourceMappingURL=member-info.service.js.map

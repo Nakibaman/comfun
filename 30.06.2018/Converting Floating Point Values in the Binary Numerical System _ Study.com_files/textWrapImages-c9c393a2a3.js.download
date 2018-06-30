@@ -1,0 +1,54 @@
+(function () {
+	'use strict';
+
+	/**
+	 * @param {function(...) : jQuery} $
+	 */
+	function init($) {
+		/**
+		 * @param {jQuery|Element} containerWithImages
+		 * @constructor
+		 */
+		function TextWrapImages(containerWithImages) {
+			this.$container = $(containerWithImages);
+			this.$images = this.$container.find('.imageplugin');
+
+			this.wrapImages();
+		}
+
+		TextWrapImages.prototype.wrapImages = function () {
+			var self = this;
+
+			this.$images.each(function (index, el) {
+				$(el).removeAttr('align');
+
+				if (self._isOdd(index)) {
+					$(el).addClass('isOdd');
+				}
+				else {
+					$(el).addClass('isEven');
+				}
+
+				$(el).find('img').one('load', function () {
+
+					if ($(this).width() < '100') {
+						$(this).removeClass('isOdd isEven');
+					}
+				}).each(function () {
+					if (this.complete) {
+						$(this).load();
+					}
+				});
+			});
+
+		};
+
+		TextWrapImages.prototype._isOdd = function (num) {
+			return num % 2;
+		};
+
+		return TextWrapImages;
+	}
+
+		define(['jquery'], init);
+})();

@@ -1,0 +1,694 @@
+(function () {
+    'use strict';
+
+	define(['jquery', 'lib/toastr', 'util/remspect', 'lib/jquery/bootstrap'], init);
+
+    function init($, toastr, remspect) {
+        CourseProgressController.COMPLETION_CERTIFICATE_MINIMUM_PERCENT = 85;
+		 // this variable is duplicated (by necessity) in many places
+		 var MAX_PROGRESS_PERCENT_TO_START_PLACEMENT_TEST = 30;
+
+		 CourseProgressController.$inject = ["$element", "$http", "$q", "$rootScope", "$timeout", "courseParticipationSnapshotService", "CourseProgressService",
+			 "featureCheckService", "StudyTrainerService"];
+
+        /**
+         * Created by dseltzer
+         * @param {$q} $q - ng promises
+         * @param {$rootScope} $rootScope
+			* @param {CourseProgressService} progressService  - Course Progress Loading service
+			* @param {FeatureCheckService} featureCheckService
+         * @constructor
+         */
+        function CourseProgressController($element, $http, $q, $rootScope, $timeout, courseParticipationSnapshotService, progressService, featureCheckService,
+			studyTrainerService) {
+			  /**
+				*  @type CourseParticipationSnapshotService
+				*/
+			  this._courseParticipationSnapshotService = courseParticipationSnapshotService;
+	
+			  /**
+				*  @type StudyTrainerService
+				*/
+			  this._studyTrainerService = studyTrainerService;
+			  
+            /**
+             * @type CourseProgressService
+             */
+            this._progressService = progressService;
+            this.$element = $element;
+            this.$http = $http;
+            this.$q = $q;
+            this.$rootScope = $rootScope;
+            this.$timeout = $timeout;
+            this._fieldSelection = "";
+
+            // asset ids
+            this.currentCourseAcademyAssetId = null;
+            this.currentTopicAcademyAssetId = null;
+            this.currentLessonAcademyAssetId = null;
+
+            // current assets progress
+            this.currentCourseProgress = null;
+            this.currentTopicProgress = null;
+            this.currentLessonProgress = null;
+
+            // progress indexed by asset id
+            this.allCourses = null;
+            this.topicAssetIdToProgress = {};
+            this.lessonAssetIdToProgress = {};
+			  
+			  // participation indexed by asset id
+            this.lessonAssetIdToParticipation = {};
+
+            // completion certificates
+            this.completionCertificateCourses = [];
+
+            // course removal
+            this.courseNameToRemove = "";
+            this.courseIndexToRemove = "";
+
+            // state
+            this.initialized = false;
+            this.participationInitialized = false;
+            this.error = false;
+            this.denied = false;
+			   if (location.hash == '#exam') {
+				   this.onExamTab = true;
+			   } else {
+				   this.onExamTab = false;
+			   }
+            
+            this.hideCoursePlanMessage = {};
+			  
+			  this.canTakeFinalExam = false;
+			  featureCheckService.hasFeature(featureCheckService.FEATURE_PROCTORED_EXAM).then(function(data) {
+				  this.canTakeFinalExam = data;
+			  }.bind(this));
+        }
+
+        /**
+         * Initialize course progress for current course, topic, and/or lesson
+         * @param {boolean} includeTopics
+         * @param {boolean} includeLessons
+         * @param {boolean} includeNextQuiz
+         * @param {number} [courseAcademyAssetId]
+         * @param {number} [topicAcademyAssetId]
+         * @param {number} [lessonAcademyAssetId]
+         */
+        CourseProgressController.prototype.init= function (includeTopics, includeLessons, includeNextQuiz,
+                                                           courseAcademyAssetId, topicAcademyAssetId, lessonAcademyAssetId) {
+
+            this.currentCourseAcademyAssetId = courseAcademyAssetId;
+            this.currentTopicAcademyAssetId = topicAcademyAssetId;
+            this.currentLessonAcademyAssetId = lessonAcademyAssetId;
+
+            // build field selections string
+            var fieldSelectionArr = [];
+            if (includeTopics) {
+                fieldSelectionArr.push("topics");
+            }
+            if (includeLessons) {
+                fieldSelectionArr.push("lessons");
+            }
+            if (includeNextQuiz) {
+                fieldSelectionArr.push("nextQuizAssetId");
+            }
+
+            this._fieldSelection = fieldSelectionArr.join(",");
+
+            this.loadProgress();
+	
+			  var memberStatus = document.getElementById('memberData').getAttribute('data-member-status');
+			  var loggedIn = memberStatus !== "";
+
+			  if (this.currentCourseAcademyAssetId && loggedIn) {
+				  this._courseParticipationSnapshotService.getCourseParticipationSnapshotPromise(this.currentCourseAcademyAssetId)
+				  .then(function(data) {
+					  this._processLoadedParticipation(data.data);
+				  }.bind(this));
+				  
+				  this._studyTrainerService.getSchedule(this.currentCourseAcademyAssetId)
+				  .then(function(data) {
+					  this.studyPlanStartDate = data.dateCreated;
+					  this.studyPlanEndDate = data.endDate;
+					  this.isBehindStudyGoal = data.goalState == 'BEHIND' || data.goalState == 'INCOMPLETE';
+				  }.bind(this));
+				  
+			  }
+
+			  // listen for reload events
+            this.$rootScope.$on(this._progressService.RELOAD_TRIGGER, $.proxy(function(element, courseAcademyAssetId) {
+
+                // check if reload is necessary
+                if (!courseAcademyAssetId || !this.currentCourseAcademyAssetId || courseAcademyAssetId === this.currentCourseAcademyAssetId) {
+
+                    this.loadProgress(true);
+                }
+            }, this));
+	
+			  $(document).on('shown.bs.tab', function (e) {
+				  if (e.target.hash == '#exam') {
+					  this.onExamTab = true;
+				  }
+				  else {
+					  this.onExamTab = false;
+				  }
+				  this.$rootScope.$apply();
+			  }.bind(this));
+	
+		  };
+	
+		 CourseProgressController.prototype.ensureLessonToPreviewIsSet = function (firstLessonAcademyAssetId) {
+		 	if (!firstLessonAcademyAssetId) {
+		 		return;
+			}
+		 	
+		 	if (this.lessonToPreview) {
+		 		return;
+			}
+			
+			if (this._loadingLessonToPreview) {
+		 		return;
+			}
+			
+			if (this.currentCourseProgress && this.currentCourseProgress.nextLesson) {
+		 		this.lessonToPreview = this.currentCourseProgress.nextLesson;
+		 		return;
+			}
+			
+			this._loadingLessonToPreview = true;
+			this._progressService.loadLesson(firstLessonAcademyAssetId)
+			 .then(function(response) {
+			 	this.lessonToPreview = response[firstLessonAcademyAssetId];
+			 }.bind(this))
+			 .finally(function() {
+			 	this._loadingLessonToPreview = false;
+			 }.bind(this));
+		 };
+
+		 /**
+		  * Load course progress for either the current course, or all progress for user
+		  * @param {boolean} [skipCache] - true to force an ajax call to the server even if a value is cached
+		  */
+		 CourseProgressController.prototype.loadProgress = function (skipCache) {
+			
+			 var promises = {};
+			 promises.progressPromise = this._progressService.getProgress(this.currentCourseAcademyAssetId, this._fieldSelection, skipCache);
+			 if (!this.currentCourseAcademyAssetId) {
+				 promises.coursePlansPromise = this.$http.get("/member/enrollment/course-plans-by-course-id.ajax");
+				 promises.assignedByNamesPromise = this.$http.get("/member/enrollment/assigned-by-names.ajax");
+			 }
+			
+			 this.$q.all(promises).then(function (resolves) {
+				 if (resolves.coursePlansPromise) {
+					 var assignedByNames = resolves.assignedByNamesPromise.data;
+				 	 var coursePlans = resolves.coursePlansPromise.data;
+					 var coursePlansByCourseId = {};
+					 var courseForCoursePlansByCourseId = {};
+					
+					 for (var courseId in coursePlans) {
+						 var coursePlan = coursePlans[courseId];
+						 coursePlan.assignedBy = assignedByNames[coursePlan.assignerId];
+						 coursePlansByCourseId[courseId] = coursePlan;
+						 for (var i in coursePlan.courseForCoursePlanList) {
+							 var courseForCoursePlan = coursePlan.courseForCoursePlanList[i];
+							 if (courseForCoursePlan.courseId == courseId) {
+								 courseForCoursePlansByCourseId[courseId] = courseForCoursePlan;
+							 }
+						 }
+					 }
+					
+					 this.coursePlansByCourseId = coursePlansByCourseId;
+					 this.courseForCoursePlansByCourseId = courseForCoursePlansByCourseId;
+				 }
+				
+				 this._processLoadedProgress(resolves.progressPromise)
+			 }.bind(this))
+			 .catch(function(rejection) {
+			 	this._loadError(rejection)
+			 }.bind(this));
+		 };
+
+        /**
+         * Set current course as in progress
+         */
+        CourseProgressController.prototype.startCourse = function () {
+            this._progressService.setProgressStatus(this.currentCourseAcademyAssetId, true);
+        };
+
+        CourseProgressController.prototype.confirmRemove = function (index) {
+            var progressItem = this.allCourses[index];
+            this.courseNameToRemove = progressItem.course.title;
+            this.courseIndexToRemove = index;
+            $('[data-remove-overlay]').modal('show');
+        };
+
+        CourseProgressController.prototype.cancelRemove = function (index) {
+            this.courseNameToRemove = "";
+            this.courseIndexToRemove = "";
+            $('[data-remove-overlay]').modal('hide');
+        };
+
+        CourseProgressController.prototype.hideItem = function (index) {
+            var progressItem = this.allCourses[index];
+            this._progressService.setProgressStatus(progressItem.course.academyAssetId, false);
+            this.allCourses.splice(index, 1);
+            this.courseNameToRemove = "";
+            this.courseIndexToRemove = "";
+            $('[data-remove-overlay]').modal('hide');
+        };
+
+        CourseProgressController.prototype.lessonPassed = function (lessonAcademyAssetId) {
+            var lessonProgress = this.lessonAssetIdToProgress[lessonAcademyAssetId];
+
+			   return lessonProgress && (lessonProgress.examPassed || lessonProgress.mastery);
+        };
+
+		  CourseProgressController.prototype.topicPassed = function (topicAcademyAssetId) {
+			  var topicProgress = this.topicAssetIdToProgress[topicAcademyAssetId];
+			  
+			  return topicProgress && (topicProgress.examPassed || topicProgress.mastery);
+		  };
+	
+		  CourseProgressController.prototype.showCourseSpecificPlacementTestLinks = function (progress) {
+		 	 if (!progress || !progress.course || !progress.course.knowledgeCheckEnabled) {
+		 		 return false;
+		 	 }
+		 	 return !progress.certificateEarned && progress.percentComplete < MAX_PROGRESS_PERCENT_TO_START_PLACEMENT_TEST;
+		  };
+
+        /**
+         * Process course progress that has been loaded
+         * @param {object} loadedCourseProgress
+         */
+        CourseProgressController.prototype._processLoadedProgress = function (loadedCourseProgress) {
+
+            this.allCourses = loadedCourseProgress;
+
+            // completion certificates
+            var completionCertificateCourses = [];
+            $.each(this.allCourses, function(index, course) {
+
+                if (course.percentComplete >= CourseProgressController.COMPLETION_CERTIFICATE_MINIMUM_PERCENT) {
+
+                    completionCertificateCourses.push(course.course);
+                }
+            });
+            this.completionCertificateCourses = completionCertificateCourses;
+
+            // no current course specified
+            if (!this.currentCourseAcademyAssetId) {
+					this.allCourses.sort(this.sortCourses.bind(this));
+                this.initialized = true;
+                return;
+            }
+
+            // current course
+            var requestedCourseArr = $.grep(this.allCourses, $.proxy(function(item) {
+                return this.currentCourseAcademyAssetId === item.academyAssetId;
+            }, this));
+
+            if (requestedCourseArr.length > 0) {
+                this.currentCourseProgress = requestedCourseArr[0];
+                if (this.currentCourseProgress.nextLesson) {
+                	this.lessonToPreview = this.currentCourseProgress.nextLesson;
+					 }
+            }
+            // requested course not loaded
+            else {
+                this.error = true;
+                return;
+            }
+
+            // index topic and lesson progress by academy asset id
+            $.each(this.currentCourseProgress.topics, $.proxy(function(index, topicProgress) {
+
+                // requested topic
+                if (this.currentTopicAcademyAssetId === topicProgress.academyAssetId) {
+                    this.currentTopicProgress = topicProgress;
+                }
+
+                this.topicAssetIdToProgress[topicProgress.academyAssetId] = topicProgress;
+
+                // index lessons
+                $.each(topicProgress.lessons, $.proxy(function(index, lessonProgress) {
+
+                    // requested lesson
+                    if (this.currentLessonAcademyAssetId === lessonProgress.academyAssetId) {
+                        this.currentLessonProgress = lessonProgress;
+                    }
+
+                    this.lessonAssetIdToProgress[lessonProgress.academyAssetId] = lessonProgress;
+
+                }, this));
+            }, this));
+
+            // verify requested progress loaded
+            if ((this.currentTopicAcademyAssetId && !this.currentTopicProgress) ||
+                (this.currentLessonAcademyAssetId && !this.currentLessonProgress)) {
+
+                this.error = true;
+                return;
+            }
+
+            // successful load and index
+            this.initialized = true;
+            if (window.HeroTracking) {
+					window.HeroTracking.add(this.$element && this.$element[0], "COURSE__PROGRESS_LOADED");
+					window.HeroTracking.trackImageAfterDigestCycle("[test-id=course__progress__next-lesson] img", "COURSE__NEXT_LESSON_IMAGE");
+				}
+        };
+        
+		  CourseProgressController.prototype.getGoalWeekForTopic = function(topicIndex, topicCount) {
+		  		if (this.studyPlanEndDate) {
+		  			if (topicIndex == 0) {
+		  				return 1;
+					}
+					var totalWeeks = (this.studyPlanEndDate - this.studyPlanStartDate) / (1000*60*60*24*7);
+					var weeksPerChapter = totalWeeks / topicCount;
+				 
+					var topicWeek;
+					var lastTopicWeek;
+					if (topicCount < totalWeeks) {
+						topicWeek = Math.floor(weeksPerChapter * topicIndex) + 1;
+						lastTopicWeek = Math.floor(weeksPerChapter * (topicIndex - 1)) + 1;
+					} else {
+						topicWeek = Math.ceil(weeksPerChapter * (topicIndex + 1));
+						lastTopicWeek = Math.ceil(weeksPerChapter * topicIndex);
+					}
+					if (topicIndex == 1) {
+						lastTopicWeek = 1;
+					}
+					if (lastTopicWeek == topicWeek) {
+						return undefined;
+					}
+					return topicWeek;
+				}
+				return undefined;
+		  };
+        
+        CourseProgressController.prototype.getCssClassForGoalState = function(topicAcademyAssetId, topicIndex, topicCount) {
+        		var goalWeekForTopic = this.getGoalWeekForTopic(topicIndex, topicCount);
+        		if (goalWeekForTopic) {
+					var studyPlanCurrentWeek = Math.floor((new Date() - this.studyPlanStartDate) / (1000*60*60*24*7)) + 1;
+					var topic = this.topicAssetIdToProgress[topicAcademyAssetId];
+					if (goalWeekForTopic == studyPlanCurrentWeek) {
+						this.currentStudyGoalWeek = studyPlanCurrentWeek;
+					}
+					if (topic && topic.percentComplete > 99 && this.isCompleteWeek(goalWeekForTopic, topicIndex, topicCount)) {
+						return 'goal-week-complete';
+					}
+					else if (goalWeekForTopic < studyPlanCurrentWeek) {
+						return 'goal-week-late';
+					} else if (goalWeekForTopic == studyPlanCurrentWeek) {
+						return 'goal-week-current';
+					} else {
+						return 'goal-week-future';
+					}
+			   }
+				return '';
+        };
+	
+		 CourseProgressController.prototype.isCompleteWeek = function (goalWeek, topicIndex, topicCount) {
+		 	 if (topicIndex + 1 >= topicCount) {
+		 		 return true;
+			 }
+		 	 var iteratorTopicIndex = topicIndex + 1;
+		 	
+			 var goalWeekForTopic = this.getGoalWeekForTopic(iteratorTopicIndex, topicCount);
+			 if (goalWeekForTopic > goalWeek) {
+			 	return true;
+			 }
+			 var topic = this.getTopicByIndex(iteratorTopicIndex);
+			 if (!topic || topic.percentComplete <= 99) {
+			 	return false;
+			 } else {
+			 	return this.isCompleteWeek(goalWeek, iteratorTopicIndex, topicCount);
+			 }
+		 };
+	
+		 CourseProgressController.prototype.getTopicByIndex = function (topicIndex) {
+			 for (var topicAssetId in this.topicAssetIdToProgress) {
+				 if (this.topicAssetIdToProgress.hasOwnProperty(topicAssetId)) {
+					 if (this.topicAssetIdToProgress[topicAssetId].topicSequenceIndex -1 == topicIndex) {
+					 	return this.topicAssetIdToProgress[topicAssetId];
+					 }
+				 }
+			 }
+			 return null;
+		 };
+		 
+        CourseProgressController.prototype._processLoadedParticipation = function (loadedCourseParticipation) {
+			  // index lesson participation
+			  if (loadedCourseParticipation &&
+				loadedCourseParticipation.lessonParticipationSnapshots &&
+				loadedCourseParticipation.lessonParticipationSnapshots.hasOwnProperty("length")) {
+				  $.each(loadedCourseParticipation.lessonParticipationSnapshots, $.proxy(function(index, lessonParticipation) {
+					  this.lessonAssetIdToParticipation[lessonParticipation.lessonId] = lessonParticipation;
+				  }, this));
+			  }
+			  this.participationInitialized = true;
+		 };
+	
+		 CourseProgressController.prototype.hasMastery = function (lessonAcademyAssetId) {
+		 	var lessonProgress = this.lessonAssetIdToProgress[lessonAcademyAssetId];
+		 	if (lessonProgress) {
+				return lessonProgress.mastery;
+			}
+			return false;
+		 };
+	
+		 CourseProgressController.prototype.canRetakeQuizForGrade = function (lessonAcademyAssetId) {
+		 	var lessonParticipation = this.lessonAssetIdToParticipation[lessonAcademyAssetId];
+		 	if (!lessonParticipation) {
+		 		return false;
+			}
+			 if (!lessonParticipation.quizScores || (lessonParticipation.participationScore != 1 && lessonParticipation.quizScores.length < 3)) {
+			 	return true;
+			 }
+			 if (lessonParticipation.quizScores.length > 2) {
+			 	return false;
+			 }
+			 return false;
+		 };
+		 
+		 CourseProgressController.prototype.hasPerfectScore = function(lessonAcademyAssetId) {
+			 var lessonProgress = this.lessonAssetIdToProgress[lessonAcademyAssetId];
+			 if (lessonProgress && lessonProgress.bestScoreQuestions) {
+				 if (lessonProgress.bestScoreQuestions == lessonProgress.bestCorrect) {
+				 	return true;
+				 }
+			 }
+			 return false;
+		 };
+	
+		 CourseProgressController.prototype.hasTakenQuiz = function (lessonAcademyAssetId) {
+			 var lessonProgress = this.lessonAssetIdToProgress[lessonAcademyAssetId];
+			 if (lessonProgress) {
+				 return lessonProgress.bestScoreQuestions;
+			 }
+			 return false;
+		 };
+	
+		 /**
+		 /**
+		  * @param progressWithCourse
+		  * @returns {boolean}
+		  */
+		 CourseProgressController.prototype.showFinalExamCta = function(progressWithCourse) {
+			 return progressWithCourse.certificateEarned && progressWithCourse.course.creditEligible && this.canTakeFinalExam;
+		 };
+
+		 /**
+		  * @param progressWithCourse
+		  * @returns {boolean}
+		  */
+		 CourseProgressController.prototype.showCertificate = function(progressWithCourse) {
+			 return progressWithCourse.certificateEarned && (!progressWithCourse.course.creditEligible || !this.canTakeFinalExam)
+		 };
+	
+		 /**
+         * load error
+         * @param error
+         * @private
+         */
+        CourseProgressController.prototype._loadError = function (error) {
+            if (error === 'DENIED') {
+                this.denied = true;
+            }
+            else {
+                this.error = true;
+            }
+
+            //even though this is an "error", this module has been initialized
+            this.initialized = true;
+            if (window.HeroTracking) {
+            	if (this.denied) {
+						window.HeroTracking.add(this.$element && this.$element[0], "COURSE__PROGRESS_DENIED");
+					}
+					else {
+						window.HeroTracking.add(this.$element && this.$element[0], "COURSE__PROGRESS_ERROR");
+					}
+					window.HeroTracking.trackImageAfterDigestCycle("[data-cname=course_overview_watch_preview] img", "COURSE__PREVIEW_IMAGE");
+			  }
+        };
+	
+        CourseProgressController.prototype.showCoursePlanMessage = function(index) {
+        	var progress = this.allCourses[index];
+        	var course = progress.course;
+        	if (! course) {
+        		return false;
+			}
+			
+        	var coursePlan = this.coursePlansByCourseId[course.courseAcademyAssetId];
+        	if (! coursePlan) {
+        		return false;
+			}
+			
+			  var userHasClosedCoursePlan = this.hideCoursePlanMessage[coursePlan.id];
+			  if (userHasClosedCoursePlan) {
+				  return false;
+			  }
+	
+			  var isFirstInList = index === 0;
+			  if (isFirstInList) {
+				  return true;
+			  }
+	
+			  var previousCourseId = this.allCourses[index - 1].course.courseAcademyAssetId;
+			  var previousCoursePlan = this.coursePlansByCourseId[previousCourseId];
+			  if (! previousCoursePlan) {
+				  return true;
+			  }
+	
+			  var previousCourseIsInDifferentPlan = previousCoursePlan.id !== coursePlan.id;
+			  return previousCourseIsInDifferentPlan;
+		  };
+	
+		 CourseProgressController.prototype.showCoursePlanSpacer = function(index) {
+			 var isFirstInList = index === 0;
+			 if (isFirstInList) {
+				 return false;
+			 }
+		
+			 var progress = this.allCourses[index];
+			 var course = progress.course;
+			 if (!course) {
+				 return false;
+			 }
+		
+			 var coursePlan = this.coursePlansByCourseId[course.courseAcademyAssetId];
+			 var previousCourseId = this.allCourses[index - 1].course && this.allCourses[index - 1].course.courseAcademyAssetId;
+			 var previousCoursePlan = this.coursePlansByCourseId[previousCourseId];
+			 if (!coursePlan) {
+				 return previousCoursePlan;
+			 }
+			
+			 var userHasClosedCoursePlan = this.hideCoursePlanMessage[coursePlan.id];
+			 if (userHasClosedCoursePlan) {
+				 return true;
+			 }
+			
+			 return ! previousCoursePlan;
+		 };
+	
+		 CourseProgressController.prototype.closeCoursePlanMessage = function(coursePlan) {
+			 this.hideCoursePlanMessage[coursePlan.id] = true;
+		 };
+	
+		 CourseProgressController.prototype.openCoursePlanMessage = function (coursePlan) {
+			 this.hideCoursePlanMessage[coursePlan.id] = false;
+		
+			 this.$timeout(function () {
+				 var jqel = $("#course_plan_message_" + coursePlan.id);
+				 $("html, body").animate({scrollTop: jqel.offset().top - 50}, "fast");
+			 }, 0);
+		 };
+	
+		 CourseProgressController.prototype.formatCoursePlanDate = function(coursePlan) {
+			 if (!coursePlan || !coursePlan.dateCreated) {
+				 return undefined;
+			 }
+		
+			 var coursePlanDate = new Date(coursePlan.dateCreated);
+			 return coursePlanDate.toLocaleDateString();
+		 };
+	
+		 CourseProgressController.prototype.sortCourses = function(courseData1, courseData2) {
+		 	// if one course is complete, sort to bottom
+			 if (courseData1.percentComplete === 100 && courseData2.percentComplete !== 100) {
+			 	return 1;
+			 }
+			 else if (courseData1.percentComplete !== 100 && courseData2.percentComplete === 100) {
+			 	return -1;
+			 }
+		 	
+			var coursePlan1 = this.coursePlansByCourseId[courseData1.academyAssetId];
+			var coursePlan2 = this.coursePlansByCourseId[courseData2.academyAssetId];
+			
+			 if (coursePlan1 && coursePlan2) {
+				 // if both courses are assigned, sort by course plan sequence, then by course for course plan sequence
+				 var cfcp1 = this.courseForCoursePlansByCourseId[courseData1.academyAssetId];
+				 var cfcp2 = this.courseForCoursePlansByCourseId[courseData2.academyAssetId];
+				 
+				 if (coursePlan1.sequence === coursePlan2.sequence) {
+					 if (coursePlan1.id === coursePlan2.id) {
+						 return cfcp1.sequence - cfcp2.sequence;
+					 }
+					 else {
+						 return coursePlan1.id - coursePlan2.id;
+					 }
+				 }
+				 else {
+					 return coursePlan1.sequence - coursePlan2.sequence;
+				 }
+			 }
+			 else if (coursePlan1) {
+				 // if courseData1.course is assigned but courseData2.course isn't, sort courseData1.course above courseData2.course
+				 return -1;
+			 }
+			 else if (coursePlan2) {
+				 // if courseData2.course is assigned but courseData1.course isn't, sort courseData2.course above courseData1.course
+				 return 1;
+			 }
+			 else {
+				 // if neither course is assigned, sort by most recent activity
+				 var lastViewedLessonDate1 = courseData1.lastViewedLessonDate || "";
+				 var lastViewedLessonDate2 = courseData2.lastViewedLessonDate || "";
+				 return lastViewedLessonDate2.localeCompare(lastViewedLessonDate1);
+			 }
+		 };
+	
+		 CourseProgressController.prototype.hasCoursePlan = function(courseId) {
+		 	if (this.coursePlansByCourseId) {
+		 		if (this.coursePlansByCourseId[String(courseId)]) {
+		 			return true;
+				}
+			}
+			return false;
+		 };
+		 
+		 CourseProgressController.prototype.retakePracticeExam = function(examUrl, examInstanceId, courseId) {
+			 this.$http.post("/academy/exam/practice/restartExam.ajax?examInstanceId=" + examInstanceId + "&courseAcademyAssetId=" + courseId)
+			 .then(function () {
+				 window.location = examUrl;
+			 }).catch(function () {
+				 toastr.error("There was an error restarting your exam. Please try again or contact customer support.", "A problem occurred", {
+					 positionClass: 'toast-top-center'
+				 });
+			 });
+		 };
+	
+	
+		 CourseProgressController.prototype.showTakeFinalExamButton = function(proctoringEnabled) {
+			 return this.initialized && proctoringEnabled && this.currentCourseProgress && this.currentCourseProgress.percentComplete === 100;
+		 };
+	
+		 CourseProgressController.prototype.showProgressBar = function(proctoringEnabled, useTopicProgress) {
+			 return (!proctoringEnabled || (this.currentCourseProgress && this.currentCourseProgress.percentComplete !== 100))
+			     && (useTopicProgress && this.currentTopicProgress && this.currentTopicProgress.plannedQuizCount > 0);
+		 };
+
+        return CourseProgressController;
+    }
+})();

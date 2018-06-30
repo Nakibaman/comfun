@@ -1,0 +1,67 @@
+define(["require", "exports", "angularDependency", "angular/util/academy-asset.service", "classroom/assignment.service", "angularDependency", "angular/util/academy-asset.service", "classroom/assignment.service"], function (require, exports, angular, academy_asset_service_1, assignment_service_1) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("assignment-preview.directive", ["academy-asset.service"]);
+    var AssignmentPreviewController = (function () {
+        function AssignmentPreviewController(academyAssetService) {
+            this.academyAssetService = academyAssetService;
+            this.validateParams();
+            this.loadAcademyAsset();
+        }
+        AssignmentPreviewController.prototype.validateParams = function () {
+            if (this.assignmentResourceType && this.academyAssetId && this.courseAcademyAssetId) {
+                return;
+            }
+            throw "Missing required parameters to assignment-preview directive";
+        };
+        AssignmentPreviewController.prototype.loadAcademyAsset = function () {
+            var academyType = AssignmentPreviewController.resourceTypeToAcademyType(this.assignmentResourceType);
+            this.academyAssetService.getAssets(academyType, this.academyAssetId, AssignmentPreviewController.ACADEMY_ASSET_FIELD_SELECTION, this.courseAcademyAssetId)
+                .then(function (academyAsset) {
+                this.academyAsset = academyAsset;
+                if (assignment_service_1.AssignmentResourceType.LESSON === this.assignmentResourceType) {
+                    var lesson = academyAsset;
+                    this.chapterNumber = lesson.topicIndex + 1;
+                    this.courseBreadcrumb = lesson.courseBreadcrumb;
+                    this.lessonNumber = lesson.lessonIndex + 1;
+                    this.videoPreviewImageUrl = academy_asset_service_1.Lesson.getSmallVideoPreviewImageUrl(lesson);
+                }
+                if (assignment_service_1.AssignmentResourceType.TOPIC === this.assignmentResourceType) {
+                    var topic = academyAsset;
+                    this.chapterNumber = topic.chapterNumber;
+                    this.courseBreadcrumb = academy_asset_service_1.Topic.getCourseBreadcrumb(topic);
+                }
+            }.bind(this));
+        };
+        AssignmentPreviewController.resourceTypeToAcademyType = function (resourceType) {
+            if (assignment_service_1.AssignmentResourceType.LESSON === resourceType) {
+                return academy_asset_service_1.AcademyType.LESSON;
+            }
+            else if (assignment_service_1.AssignmentResourceType.TOPIC === resourceType) {
+                return academy_asset_service_1.AcademyType.TOPIC;
+            }
+            throw "Cannot determine AcademyType for AssignmentResourceType=" + resourceType;
+        };
+        AssignmentPreviewController.ACADEMY_ASSET_FIELD_SELECTION = ["breadcrumbs", "lessonIndex_i", "title", "topicIndex_i", "topics_s", "videoPreviewImageUri_s"];
+        AssignmentPreviewController.$inject = ["academyAssetService"];
+        return AssignmentPreviewController;
+    }());
+    exports.AssignmentPreviewController = AssignmentPreviewController;
+    module.directive("assignmentPreview", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/share/assignment-preview.tpl",
+            scope: {
+                academyAssetId: "=",
+                assignmentResourceType: "=",
+                assignmentContentType: "=",
+                courseAcademyAssetId: "="
+            },
+            bindToController: true,
+            controller: AssignmentPreviewController,
+            controllerAs: "assignmentPreviewCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=assignment-preview.directive.js.map

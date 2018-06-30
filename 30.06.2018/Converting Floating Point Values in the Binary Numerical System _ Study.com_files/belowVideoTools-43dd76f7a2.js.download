@@ -1,0 +1,25 @@
+(function () {
+	"use strict";
+	var deps = ["jquery", "lib/jquery/bootstrap/jasny"];
+	function init($) {
+		var belowVideoTools = $("#belowVideoTools");
+		belowVideoTools.find(".collapse").collapse({
+			toggle: false
+		});
+
+		$('[below-video-toggle]').on('click', function() {
+			var selector = $(this).attr('below-video-toggle');
+			var alreadyOpen = belowVideoTools.find(selector).hasClass('in');
+
+			belowVideoTools.find(".collapse").collapse('hide');
+			belowVideoTools.removeClass("open");
+
+			if (!alreadyOpen) {
+				belowVideoTools.addClass("open");
+				belowVideoTools.find(selector).collapse('show');
+			}
+		});
+	}
+
+	define(deps, init);
+})();

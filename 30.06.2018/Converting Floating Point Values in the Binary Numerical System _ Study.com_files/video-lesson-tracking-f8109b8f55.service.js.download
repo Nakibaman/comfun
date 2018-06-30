@@ -1,0 +1,112 @@
+(function() {
+	"use strict";
+	
+	/**
+	 * @typedef {object} VideoPlayTrackingData
+	 * @property {string} wistiaId
+	 * @property {number} academyAssetId
+	 * @property {number} secondsWatched
+	 * @property {boolean} videoPlaytimeListenerInitialized
+	 */
+	
+	define(['jquery', 'angularDependency', 'lib/wistia', 'angular/util/http-post-params-as-form.provider'],
+	 function ($, angular, Wistia) {
+		
+		/**
+		 * @type {number}
+		 */
+		var MINIMUM_SECONDS_WATCHED_NEEDED_TO_COUNT_AS_PLAYED = 60;
+		
+		var module = angular.module("video-lesson-tracking.service", ["study.http-post-params-as-form"]);
+		
+		VideoLessonTrackingService["$inject"] = ["$http", "httpPostParamsAsFormConfig"];
+		
+		function VideoLessonTrackingService($http, httpPostParamsAsFormConfig) {
+			this.$http = $http;
+			this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+			
+			/**
+			 * @type {Object.<string, VideoPlayTrackingData>}
+			 */
+			this.trackedVideos = {};
+			
+			// listen for wistia videos to be ready
+			$("body").on("wistia-embed.ready", function(event, wistiaId) {
+				
+				var videoPlayTrackingData = this.trackedVideos[wistiaId];
+				if (videoPlayTrackingData) {
+					this._attemptToInitVideoPlaytimeListenerIfNotInitialized(videoPlayTrackingData);
+				}
+				
+			}.bind(this));
+		}
+		
+		/**
+		 * @param {string} wistiaId
+		 * @param {number} academyAssetId
+		 */
+		VideoLessonTrackingService.prototype.trackVideoPlays = function(wistiaId, academyAssetId) {
+			
+			/**
+			 * @type {VideoPlayTrackingData}
+			 */
+			var videoPlayTrackingData = {
+				wistiaId: wistiaId,
+				academyAssetId: academyAssetId,
+				secondsWatched: 0,
+				videoPlaytimeListenerInitialized: false
+			};
+			
+			this.trackedVideos[wistiaId] = videoPlayTrackingData;
+			this._attemptToInitVideoPlaytimeListenerIfNotInitialized(videoPlayTrackingData);
+		};
+		
+		/**
+		 * @param {VideoPlayTrackingData} videoPlayTrackingData
+		 * @private
+		 */
+		VideoLessonTrackingService.prototype._attemptToInitVideoPlaytimeListenerIfNotInitialized = function(videoPlayTrackingData) {
+			
+			// already initialized
+			if (videoPlayTrackingData.videoPlaytimeListenerInitialized) {
+				return;
+			}
+			
+			var wistiaEmbedObject = Wistia.api(videoPlayTrackingData.wistiaId);
+			
+			// embed not ready
+			if (!wistiaEmbedObject) {
+				return;
+			}
+			
+			// initialize listener
+			wistiaEmbedObject.bind('secondchange', function(second) {
+				
+				videoPlayTrackingData.secondsWatched = videoPlayTrackingData.secondsWatched + 1;
+				
+				if (videoPlayTrackingData.secondsWatched === MINIMUM_SECONDS_WATCHED_NEEDED_TO_COUNT_AS_PLAYED) {
+					
+					this._recordVideoPlay(videoPlayTrackingData.academyAssetId);
+				}
+			}.bind(this));
+			
+			videoPlayTrackingData.videoPlaytimeListenerInitialized = true;
+		};
+		
+		/**
+		 * @param {number} academyAssetId
+		 */
+		VideoLessonTrackingService.prototype._recordVideoPlay = function(academyAssetId) {
+			
+			var videoPlay = {
+				academyAssetId: academyAssetId
+			};
+			
+			this.$http.post("/academy/lesson/video-tracking/track-video-play.ajax", videoPlay, this.httpPostParamsAsFormConfig);
+		};
+		
+		module.service("videoLessonTrackingService", VideoLessonTrackingService);
+		
+		return module;
+	});
+})();

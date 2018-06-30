@@ -1,0 +1,40 @@
+(function() {
+	"use strict";
+	
+	define([
+		// Injected Dependencies
+		"angularDependency"
+	], init);
+	
+	function init(angular) {
+		var module = angular.module("studyTextInput", []);
+		module.directive("studyTextInput", function() {
+			return {
+				restrict: "E",
+				templateUrl: '/templates/util/study-text-input.tpl',
+				scope: {
+					"cname": "@",
+					"error": "@",
+					"helperText": "@",
+					"id": "@",
+					"label": "@",
+					"placeholder": "@",
+					"ngModel": "="
+				},
+				link: function(scope) {
+					var debugString = "{ " +
+					  "id: " + scope.id + ", " +
+					  "cname: " + scope.cname + " " +
+					  "}";
+
+					if (!scope.cname) {
+						throw "No cname for " + debugString;
+					}
+					if (!scope.id) {
+						throw "No id for " + debugString;
+					}
+				}
+			};
+		});
+	}
+})();

@@ -1,0 +1,121 @@
+define(["require", "exports", "angularDependency", "angularDependency", "lib/angular-storage", "angular/util/http-post-params-as-form.provider"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("tutorial.service", ["study.http-post-params-as-form"]);
+    var TutorialService = (function () {
+        function TutorialService($http, $q, httpPostParamsAsFormConfig, store) {
+            this.$http = $http;
+            this.$q = $q;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            this.store = store;
+            this.registeredSets = {};
+            this.setViewedPromises = {};
+            this.setViewedItems = {};
+        }
+        TutorialService.prototype.registerItem = function (item) {
+            if (!this.registeredSets[item.setKey]) {
+                this.registeredSets[item.setKey] = [];
+            }
+            this.registeredSets[item.setKey].push(item);
+            if (!this.setViewedPromises[item.setKey] && !this.setViewedItems[item.setKey]) {
+                this.loadAlreadyViewedItemsForSet(item.setKey);
+            }
+            if (this.setViewedItems[item.setKey]) {
+                item.showItemWhenConditionsMet();
+            }
+        };
+        TutorialService.prototype.markItemAsViewed = function (item) {
+            var data = {
+                stepSetKey: item.setKey,
+                stepKey: item.key
+            };
+            if (this.setViewedItems[item.setKey].indexOf(item.key) === -1) {
+                this.setViewedItems[item.setKey].push(item.key);
+            }
+            return this.$http.post(TutorialService.MARK_AS_READ_URL, data, this.httpPostParamsAsFormConfig);
+        };
+        TutorialService.prototype.markSetAsViewed = function (setKey) {
+            this.temporarilyHideSet(setKey);
+            var commaSeparatedItemKeys = this.setViewedItems[setKey].join(",");
+            var data = {
+                stepSetKey: setKey,
+                stepKey: commaSeparatedItemKeys
+            };
+            return this.$http.post(TutorialService.MARK_AS_READ_URL, data, this.httpPostParamsAsFormConfig);
+        };
+        TutorialService.prototype.hasSeenItem = function (item) {
+            return this.setViewedItems[item.setKey] && this.setViewedItems[item.setKey].indexOf(item.key) !== -1;
+        };
+        TutorialService.prototype.temporarilyHideSet = function (setKey) {
+            this.setViewedItems[setKey] = [];
+            for (var i = 0; i < this.registeredSets[setKey].length; i++) {
+                this.setViewedItems[setKey].push(this.registeredSets[setKey][i].key);
+            }
+        };
+        TutorialService.prototype.resetViewingDataForSet = function (setKey) {
+            this.setViewedItems[setKey] = [];
+        };
+        TutorialService.prototype.showItem = function (setKey, itemKey) {
+            for (var i = 0; i < this.registeredSets[setKey].length; i++) {
+                if (!itemKey || this.registeredSets[setKey][i].key === itemKey) {
+                    this.registeredSets[setKey][i].showItemWhenConditionsMet();
+                }
+            }
+        };
+        TutorialService.prototype.loadAlreadyViewedItemsForSet = function (setKey) {
+            var alreadyViewedItemsDefer = this.$q.defer();
+            if (TutorialService.DEBUG) {
+                alreadyViewedItemsDefer.resolve(this.getSeenItemsFromStorage(setKey));
+            }
+            else {
+                this.getSeenItemsFromServer(setKey).then(function (seenItemsFromServer) {
+                    alreadyViewedItemsDefer.resolve(seenItemsFromServer);
+                });
+            }
+            this.setViewedPromises[setKey] = alreadyViewedItemsDefer.promise.then(function (seenData) {
+                this.setViewedPromises[setKey] = null;
+                this.setViewedItems[setKey] = seenData;
+                this.showItem(setKey);
+                return seenData;
+            }.bind(this));
+        };
+        TutorialService.prototype.getSeenItemsFromStorage = function (setKey) {
+            var alreadySeenOverrides = this.store.get(TutorialService.LOCAL_STORAGE_KEY_FOR_ALREADY_SEEN_OVERRIDES);
+            if (alreadySeenOverrides) {
+                return alreadySeenOverrides[setKey];
+            }
+            else {
+                return [];
+            }
+        };
+        TutorialService.prototype.getSeenItemsFromServer = function (setKey) {
+            var config = {
+                params: {
+                    stepSetKey: setKey
+                }
+            };
+            return this.$http.get(TutorialService.GET_ALREADY_SEEN_STEPS_URL, config)
+                .then(function (response) {
+                var alreadyViewedItemsFromServer = response.data;
+                var alreadyViewedItems = [];
+                for (var _i = 0, alreadyViewedItemsFromServer_1 = alreadyViewedItemsFromServer; _i < alreadyViewedItemsFromServer_1.length; _i++) {
+                    var alreadyViewedItem = alreadyViewedItemsFromServer_1[_i];
+                    if (alreadyViewedItem.stepSetKey === setKey) {
+                        alreadyViewedItems.push(alreadyViewedItem.stepKey);
+                    }
+                }
+                return alreadyViewedItems;
+            }.bind(this));
+        };
+        TutorialService.DEBUG = false;
+        TutorialService.MARK_AS_READ_URL = '/member/tutorial/mark-steps-as-read.ajax';
+        TutorialService.GET_ALREADY_SEEN_STEPS_URL = '/member/tutorial/get-already-seen-steps.ajax';
+        TutorialService.LOCAL_STORAGE_KEY_FOR_ALREADY_SEEN_OVERRIDES = 'tutorialAlreadySeenOverrides';
+        TutorialService.$inject = ["$http", "$q", "httpPostParamsAsFormConfig", "store"];
+        return TutorialService;
+    }());
+    exports.TutorialService = TutorialService;
+    module.service("TutorialService", TutorialService);
+});
+
+//# sourceMappingURL=tutorial.service.js.map

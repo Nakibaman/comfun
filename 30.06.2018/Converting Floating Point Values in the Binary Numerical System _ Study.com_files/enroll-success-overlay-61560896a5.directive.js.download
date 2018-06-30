@@ -1,0 +1,113 @@
+(function () {
+	'use strict';
+	
+	define([
+	 	"angularDependency",
+	 	"jquery",
+	 	"lib/toastr",
+	   "util/remspect",
+	 	"enrollment/enrolled-courses.service",
+	 	"remspect/remspect.directive",
+	 	"studyGoals/study-goal-controls.directive",
+	 	"studyGoals/study-goals.service"
+	], init);
+	
+	function init(angular, $, toastr, remspect) {
+		var module = angular.module("enrollSuccessOverlay", ["enrolled-courses.service", "study-goal-controls.directive", "study-goals.service", "study.remspect-directives"]);
+		
+		EnrollSuccessOverlayController.$inject = ["$scope", "$timeout", "EnrolledCoursesService", "studyGoalsService"];
+		
+		function EnrollSuccessOverlayController($scope, $timeout, enrollService, studyGoalsService) {
+			this.$scope = $scope;
+			this.$timeout = $timeout;
+			this.enrollService = enrollService;
+			this.studyGoalsService = studyGoalsService;
+			if (!this.testId) {
+				this.testId = "enrollment_enroll_button_with_overlay";
+			}
+			this.studyPlanId = undefined;
+			
+		}
+		
+		EnrollSuccessOverlayController.prototype.createStudyPlan = function() {
+			this.studyGoalsService.saveSchedule(null, this.courseAssetId)
+			.then(function(response) {
+				this.studyPlanId = response.data.studyplan.studyPlanId;
+			}.bind(this))
+			.catch(function(response) {
+				var errorMessage = response.headers().studyplanerror;
+				toastr.error(errorMessage, "A problem occurred", {
+					positionClass: 'toast-top-center'
+				});
+			});
+		};
+		
+
+		EnrollSuccessOverlayController.prototype.enrollInCurrentCourse = function($event) {
+			if (this.courseAssetId) {
+				this.enrollService.enrollInCourse(this.courseAssetId, $event)
+				.then(function(response) {
+					$("#" + this.modalId).modal("show");
+					if (this.currentCourseProgress) {
+						this.currentCourseProgress.enrolled = true;
+						this.currentCourseProgress.inProgress = true;
+					}
+					if (this.enrollCallback) {
+						$("#" + this.modalId).on("hidden.bs.modal", this.enrollCallback)
+					}
+					
+					this.createStudyPlan();
+				}.bind(this))
+				.catch(function(response) {
+					var errorMessage = "error enrolling in current course, course_id=" + this.courseAssetId;
+					toastr.error(errorMessage, "A problem occurred", {
+						positionClass: 'toast-top-center'
+					}.bind(this));
+				});
+			}
+		};
+		
+		EnrollSuccessOverlayController.prototype.goToDashboard = function() {
+			$("#" + this.modalId).modal("hide");
+			if (this.enrollCallback) {
+				this.$timeout(function() {
+					window.location.href = "/member/my-dashboard.html#/enrolled-courses";
+				}, 0);
+			}
+		};
+		
+		EnrollSuccessOverlayController.prototype.setUpStudyTrainer = function() {
+			$("#" + this.modalId).modal("hide");
+			window.location.href = "/member/my-dashboard.html#studyTrainer/edit?courseId=" + this.courseAssetId;
+			window.scrollTo(0,0);
+		};
+		
+		module.directive("enrollSuccessOverlay", function() {
+			return {
+				restrict: "E",
+				scope: {
+					courseAssetId: "=",
+					courseTitle: "=",
+					currentCourseProgress: "=",
+					isEnrolled: "=",
+					enrollCallback: "&",
+					modalId: "@",
+					nextLessonImage: "=",
+					nextLessonTitle: "=",
+					nextLessonUrl: "=",
+					nextLessonChapterNumber: "=",
+					nextLessonNumber: "=",
+					testId: "@"
+				},
+				templateUrl: '/templates/enrollment/enroll-success-overlay.tpl',
+				bindToController: true,
+				controllerAs: "enrollSuccessOverlayController",
+				controller: EnrollSuccessOverlayController
+			};
+		});
+		
+		return module;
+	}
+})();
+
+		

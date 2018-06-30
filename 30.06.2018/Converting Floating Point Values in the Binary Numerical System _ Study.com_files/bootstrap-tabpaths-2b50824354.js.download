@@ -1,0 +1,237 @@
+(function () {
+    'use strict';
+
+     function init($, underscore) {
+        /**
+         * jQuery/Bootstrap plugin for allowing Tabs to be navigable by url hash and/or browser history
+         * @constructor
+         * @param {jQuery|Element} element
+         * @param {{path: string=, history: boolean=false, default:boolean=false, autoscroll:boolean=false}} [config]
+         */
+		  var TabPath = function(element, config) {
+
+			  /**
+				* @type {jQuery}
+				*/
+			  this.$el = $(element);
+
+			  if (!this.$el.is("[data-tabpath]")) {
+				  this.$el.attr("data-tabpath", config && config.path ? config.path : "");
+			  }
+
+			  /**
+				*
+				* @type {string}
+				*/
+			  this.pathString = "";
+
+			  if (config && config.path) {
+				  this.pathString = config.path;
+			  }
+			  else if (this.$el.data("tabpath")) {
+				  this.pathString = this.$el.data("tabpath");
+			  }
+			  else {
+				  var href = this.$el.attr("href");
+				  if (href) {
+					  this.pathString = href.replace(/^[^#]*#/, "");
+				  }
+				  else {
+					  var attributes = [];
+					  var attributesMap = this.$el[0].attributes;
+					  for (var i = 0; i < attributesMap.length; i++) {
+						  if (attributesMap[i].value) {
+							  attributes.push(attributesMap[i].name + "=" + attributesMap[i].value);
+						  }
+						  else {
+							  attributes.push(attributesMap[i].name);
+						  }
+
+					  }
+					  var tagAndAttributes = "<" + this.$el[0].tagName + " " + attributes.join(", ") + ">";
+					  throw "Failed to find href. " + tagAndAttributes;
+				  }
+			  }
+
+			  if (this.pathString.charAt(0) === "/") {
+				  this.pathString = this.pathString.substring(1);
+			  }
+
+            /**
+             * Path parts, as delimited by '/'
+             * @type {Array}
+             */
+            this.path = this.pathString.split(TabPath.DELIMITER);
+
+            /**
+             * Whether to add an entry to the history for activating this tab. Can be activated with 'data-tabhistory' attribute
+             * @type {boolean}
+             */
+            this.history = config && typeof config.history !== "undefined" ? !!config.history : this.$el.is("[data-tabhistory]");
+
+            /**
+             * If a blank hash should map to this tab. Can be activated with 'data-tabdefault' attribute
+             * @type {boolean}
+             */
+            this.def = config && typeof config.def !== "undefined" ? !!config.def : this.$el.is("[data-tabdefault]");
+
+            /**
+             * If on activation the page should automatically scroll to the top of the tab target. Only works on exact match
+             * @type {boolean}
+             */
+            this.autoscroll = config && typeof config.autoscroll !== "undefined" ? !!config.def : this.$el.is("[data-tabautoscroll]");
+        };
+
+        function getHashString() {
+            return window.location.hash.split(/#\/*/)[1];
+        }
+
+        $(document).on("shown.bs.tab", "[data-tabpath]", function() {
+            var $this = $(this);
+
+            /**
+             * @type TabPath
+             */
+            var tabPath = getTabPath($this);
+
+            tabPath.updateHash();
+        });
+
+        TabPath.DELIMITER = "/";
+
+        TabPath.prototype.updateHash = function() {
+            //todo paul modernizr and Html5 history API plz
+            if (this.history) {
+                if (!this.matchesHash()) {
+                    window.location = "#" + this.pathString;
+                }
+            }
+
+            if (this.autoscroll && this.matchesHash(true)) {
+                var to = $(this.$el.data("target"));
+                if (to.offset()) {
+                    $("html, body").animate({scrollTop: to.offset().top});
+                }
+            }
+        };
+
+        /**
+         * @param  {boolean} [exact=false] - Require exact, complete hash match
+         * @return boolean
+         */
+        TabPath.prototype.matchesHash = function(exact) {
+            if (this.def && !window.location.hash) {
+                return true;
+            }
+
+            var hashString = getHashString();
+            if (!hashString) {
+                return false;
+            }
+
+			   if (hashString.charAt(0) === "/") {
+					hashString = hashString.substring(1);
+				}
+
+            var hashPath = hashString.split(TabPath.DELIMITER);
+
+            var ret = true;
+
+            if (exact && this.path.length !== hashPath.length) {
+                return false;
+            }
+
+            for (var i = 0; i < this.path.length && ret; i++) {
+                ret = hashPath[i] === this.path[i];
+            }
+
+            return ret;
+        };
+
+		 var debouncedProcessHash = underscore.debounce(processHash, 200);
+
+		 function processHash() {
+			 var attemptsLeft = 20;
+			 processHashWithRetries(attemptsLeft);
+		 }
+
+		 function processHashWithRetries(attemptsLeft) {
+			 var pathedTabs = $("[data-tabpath]");
+
+			 try {
+
+				 pathedTabs.each(function() {
+					 var data = getTabPath($(this));
+
+					 if (data.matchesHash()) {
+                    data.$el.tab("show");
+					 }
+				 });
+			 }
+			 catch (e) {
+				 attemptsLeft--;
+				 if (attemptsLeft > 0) {
+					 setTimeout(function() {processHashWithRetries(attemptsLeft)}, 250);
+				 }
+				 else {
+					 console.log("Failed to process hash change for tab paths");
+					 throw e;
+				 }
+			 }
+
+		 }
+
+        /**
+         * @param {jQuery} $this
+         * @param [config]
+         * @return TabPath
+         */
+        function getTabPath($this, config) {
+            var tabPath = $this.data("bs.tabpath");
+
+            if (!tabPath) {
+                tabPath = new TabPath($this, config);
+
+                $this.data("bs.tabpath", tabPath);
+            }
+
+            return tabPath;
+        }
+
+        /**
+         * @param [config]
+         * @returns {jQuery}
+         */
+        function Plugin(config) {
+            return this.each(function() {
+                var $this = $(this);
+                getTabPath($this, config);
+            });
+        }
+
+        $.fn.tabPath = Plugin;
+        $.fn.tabPath.Constructor = TabPath;
+
+		 $(window).on("hashchange", debouncedProcessHash);
+
+        /**
+         * @param {{delimiter: string}} config
+         */
+        $.tabPath = function(config) {
+            if (config.delimiter) {
+                TabPath.DELIMITER = config;
+
+                //Re-initialize pathing if the delimiter changed
+                $("[data-tabpath]").each(function () {
+                    $(this).data("bs.tabpath", new TabPath(this));
+                });
+            }
+        };
+
+        $(document).ready(setTimeout(debouncedProcessHash, 250));
+
+        return TabPath;
+    }
+
+    define(['jquery', 'lib/underscore', 'lib/jquery/bootstrap'], init);
+})();

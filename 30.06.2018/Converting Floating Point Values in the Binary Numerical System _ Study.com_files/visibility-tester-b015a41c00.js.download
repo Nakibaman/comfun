@@ -1,0 +1,168 @@
+define(["require", "exports", "eventLogging", "eventLogging"], function (require, exports, eventLogging) {
+    "use strict";
+    exports.__esModule = true;
+    var TrackingState;
+    (function (TrackingState) {
+        TrackingState["REMOVED"] = "REMOVED";
+        TrackingState["TRACKED"] = "TRACKED";
+        TrackingState["REPORTED"] = "REPORTED";
+    })(TrackingState || (TrackingState = {}));
+    var VisibilityTester = (function () {
+        function VisibilityTester(interval) {
+            this.trackedElements = [];
+            this.interval = VisibilityTester.DEFAULT_INTERVAL;
+            this.loopFn = null;
+            this.cnameToTrackingState = {};
+            this.elementsWithoutCnames = {};
+            if (VisibilityTester._instance) {
+                return VisibilityTester._instance;
+            }
+            VisibilityTester._instance = this;
+            if (interval) {
+                this.interval = interval;
+            }
+        }
+        VisibilityTester.prototype.start = function () {
+            try {
+                this.startWithIntersectionObserver();
+            }
+            catch (e) {
+                this.startBackwardsCompatible();
+            }
+        };
+        ;
+        VisibilityTester.prototype.startBackwardsCompatible = function () {
+            this.loopFn = this.checkVisibilities.bind(this);
+            setInterval(this.loopFn, this.interval);
+        };
+        ;
+        VisibilityTester.prototype.startWithIntersectionObserver = function () {
+            this.observer = new IntersectionObserver(this.handleIntersectEvents.bind(this), {});
+            this.trackedElements.forEach(function (element) {
+                this.observer.observe(element);
+            }.bind(this));
+        };
+        VisibilityTester.prototype.handleIntersectEvents = function (events, observer) {
+            events.forEach(function (event) {
+                if (event.intersectionRatio > 0) {
+                    this.handleIntersect(event);
+                }
+            }.bind(this));
+        };
+        VisibilityTester.prototype.handleIntersect = function (event) {
+            var element = event.target;
+            var elementIndex = this.trackedElements.indexOf(element);
+            if (elementIndex < 0) {
+                return;
+            }
+            VisibilityTester.sendVisibilityEvent(element);
+            var identifier = this.getElementIdentifier(element);
+            if (identifier) {
+                this.cnameToTrackingState[identifier] = TrackingState.REPORTED;
+            }
+            this.removeElementToCheck(element);
+            this.observer.unobserve(element);
+        };
+        VisibilityTester.prototype.addElementsToCheck = function (elements) {
+            for (var _i = 0, elements_1 = elements; _i < elements_1.length; _i++) {
+                var element = elements_1[_i];
+                this.addElementToCheck(element);
+            }
+        };
+        ;
+        VisibilityTester.prototype.addElementToCheck = function (element) {
+            var identifier = this.getElementIdentifier(element);
+            if (!identifier) {
+                var elementId = VisibilityTester.fetchOrGenerateId(element);
+                if (!this.elementsWithoutCnames.hasOwnProperty(elementId)) {
+                    this.elementsWithoutCnames[elementId] = true;
+                    console.warn("Attempted to track element without cname", element);
+                }
+                return;
+            }
+            var shouldTrackElement = !this.cnameToTrackingState.hasOwnProperty(identifier) || this.cnameToTrackingState[identifier] === TrackingState.REMOVED;
+            if (shouldTrackElement) {
+                this.trackedElements.push(element);
+                this.cnameToTrackingState[identifier] = TrackingState.TRACKED;
+                if (this.observer) {
+                    this.observer.observe(element);
+                }
+            }
+        };
+        VisibilityTester.prototype.getElementIdentifier = function (element) {
+            return element.getAttribute("data-cname");
+        };
+        VisibilityTester.fetchOrGenerateId = function (element) {
+            var alternativeIdAttr = "data-visibility-id";
+            var elementId = element.id;
+            var randomId = element.getAttribute(alternativeIdAttr);
+            if (!elementId && !randomId) {
+                var guid = VisibilityTester.generateGuid();
+                element.setAttribute(alternativeIdAttr, guid);
+                return guid;
+            }
+            return elementId || randomId;
+        };
+        VisibilityTester.generateGuid = function () {
+            var now = Date.now();
+            return 'xxxxxxxxxxxx4xxxyxxxxxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                var r = (now + Math.random() * 16) % 16 | 0;
+                now = Math.floor(now / 16);
+                return (c === 'x' ? r : (r & 0x7 | 0x8)).toString(16);
+            });
+        };
+        VisibilityTester.prototype.removeElementToCheck = function (element) {
+            var elementIndex = this.trackedElements.indexOf(element);
+            if (elementIndex >= 0) {
+                this.trackedElements.splice(elementIndex, 1);
+            }
+            var identifier = this.getElementIdentifier(element);
+            if (identifier) {
+                var wasReported = this.cnameToTrackingState[identifier] === TrackingState.REPORTED;
+                if (!wasReported) {
+                    this.cnameToTrackingState[identifier] = TrackingState.REMOVED;
+                }
+            }
+        };
+        VisibilityTester.prototype.checkVisibilities = function () {
+            var visibleIndexes = [];
+            var pageHeight = window.innerHeight;
+            var pageWidth = window.innerWidth;
+            for (var i = 0; i < this.trackedElements.length; i++) {
+                var element = this.trackedElements[i];
+                var rectangle = element.getBoundingClientRect();
+                var yVisible = rectangle.top < pageHeight && rectangle.bottom > 0;
+                var xVisible = rectangle.left < pageWidth && rectangle.right > 0;
+                var rHeight = rectangle.bottom - rectangle.top;
+                var rWidth = rectangle.right - rectangle.left;
+                if (xVisible && yVisible && rWidth > 0 && rHeight > 0) {
+                    visibleIndexes.push(i);
+                    VisibilityTester.sendVisibilityEvent(element);
+                    var identifier = this.getElementIdentifier(element);
+                    if (identifier) {
+                        this.cnameToTrackingState[identifier] = TrackingState.REPORTED;
+                    }
+                }
+            }
+            for (var i = visibleIndexes.length - 1; i >= 0; i--) {
+                this.trackedElements.splice(visibleIndexes[i], 1);
+            }
+        };
+        VisibilityTester.sendVisibilityEvent = function (element, cnameOverride) {
+            var event = new eventLogging.LoggableEvent("elementVisible");
+            eventLogging.addElementInfoToEventDetail(event, element, cnameOverride);
+            var boundingRectangle = element.getBoundingClientRect();
+            event.elementCoordinate = {
+                x: boundingRectangle.top + window.pageYOffset,
+                y: boundingRectangle.left + window.pageXOffset
+            };
+            eventLogging.queueEvent(event);
+        };
+        ;
+        VisibilityTester.DEFAULT_INTERVAL = 1000;
+        return VisibilityTester;
+    }());
+    exports.VisibilityTester = VisibilityTester;
+});
+
+//# sourceMappingURL=visibility-tester.js.map

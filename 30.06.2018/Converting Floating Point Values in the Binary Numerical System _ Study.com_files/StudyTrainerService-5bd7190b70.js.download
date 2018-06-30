@@ -1,0 +1,371 @@
+(function () {
+	"use strict";
+	
+	function init(angular, moment, $) {
+		/**
+		 * CRUD Service for Study Trainer Schedules.
+		 *
+		 * @param $rootScope
+		 * @param $http
+		 * @param $q
+		 * @param assets
+		 * @param httpPostParamsAsFormConfig
+		 * @constructor
+		 */
+		function StudyTrainerService($rootScope, $http, $q, assets, httpPostParamsAsFormConfig) {
+			this.$rootScope = $rootScope;
+			this.$http = $http;
+			this.$q = $q;
+			this.assets = assets;
+			this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+
+			this.plan = {};
+			this.hours = [];
+			this.days = [];
+
+			for (var h = 0; h < this.NUM_HOURS_IN_DAY; h++) {
+				var hour = moment().hour(h);
+				this.hours.push({
+					'display': hour.format('hA'),
+					'value': hour.format('H')
+				});
+			}
+
+			for (var i = 0; i < this.NUM_DAYS_IN_WEEK; i++) {
+				var day = moment().day(i);
+				this.days.push({
+					'display': day.format('dddd'),
+					'value': day.format('d')
+				});
+			}
+		}
+
+		StudyTrainerService.prototype.SCHEDULE_HOUR_KEY = 'H';
+		StudyTrainerService.prototype.SCHEDULE_DAY_KEY = 'ddd';
+		StudyTrainerService.prototype.BACKEND_DATE_FORMAT = "MMM D, YYYY h:mm:ss A";
+		StudyTrainerService.prototype.NUM_DAYS_IN_WEEK = 7;
+		StudyTrainerService.prototype.NUM_HOURS_IN_DAY = 24;
+
+		StudyTrainerService.prototype.getCourse = function (id) {
+			return this.assets.getAssets('course', id,
+			 ["title", "uri", "lessonCount_i", "leafCount_i", "imageUriSmall_s", "creditEligible", "certificateEligible", "academyAssetId"]);
+		};
+		
+
+		/**
+		 * Get the current Study Schedule in the form of a promise.
+		 * @returns {promise}
+		 */
+		StudyTrainerService.prototype.getSchedule = function (courseId) {
+			if (!this.schedulePromise) {
+				var today = new Date();
+				var jan = new Date(today.getFullYear(), 0, 1);
+				var jul = new Date(today.getFullYear(), 6, 1);
+				var timezoneOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+				var url = "/member/study-plan/get-study-plan.ajax?offset=" + (-1 * timezoneOffset);
+				if (courseId) {
+					url = url + "&courseId=" + courseId;
+				}
+
+				this.schedulePromise = this.$http.get(url).then(function (response) {
+					this._parseSchedule(response['data']);
+					return this.plan;
+				}.bind(this));
+			}
+
+			return this.schedulePromise;
+		};
+		
+		StudyTrainerService.prototype.getStudyPlansForDashboard = function() {
+			return this.$http.get("/member/study-plan/get-study-plan-list.ajax?filterCompleted=true");
+		};
+		
+		StudyTrainerService.prototype.getStudyPlansForGoalsTab = function() {
+			return this.$http.get("/member/study-plan/get-study-plan-list.ajax");
+		};
+		
+		StudyTrainerService.prototype.getEnrolledCoursesWithoutGoals = function() {
+			return this.$http.get("/member/study-plan/get-enrolled-courses-without-plans.ajax");
+		};
+		
+		/**
+		 * Creates or updates the users's current schedule
+		 * @param input
+		 * @returns {*}
+		 */
+		StudyTrainerService.prototype.saveSchedule = function (input) {
+			var data = this._parseScheduleInput(input);
+
+			return this.$http.post('/member/study-plan/save-study-plan.ajax', data,
+			 { //hack - the server expects form encoded, but ng only sends json. Need custom transformer to support old for test duration :(
+				 headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+				 transformRequest: function (data) {return $.param(data);}
+			 })
+			 .success($.proxy(function () {
+				 this.schedulePromise = null;
+				 return this.getSchedule();
+			 }, this));
+		};
+
+		/**
+		 * Deletes the current schedule
+		 * @param planId
+		 * @returns {*}
+		 */
+		StudyTrainerService.prototype.deleteSchedule = function (planId) {
+			return this.$http.post("/member/study-plan/delete-study-plan.ajax", {studyPlanId: planId}, this.httpPostParamsAsFormConfig)
+			.then(this.clearSchedule.bind(this))
+		};
+
+		StudyTrainerService.prototype.clearSchedule = function() {
+			this.schedulePromise = null;
+			this.plan = {
+				course: null,
+				endDate: null,
+				template: null,
+				schedules: null
+			};
+			this._broadcastSchedule();
+		};
+		
+		StudyTrainerService.prototype._parseScheduleInput = function (input) {
+			var data = {};
+			var studyPlan = {
+				endDate: moment(input['endDate']).format(this.BACKEND_DATE_FORMAT),
+				emailsEnabled: !input['optOut'],
+				dateCreated: moment(input['dateCreated']).format(this.BACKEND_DATE_FORMAT),
+				studyPlanType: input['studyPlanType']
+			};
+
+			if (input['courseId']) {
+				studyPlan['courseId'] = input['courseId'];
+			}
+			else if (input['courseResourceId']) {
+				data['siteResourceId'] = input['courseResourceId'];
+			}
+			else {
+				studyPlan['title'] = input['title'];
+			}
+
+			data['timezone'] = input['timezone'];
+			data['schedule'] = JSON.stringify(this._convertScheduleForBackend(input['schedule']));
+			data['studyPlanId'] = this.plan.id;
+			data['studyPlan'] = JSON.stringify(studyPlan);
+
+			return data;
+		};
+
+		StudyTrainerService.prototype._broadcastSchedule = function () {
+			this.$rootScope.$broadcast("StudyTrainerService.scheduleUpdate", this.plan);
+		};
+
+		StudyTrainerService.prototype._parseSchedule = function (data) {
+			if (data) {
+				if (data['timezoneList']) {
+					this.timezoneList = data['timezoneList'];
+				}
+
+				this.plan = this._parsePlan(data);
+				this.plan.hasSchedule = !!this.plan.schedules && Object.keys(this.plan.schedules).length > 0;
+
+				if (!this.plan.hasSchedule) {
+					this.plan['nextStudyTime'] = null;
+					this.plan['nextStudyTimeDuration'] = null;
+				}
+
+				if (data['studyplan'] && data['studyplan']['studyPlanPeriodList']) {
+					angular.forEach(data['studyplan']['studyPlanPeriodList'], $.proxy(function (period) {
+						this.plan.template = this._addPeriodToSchedule(period, this.plan.template);
+					}, this));
+				}
+			}
+
+			this._broadcastSchedule();
+		};
+
+		StudyTrainerService.prototype._parsePlan = function (data) {
+			var plan = {};
+			var planData = data['studyplan'];
+
+			plan['hoursTilEndOfNextSession'] = 7 * 24 + 1;
+			plan.timezone = data['timezone'];
+			plan.goalState = data['goalState'];
+
+			if (planData) {
+				if (planData['courseId']) {
+					// Course Data
+					plan.course = {};
+					plan.course.previewImageUrl = planData['coursePreviewImageUri'];
+					plan.course.id = planData['courseId'];
+					plan.course.uri = planData['courseUri'];
+					plan.course.title = planData['courseTitle'];
+
+					plan.title = null;
+				}
+
+				if (planData['title']) {
+					plan.title = planData['title'];
+
+					plan.course = null;
+				}
+
+				// Timing Data
+				plan.totalMinutesForCourse = planData['courseTotalMinutes'];
+				plan.totalMinutesCompletedForCourse = planData['courseTotalMinutesCompleted'];
+				plan.totalMinutes = planData['studyPlanTotalMinutes'];
+				plan.minutesRemaining = planData['studyPlanTotalMinutesRemaining'];
+				plan.minutesPerWeek = planData['studyWeekTotalMinutes'];
+
+				// User Data
+				plan.endDate = moment(planData['endDate'], this.BACKEND_DATE_FORMAT);
+				plan.dateCreated = moment(planData['dateCreated'], this.BACKEND_DATE_FORMAT);
+				plan.memberId = planData['memberId'];
+				plan.id = planData['studyPlanId'];
+
+				// User's Schedule
+				if (planData['fullStudyPlanPeriodList']) {
+					var startOfCurrentWeek = moment().startOf('week');
+					plan.schedules = {};
+
+					angular.forEach(planData['fullStudyPlanPeriodList'], $.proxy(function (period) {
+						// Start of the week this period is in
+						var startOfWeekMoment = moment(period['startTime'], this.BACKEND_DATE_FORMAT).startOf('week');
+						// The distance from the current week, 0 indexed (as a string)
+						var weekKey = startOfWeekMoment.diff(startOfCurrentWeek, 'weeks') + "";
+
+						plan.schedules[weekKey] = this._addPeriodToSchedule(period, plan.schedules[weekKey], plan);
+					}, this));
+				}
+			}
+
+			return this.checkStatus(plan);
+		};
+
+		StudyTrainerService.prototype.checkStatus = function (plan) {
+			if (!plan) {
+				plan = this.plan;
+			}
+
+			var hasSchedule = !!plan.schedules;
+
+			if (hasSchedule) {
+				var minutesLeftInCourse = plan.totalMinutesForCourse - plan.totalMinutesCompletedForCourse;
+				// It's before the end date and they have a personal goal or minutes left in the course
+				plan.inProgress = moment().isBefore(plan.endDate) && (!!plan.title || (!!plan.course && minutesLeftInCourse > 0));
+
+				if (plan.course) {
+					if (plan.inProgress) {
+						if (minutesLeftInCourse > plan.minutesRemaining) {
+							plan.status = 'behind';
+						}
+						else if (minutesLeftInCourse < plan.minutesRemaining * 0.9) {
+							plan.status = 'ahead';
+						}
+						else {
+							plan.status = 'ontime';
+						}
+					}
+					else {
+						if (minutesLeftInCourse <= 0) {
+							plan.isComplete = 'yes';
+							plan.status = 'ahead';
+						}
+						else {
+							plan.isComplete = 'no';
+							plan.status = 'behind';
+						}
+					}
+				}
+				else {
+					plan.isComplete = null;
+				}
+			}
+
+			return plan;
+		};
+
+		StudyTrainerService.prototype.setComplete = function (completeStatus) {
+			this.plan.isComplete = completeStatus;
+			this._broadcastSchedule();
+		};
+
+		StudyTrainerService.prototype._addPeriodToSchedule = function (period, schedule, plan) {
+			if (!schedule) {
+				schedule = {};
+			}
+
+			var startMoment = moment(period['startTime'], this.BACKEND_DATE_FORMAT);
+			var dayKey = startMoment.format(this.SCHEDULE_DAY_KEY);
+			var hourKey = startMoment.format(this.SCHEDULE_HOUR_KEY);
+			var duration = period['durationMinutes'] / 60;
+			var agenda = null;
+
+			if (!schedule[dayKey]) {
+				schedule[dayKey] = {};
+			}
+
+			if (period['studyTaskList'] && period['studyTaskList'].length > 0) {
+				agenda = period['studyTaskList'];
+			}
+
+			var isPassed = startMoment.isBefore(moment());
+
+			schedule[dayKey][hourKey] = {
+				start: startMoment,
+				agenda: agenda,
+				showAnyways: (plan && plan.title),
+				isPassed: isPassed,
+				duration: {
+					value: duration,
+					display: moment(startMoment).add(period['durationMinutes'], 'minutes').format('hA')
+				}
+			};
+
+			var timeTilEndOfEvent = moment(startMoment).minutes(0).add(duration, 'hours').diff(moment(), 'hours');
+
+			if (plan && timeTilEndOfEvent >= 0 && timeTilEndOfEvent < plan['hoursTilEndOfNextSession'] &&
+			 ((schedule[dayKey][hourKey]['agenda'] && schedule[dayKey][hourKey]['agenda'].length > 0) || schedule[dayKey][hourKey]['showAnyways'])) {
+				schedule[dayKey][hourKey]['isNext'] = true;
+				schedule[dayKey][hourKey]['isPassed'] = false;
+
+				plan['hoursTilEndOfNextSession'] = timeTilEndOfEvent;
+				plan['nextStudyTime'] = startMoment;
+				plan['nextStudyTimeDuration'] = schedule[dayKey][hourKey]['duration']['value'];
+
+				if (schedule[dayKey][hourKey]['agenda']) {
+					for (var i = schedule[dayKey][hourKey]['agenda'].length; i > 0; i--) {
+						var lesson = schedule[dayKey][hourKey]['agenda'][i - 1];
+						if (!lesson['examPassed']) {
+							plan.nextLesson = angular.copy(lesson);
+						}
+					}
+				}
+			}
+
+			return schedule;
+		};
+
+		StudyTrainerService.prototype._convertScheduleForBackend = function (schedule) {
+			var periodList = [];
+
+			angular.forEach(schedule, function (periods, day) {
+				angular.forEach(periods, function (period, hour) {
+					var startTime = moment().day(day).hour(hour);
+
+					periodList.push({
+						startTime: startTime.format(this.BACKEND_DATE_FORMAT),
+						durationMinutes: period.duration.value * 60
+					});
+				}, this);
+			}, this);
+
+			return periodList;
+		};
+
+		StudyTrainerService['$inject'] = ['$rootScope', '$http', '$q', 'academyAssetService', "httpPostParamsAsFormConfig"];
+
+		angular.module("studyTrainer.service", ['academy-asset.service', "study.http-post-params-as-form"]).service('StudyTrainerService', StudyTrainerService);
+	}
+	
+	define(['angularDependency', 'moment', 'jquery', 'angular/util/academy-asset.service', "angular/util/http-post-params-as-form.provider"], init);
+})();

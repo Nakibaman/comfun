@@ -1,0 +1,270 @@
+(function() {
+    "use strict";
+
+    /**
+     *
+     * @param angular
+     * @param {
+     * {card: {
+     *  validateExpiry: function(int, int): boolean,
+     *  validateCardNumber: function(string): boolean,
+     *  validateCVC: function(int): boolean,
+     *  cardType: function(string): string}
+     * }} Stripe
+     */
+    function init(angular, Stripe, remspect) {
+        var module = angular.module("registrationForm.directives", ["registrationForm.constants"]);
+
+        /**
+         * directive for validating that the email is available on blur
+         */
+        module.directive('remEmailAvailable', ["$http", "registrationForm.errorStrings", function ($http, errors) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, elm, attrs, ctrl) {
+
+                    var available;
+                    function lookupEmail(email, manualSlide) {
+                        // ajax call to check that email is available
+                        $http({
+                            url: '/member/existing-email.ajax',
+                            method: 'GET',
+                            params: {email: email},
+                            dataType: "json"
+                        }).
+                          success(function (data) {
+                              available = !(data.emailExists);
+                              ctrl.$setValidity(errors.ERROR_EMAIL_AVAILABLE, available);
+                              ctrl.$dirty = !available;
+
+
+                              if(manualSlide && !ctrl.$error.emailAvailable){
+                              	if (scope.forms) {
+												scope.pageForward(scope.forms.emailForm);
+											} else if (scope.regFormModalCtrl){
+           									scope.regFormModalCtrl.preselectProductAndPageForward(ctrl);
+											}
+                              }
+                        }).
+                          error(function () {
+                              // if check fails, set it to valid so the form is not blocked
+                              ctrl.$setValidity(errors.ERROR_EMAIL_AVAILABLE, true);
+                                });
+                    }
+
+                    // bind to focus
+                    elm.bind("focus", function () {
+                        lookupEmail(elm.val());
+                    });
+
+                    // bind to blur
+                    elm.bind("blur", function (e, manualSlide) {
+                        lookupEmail(elm.val(), manualSlide);
+                    });
+
+                    // bind to enter key
+                    elm.bind("keypress", function (e) {
+
+                        //enter key doesnt fire fast enough and errors dont show up before field slides soooooooooooo
+                        if (e.keyCode === 13) { // enter key
+                            e.preventDefault();
+                            e.stopPropagation();
+
+                            //trigger doesnt pass args properly
+                            elm.triggerHandler("blur", [true]);
+                        }
+                    });
+                }
+            };
+        }]);
+
+        /**
+         * directive for validating that the field value matches the value of the other field specified as an attribute
+         */
+        module.directive('remMatchField', ["registrationForm.errorStrings", function (errors) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+
+                    var otherField = attributes.remMatchField;
+
+                    function validateFieldsMatch(value) {
+
+                        var otherValue;
+                        if (scope.registrationData) {
+                        	otherValue = scope.registrationData[otherField];
+								} else if (scope.regFormModalCtrl) {
+                        	otherValue = scope.regFormModalCtrl.registrationData[otherField];
+								}
+                        var valid = (value === otherValue);
+
+                        controller.$setValidity(errors.ERROR_MATCH_FIELD, valid);
+                    }
+
+                    // watch this element for changes
+                    scope.$watch(attributes.ngModel, function (value) {
+                        validateFieldsMatch(value);
+                    });
+
+                    // watch rem match field (other field) for changes
+                    var otherModel =  attributes.ngModel.split('.')[0] + '.' + otherField;
+                    scope.$watch(otherModel, function (value) {
+                        validateFieldsMatch(element.val());
+                    });
+                }
+            };
+        }]);
+
+        module.directive('remExpDate', ["registrationForm.errorStrings", function (errors) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+
+                    // watch this element for changes
+                    scope.$watch(attributes.ngModel, function (value) {
+
+                        var valid = true;
+                        
+                        if (scope.regFormModalCtrl){
+									var expMonth = scope.regFormModalForm.expMonth;
+									var expYear = scope.regFormModalForm.expYear;
+								} else {
+									var expMonth = scope.forms.billingInfoForm.expMonth;
+									var expYear = scope.forms.billingInfoForm.expYear;
+								}
+
+                        // Only check if values have been set for both fields
+							   if(remspect.isVariation("authorizeNet", "both") || remspect.isControl("authorizeNet")){
+									if (expMonth && expYear && expMonth.$dirty && expYear.$dirty && expMonth.$modelValue && expYear.$modelValue) {
+										 valid = Stripe.card.validateExpiry(expMonth.$modelValue, expYear.$modelValue);
+									}
+	
+									if (expMonth && expYear) {
+										expMonth.$setValidity(errors.ERROR_INVALID_EXPIRATION_DATE, valid);
+										expYear.$setValidity(errors.ERROR_INVALID_EXPIRATION_DATE, valid);
+									}
+								}
+						  });
+                }
+            };
+        }]);
+
+        module.directive('remValidCreditCardNumber', ["registrationForm.errorStrings", function (errors) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+	
+						 if(remspect.isVariation("authorizeNet", "both") || remspect.isControl("authorizeNet")) {
+							 // watch this element for changes
+							 scope.$watch(attributes.ngModel, function(value) {
+								 var valid = Stripe.card.validateCardNumber(value);
+								 controller.$setValidity(errors.ERROR_INVALID_CREDIT_CARD_NUMBER, valid);
+							 });
+						 }
+                }
+            };
+        }]);
+
+        module.directive('remValidCvcNumber', ["registrationForm.errorStrings", function (errors) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+						 if(remspect.isVariation("authorizeNet", "both") || remspect.isControl("authorizeNet")) {
+							 // watch this element for changes
+							 scope.$watch(attributes.ngModel, function(value) {
+								 var valid = Stripe.card.validateCVC(value);
+								 controller.$setValidity(errors.ERROR_INVALID_CVC_NUMBER, valid);
+							 });
+						 }
+                }
+            };
+        }]);
+
+        module.directive('remSetCreditCardType', function () {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+						 if(remspect.isVariation("authorizeNet", "both") || remspect.isControl("authorizeNet")) {
+							 // watch this element for changes
+							 scope.$watch(attributes.ngModel, function(value) {
+								
+								 if (value) {
+									 scope.creditCardType = "card-" + Stripe.card.cardType(value).toLowerCase().replace(/\s/g, '');
+								 }
+								 else {
+									 scope.creditCardType = "card-unknown";
+								 }
+							 });
+						 }
+                }
+            };
+        });
+
+        module.directive('remValidPhoneNumber', ["registrationForm.errorStrings", "registrationForm.validationRegexes", function (errors, regexes) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+
+                    // watch this element for changes
+                    scope.$watch(attributes.ngModel, function (value) {
+
+                        // If there is no value we want to let this evaluate to true (it may be an optional field)
+                        var valid = true;
+                        if (value) {
+                            var valueLength = value.replace(/\D/g, '').length;
+                            valid = regexes.BASIC_PHONE_REGEX.test(value) && valueLength >= 10 && valueLength <= 16;
+                        }
+
+                        controller.$setValidity(errors.ERROR_INVALID_PHONE_NUMBER, valid);
+                    });
+                }
+            };
+        }]);
+
+        module.directive('remValidZipCode', ["registrationForm.errorStrings", "registrationForm.validationRegexes", function (errors, regexes) {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+
+                    // watch this element for changes
+                    scope.$watch(attributes.ngModel, function (value) {
+
+                        // If there is no value we want to let this evaluate to true (it may be an optional field)
+                        var valid = true;
+                        if (value) {
+                            valid = regexes.ZIPCODE_REGEX.test(value);
+                        }
+
+                        controller.$setValidity(errors.ERROR_INVALID_ZIPCODE, valid);
+                    });
+                }
+            };
+        }]);
+
+        module.directive('remClearErrorOnChange', function () {
+            return {
+                restrict: 'A',
+                require: 'ngModel',
+                link: function (scope, element, attributes, controller) {
+                    // watch this element for changes
+                    scope.$watch(attributes.ngModel, function () {
+                        var listOfErrorToClear = attributes.remClearErrorOnChange.split(',');
+                        for (var i in listOfErrorToClear) {
+                            controller.$setValidity(listOfErrorToClear[i].trim(), true);
+                        }
+                    });
+                }
+            };
+        });
+	 }
+
+    define(['angularDependency', 'lib/stripe', 'util/remspect', 'registration/angularFormConstants'], init);
+})();

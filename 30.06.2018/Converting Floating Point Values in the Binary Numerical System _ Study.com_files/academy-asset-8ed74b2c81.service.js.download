@@ -1,0 +1,266 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+define(["require", "exports", "angularDependency", "lib/underscore", "util/javaFormEncode", "angularDependency", "angular/util/storage", "lib/underscore", "util/javaFormEncode"], function (require, exports, angular, _, javaFormEncode) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("academy-asset.service", ["storage"]);
+    var AcademyType;
+    (function (AcademyType) {
+        AcademyType["LESSON"] = "LESSON";
+        AcademyType["TOPIC"] = "TOPIC";
+        AcademyType["COURSE"] = "COURSE";
+        AcademyType["PROGRAM"] = "PROGRAM";
+        AcademyType["SCHOOL"] = "SCHOOL";
+        AcademyType["TEXT"] = "TEXT";
+        AcademyType["ARTICLE"] = "ARTICLE";
+        AcademyType["PHRASE"] = "PHRASE";
+        AcademyType["CATEGORY"] = "CATEGORY";
+        AcademyType["QUALIFICATION"] = "QUALIFICATION";
+        AcademyType["COMPANY"] = "COMPANY";
+        AcademyType["CAMPUS"] = "CAMPUS";
+        AcademyType["VIDEO"] = "VIDEO";
+        AcademyType["WORD_GROUP"] = "WORD_GROUP";
+        AcademyType["STATE"] = "STATE";
+        AcademyType["WORD"] = "WORD";
+        AcademyType["SITE_RESOURCE_CATEGORY"] = "SITE_RESOURCE_CATEGORY";
+        AcademyType["COMPANY_PROGRAM"] = "COMPANY_PROGRAM";
+        AcademyType["SCHOLARSHIP"] = "SCHOLARSHIP";
+        AcademyType["PPC"] = "PPC";
+        AcademyType["EGUIDE"] = "EGUIDE";
+        AcademyType["CONTENT_MARKETING"] = "CONTENT_MARKETING";
+        AcademyType["ACADEMY_CLASSIFICATION"] = "ACADEMY_CLASSIFICATION";
+        AcademyType["REMARKETING"] = "REMARKETING";
+        AcademyType["CONTENT_MARKETING_EPA"] = "CONTENT_MARKETING_EPA";
+        AcademyType["ACADEMY_DIRECTORY"] = "ACADEMY_DIRECTORY";
+        AcademyType["ACADEMY_ARTICLE"] = "ACADEMY_ARTICLE";
+        AcademyType["ASSESSMENT"] = "ASSESSMENT";
+        AcademyType["PLAYLIST"] = "PLAYLIST";
+        AcademyType["FLASHCARD_SET"] = "FLASHCARD_SET";
+    })(AcademyType = exports.AcademyType || (exports.AcademyType = {}));
+    var PointsTo;
+    (function (PointsTo) {
+        PointsTo["ACADEMY_ASSET"] = "ACADEMY_ASSET";
+        PointsTo["ACADEMY_CLASSIFICATION"] = "ACADEMY_CLASSIFICATION";
+    })(PointsTo = exports.PointsTo || (exports.PointsTo = {}));
+    var AcademyAsset = (function () {
+        function AcademyAsset() {
+        }
+        return AcademyAsset;
+    }());
+    exports.AcademyAsset = AcademyAsset;
+    var Lesson = (function (_super) {
+        __extends(Lesson, _super);
+        function Lesson() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        Lesson.getSmallVideoPreviewImageUrl = function (lesson) {
+            if (!lesson.videoPreviewImageUri) {
+                return null;
+            }
+            if (lesson.videoPreviewImageUri.indexOf(Lesson.SMALL_VIDEOPREVIEW_PREFIX) !== 0) {
+                return "/cimages/videopreview/videopreview-small/" + lesson.videoPreviewImageUri;
+            }
+            return lesson.videoPreviewImageUri;
+        };
+        Lesson.SMALL_VIDEOPREVIEW_PREFIX = "/cimages/videopreview/videopreview-small/";
+        return Lesson;
+    }(AcademyAsset));
+    exports.Lesson = Lesson;
+    var Topic = (function (_super) {
+        __extends(Topic, _super);
+        function Topic() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        Topic.getCourseBreadcrumb = function (topic) {
+            if (topic.breadcrumbs && topic.breadcrumbs.length > 1) {
+                return topic.breadcrumbs[1];
+            }
+            return null;
+        };
+        return Topic;
+    }(AcademyAsset));
+    exports.Topic = Topic;
+    var Course = (function (_super) {
+        __extends(Course, _super);
+        function Course() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return Course;
+    }(AcademyAsset));
+    exports.Course = Course;
+    var CourseProject = (function () {
+        function CourseProject() {
+        }
+        return CourseProject;
+    }());
+    exports.CourseProject = CourseProject;
+    var AcademyAssetService = (function () {
+        function AcademyAssetService($http, $q, cache) {
+            this.$http = $http;
+            this.$q = $q;
+            this._cache = cache;
+        }
+        AcademyAssetService.prototype.getCourseProjects = function (courseId) {
+            return this.$http.get("/academy/api/course-project.ajax", { params: { courseId: courseId } }).then(function (response) {
+                return response.data;
+            });
+        };
+        AcademyAssetService.prototype.getAssets = function (assetType, assetIdentifiers, fields, courseAcademyAssetId) {
+            var ajaxFields = angular.copy(fields);
+            var identifierArray;
+            if (!angular.isArray(assetIdentifiers)) {
+                identifierArray = [assetIdentifiers];
+            }
+            else {
+                identifierArray = assetIdentifiers;
+            }
+            if (ajaxFields.indexOf("academyAssetId") === -1) {
+                ajaxFields.push("academyAssetId");
+            }
+            if (ajaxFields.indexOf("resourceName") === -1) {
+                ajaxFields.push("resourceName");
+            }
+            if (ajaxFields.indexOf("courseAcademyAssetId_i") === -1) {
+                ajaxFields.push("courseAcademyAssetId_i");
+            }
+            if (ajaxFields.indexOf("uri") === -1) {
+                ajaxFields.push("uri");
+            }
+            if (ajaxFields.indexOf("virtual") === -1) {
+                ajaxFields.push("virtual");
+            }
+            var cacheDeferred = this.$q.defer();
+            var cachePromise = cacheDeferred.promise;
+            var misses = this._checkCache(identifierArray, courseAcademyAssetId, fields, cacheDeferred);
+            var ret = {};
+            var missLoadPromise = this._loadCacheMisses(assetType, misses, courseAcademyAssetId, ajaxFields);
+            var cacheLoadedPromise = cachePromise.then(_.bind(function (data) {
+                var foundInCache = {};
+                var toQuery = [];
+                angular.forEach(identifierArray, function (value) {
+                    if (misses.indexOf(value) === -1) {
+                        if (data[value]) {
+                            foundInCache[value] = data[value];
+                        }
+                        else {
+                            toQuery.push(value);
+                        }
+                    }
+                });
+                if (toQuery.length === 0) {
+                    return this.$q.when(foundInCache);
+                }
+                else {
+                    var cacheLoadPromise = this._loadCacheMisses(assetType, toQuery, courseAcademyAssetId, ajaxFields);
+                    return cacheLoadPromise.then(function (ajaxData) {
+                        angular.extend(foundInCache, ajaxData);
+                        return foundInCache;
+                    });
+                }
+            }, this));
+            return this.$q.all([missLoadPromise, cacheLoadedPromise]).then(function (data) {
+                _.each(data, function (datum) {
+                    angular.extend(ret, datum);
+                });
+                if (!angular.isArray(assetIdentifiers)) {
+                    return ret[identifierArray[0]];
+                }
+                return ret;
+            });
+        };
+        ;
+        AcademyAssetService.prototype._createCacheKey = function (assetIdentifier, courseAcademyAssetId) {
+            return "asset" + assetIdentifier + (courseAcademyAssetId ? "v" + courseAcademyAssetId : "");
+        };
+        ;
+        AcademyAssetService.prototype._loadCacheMisses = function (type, assetIdentifiers, courseAcademyAssetId, fields) {
+            if (assetIdentifiers.length === 0) {
+                return this.$q.when({});
+            }
+            var parameters = {};
+            var cacheLoadDeferred = this.$q.defer();
+            var cacheKeys = _.map(assetIdentifiers, function (identifier) {
+                return this._createCacheKey(identifier, courseAcademyAssetId);
+            }, this);
+            this._cache.setAll(cacheKeys, cacheLoadDeferred.promise, 60);
+            parameters.fields = fields;
+            parameters.assetType = type;
+            parameters[isNaN(assetIdentifiers[0]) ? 'resourceName' : 'assetId'] = assetIdentifiers;
+            if (courseAcademyAssetId) {
+                parameters['courseId'] = courseAcademyAssetId;
+            }
+            return this.$http.post("/academy/api/asset.ajax", parameters, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                transformRequest: javaFormEncode
+            })
+                .then(_.bind(function (response) {
+                var data = response.data;
+                var ret = {};
+                var cacheRet = {};
+                angular.forEach(data, _.bind(function (asset) {
+                    if (asset !== null) {
+                        var assetKey = isNaN(assetIdentifiers[0]) ? asset['resourceName'] : asset['academyAssetId'];
+                        ret[assetKey] = asset;
+                        cacheRet[this._createCacheKey(assetKey, courseAcademyAssetId)] = asset;
+                    }
+                }, this));
+                cacheLoadDeferred.resolve(cacheRet);
+                return ret;
+            }, this));
+        };
+        ;
+        AcademyAssetService.prototype._checkCache = function (assetIdentifiers, courseAcademyAssetId, fields, deferred) {
+            var promises = {};
+            var misses = [];
+            for (var i = 0; i < assetIdentifiers.length; i++) {
+                var identifier = assetIdentifiers[i];
+                var key = this._createCacheKey(identifier, courseAcademyAssetId);
+                var promise = this._cache.get(key);
+                if (promise) {
+                    promises[identifier] = promise;
+                }
+                else {
+                    misses.push(identifier);
+                }
+            }
+            var superPromise = this.$q.all(promises);
+            superPromise.then(function (data) {
+                var toRemove = [];
+                angular.forEach(data, function (value, key) {
+                    if (value === null) {
+                        toRemove.push(key);
+                        return;
+                    }
+                    for (var j = 0; j < fields.length; j++) {
+                        if (!value.hasOwnProperty(fields[j].replace(/_[i|s]$/, ""))) {
+                            toRemove.push(key);
+                            return;
+                        }
+                    }
+                });
+                for (var k = 0; k < toRemove.length; k++) {
+                    delete data[toRemove[k]];
+                }
+                deferred.resolve(data);
+            });
+            return misses;
+        };
+        ;
+        AcademyAssetService.MODULE_NAME = "academy-asset.service";
+        AcademyAssetService.SERVICE_NAME = "academyAssetService";
+        AcademyAssetService.$inject = ["$http", "$q", "MemoizedCache"];
+        return AcademyAssetService;
+    }());
+    exports.AcademyAssetService = AcademyAssetService;
+    module.service("academyAssetService", AcademyAssetService);
+});
+
+//# sourceMappingURL=academy-asset.service.js.map

@@ -1,0 +1,84 @@
+(function () {
+	'use strict';
+	
+	define([
+		"angularDependency",
+		"jquery",
+		"lib/toastr",
+		"support/report-an-error.service",
+		"remspect/remspect.directive"
+	], init);
+	
+	function init(angular, $, toastr) {
+		var module = angular.module("reportAnErrorOverlay", ["report-an-error.service", "study.remspect-directives"]);
+		
+		ReportAnErrorOverlayController.$inject = ["ReportAnErrorService", "$timeout"];
+		
+		function ReportAnErrorOverlayController(reportAnErrorService, $timeout) {
+			this.$timeout = $timeout;
+			this.showReportAnErrorOverlay = false;
+			this.reportAnErrorService = reportAnErrorService;
+			this.submitState = 'EDITING';
+			
+			this.errorOptions = [
+				{ name: "Select type of error", key: 'HINT', disabled: true },
+			 	{ name: "Typo", key: 'TYPO' },
+				{ name: "Incorrect answer", key: 'INCORRECT_ANSWER' },
+				{ name: "Incorrect or outdated information", key: 'INCORRECT_OR_OUTDATED_INFO' },
+				{ name: "Broken image or video", key: 'BROKEN_IMAGE_OR_VIDEO' },
+				{ name: "Other (please specify)", key: 'OTHER' }
+				];
+		}
+		
+		ReportAnErrorOverlayController.prototype.showOverlay = function() {
+			this._resetOverlay();
+			this.showReportAnErrorOverlay = true;
+			$("#" + this.modalId).modal('show');
+		};
+		
+		ReportAnErrorOverlayController.prototype.hideOverlay = function() {
+			this.showReportAnErrorOverlay = false;
+			$("#" + this.modalId).modal('hide');
+		};
+		
+		ReportAnErrorOverlayController.prototype._resetOverlay = function() {
+			this.submitState = 'EDITING';
+			this.selectedErrorType = this.errorOptions[0].key;
+			this.errorDetail = "";
+		};
+			
+		ReportAnErrorOverlayController.prototype.submitErrorDetails = function() {
+			this.submitState = 'SUBMITTING';
+			var selectedError = this.errorOptions.filter(function(option) { return option.key == this.selectedErrorType }.bind(this))[0];
+			if (this.errorLocation == 'PLACEMENT_TEST_QUESTION') {
+				this.itemId = this.itemId || 0;
+			} else if (this.errorLocation == 'FLASHCARD_SET') {
+				this.itemId = $("div.unseenCards > :last").attr('data-card-id');
+			}
+			this.reportAnErrorService.submitReport(selectedError.key, this.errorDetail, this.errorLocation, this.itemId, this.courseId)
+			.finally(function(response) {
+				// don't bother displaying an error message if there is one, they are already unhappy
+				this.submitState = 'SUBMITTED';
+			}.bind(this))
+		};
+		
+		module.directive("reportAnErrorOverlay", function() {
+			return {
+				restrict: "E",
+				scope: {
+					courseId: "@",
+					errorLocation: "@",
+					itemId: "@",
+					modalId: "@",
+					extra: "@"
+				},
+				templateUrl: '/templates/support/report-an-error-overlay.tpl',
+				bindToController: true,
+				controllerAs: "reportAnErrorOverlayController",
+				controller: ReportAnErrorOverlayController
+			};
+		});
+		
+		return module;
+	}
+})();

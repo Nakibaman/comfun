@@ -1,0 +1,33 @@
+define(["require", "exports", "angularDependency", "angularDependency", "classroom/teacher/classroom/classroom-modal.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("google-no-classrooms-cta.directive", ["classroom-modal.service"]);
+    var GoogleNoClassroomsCtaController = (function () {
+        function GoogleNoClassroomsCtaController(classroomModalService) {
+            this.classroomModalService = classroomModalService;
+            this.classroomModalService.initGoogleLoginService();
+        }
+        GoogleNoClassroomsCtaController.prototype.openCreateClassroomModal = function () {
+            this.classroomModalService.openCreateOrUpdateClassroomModal();
+        };
+        GoogleNoClassroomsCtaController.prototype.openImportClassroomModal = function () {
+            this.classroomModalService.openImportGoogleClassroomModal();
+        };
+        GoogleNoClassroomsCtaController.$inject = ["classroomModalService"];
+        return GoogleNoClassroomsCtaController;
+    }());
+    module.directive("googleNoClassroomsCta", function () {
+        return {
+            restrict: "E",
+            scope: {
+                "hideAssignmentSteps": "@?"
+            },
+            templateUrl: "/templates/classrooms/teacher/classroom/google-no-classrooms-cta.tpl",
+            controller: GoogleNoClassroomsCtaController,
+            controllerAs: "googleNoClassroomsCtrl",
+            bindToController: true
+        };
+    });
+});
+
+//# sourceMappingURL=google-no-classrooms-cta.directive.js.map

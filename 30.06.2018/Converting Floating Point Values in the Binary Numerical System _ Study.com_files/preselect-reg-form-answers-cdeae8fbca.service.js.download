@@ -1,0 +1,57 @@
+define(["require", "exports", "angularDependency", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("preselect-reg-form-answers.service", []);
+    var PreselectRegFormAnswersService = (function () {
+        function PreselectRegFormAnswersService() {
+            this.subjectsTaught = [];
+        }
+        PreselectRegFormAnswersService.prototype.getPreselectedRegistrationData = function () {
+            var data = {};
+            data.subjectsTaught = this.subjectsTaught;
+            data.gradeLevelTaught = this.gradeLevel;
+            return data;
+        };
+        PreselectRegFormAnswersService.prototype.setGradeLevel = function (value) {
+            for (var _i = 0, _a = PreselectRegFormAnswersService.GRADE_LEVEL_OPTION_DATA; _i < _a.length; _i++) {
+                var grade = _a[_i];
+                if (grade.value === value) {
+                    this.gradeLevel = grade;
+                    return;
+                }
+            }
+            this.gradeLevel = null;
+        };
+        PreselectRegFormAnswersService.prototype.setSubject = function (value) {
+            for (var _i = 0, _a = PreselectRegFormAnswersService.SUBJECT_OPTION_DATA; _i < _a.length; _i++) {
+                var subject = _a[_i];
+                if (subject.displayName === value) {
+                    this.subjectsTaught = [value];
+                    return;
+                }
+            }
+            this.subjectsTaught = [];
+        };
+        PreselectRegFormAnswersService.SUBJECT_OPTION_DATA = [
+            { "displayName": "Math", "cname": "math" },
+            { "displayName": "Science", "cname": "science" },
+            { "displayName": "English / ELA", "cname": "english" },
+            { "displayName": "History / Social Studies", "cname": "history" },
+            { "displayName": "Foreign Language", "cname": "foreign-language" },
+            { "displayName": "Art / Music", "cname": "art-music" },
+            { "displayName": "Other", "cname": "other" }
+        ];
+        PreselectRegFormAnswersService.GRADE_LEVEL_OPTION_DATA = [
+            { "value": "elementary", "displayName": "Elementary School" },
+            { "value": "middle", "displayName": "Middle School" },
+            { "value": "high", "displayName": "High School" },
+            { "value": "college", "displayName": "College" },
+            { "value": "other", "displayName": "Other" }
+        ];
+        PreselectRegFormAnswersService.$inject = [];
+        return PreselectRegFormAnswersService;
+    }());
+    module.service("PreselectRegFormAnswersService", PreselectRegFormAnswersService);
+});
+
+//# sourceMappingURL=preselect-reg-form-answers.service.js.map

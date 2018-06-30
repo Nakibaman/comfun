@@ -1,0 +1,139 @@
+define(["require", "exports", "angularDependency", "jquery", "lib/moment", "angularDependency", "jquery", "lib/jquery/cookie", "lib/moment", "logging/visible/track-visible.directive"], function (require, exports, angular, $, moment) {
+    "use strict";
+    exports.__esModule = true;
+    var announcements = angular.module("announcements.directive", ["track-visible.directive"]);
+    var AnnouncementsController = (function () {
+        function AnnouncementsController($http, $element) {
+            this.DISPLAY_LIMIT = 3;
+            this.announcements = [];
+            this.errorText = "";
+            this.isLoading = false;
+            this.$http = $http;
+            this.announcements = [];
+            this.overlay = $element.find('.modal');
+            if (window.localStorage) {
+                this.unreadCount = window.localStorage.getItem(AnnouncementsController.STORAGE_KEY_COUNT);
+            }
+            this.checkAnnouncements();
+        }
+        AnnouncementsController.prototype.checkAnnouncements = function () {
+            var storageDate = $.cookie(AnnouncementsController.STORAGE_KEY_DATE);
+            if (this.unreadCount === null || storageDate === null || !storageDate ||
+                moment(storageDate).add(AnnouncementsController.WAIT_TIME_MINUTES, 'minutes').isBefore(moment())) {
+                this.getAllAnnouncements(false);
+            }
+        };
+        ;
+        AnnouncementsController.prototype.seeAll = function () {
+            this.getAllAnnouncements(false);
+            this.overlay.modal();
+        };
+        ;
+        AnnouncementsController.prototype.showList = function () {
+            this.getAllAnnouncements(true);
+        };
+        ;
+        AnnouncementsController.prototype.readAllAnnouncements = function () {
+            var updateList = [];
+            for (var _i = 0, _a = this.announcements; _i < _a.length; _i++) {
+                var announcement = _a[_i];
+                if (!announcement.dateRead) {
+                    announcement.dateRead = moment().format(AnnouncementsController.MOMENT_FORMAT);
+                    updateList.push(announcement);
+                }
+            }
+            this.$http.post(AnnouncementsController.UPDATE_URL, updateList).then(function () {
+                this.unreadCount = AnnouncementsController._countUnreadAnnouncements(this.announcements);
+                window.localStorage.setItem(this.STORAGE_KEY_COUNT, this.unreadCount);
+            }.bind(this));
+        };
+        ;
+        AnnouncementsController.prototype.readAnnouncement = function (announcement) {
+            announcement.dateRead = moment().format(AnnouncementsController.MOMENT_FORMAT);
+            this.$http.post(AnnouncementsController.UPDATE_URL, [announcement]).then(function () {
+                this.unreadCount = AnnouncementsController._countUnreadAnnouncements(this.announcements);
+                window.localStorage.setItem(this.STORAGE_KEY_COUNT, this.unreadCount);
+            }.bind(this));
+        };
+        ;
+        AnnouncementsController.prototype.deleteAnnouncement = function (announcement) {
+            announcement.status = 'DELETED';
+            this.$http.post(AnnouncementsController.UPDATE_URL, [announcement]).then(function () {
+                this.getAllAnnouncements(false);
+            }.bind(this));
+        };
+        ;
+        AnnouncementsController.prototype.getAllAnnouncements = function (markAllRead) {
+            this.isLoading = true;
+            this.errorText = "";
+            this.$http.get(AnnouncementsController.GET_URL).then(function (response) {
+                if (response['data']) {
+                    this.announcements = response['data']['announcements'];
+                    if (markAllRead) {
+                        this.readAllAnnouncements();
+                    }
+                    else {
+                        this.unreadCount = AnnouncementsController._countUnreadAnnouncements(this.announcements);
+                    }
+                    if (window.localStorage) {
+                        window.localStorage.setItem(this.STORAGE_KEY_COUNT, this.unreadCount);
+                    }
+                    var cookieExpiresString = moment().add(this.WAIT_TIME_MINUTES, 'minutes').toDate().toUTCString();
+                    document.cookie = this.STORAGE_KEY_DATE + '=' + moment().format() + '; expires=' + cookieExpiresString + '; path=/';
+                }
+                else {
+                    this.errorText = this.DEFAULT_ERROR_TEXT;
+                }
+                this.isLoading = false;
+            }.bind(this), function (response) {
+                this.errorText = response['data'] || this.DEFAULT_ERROR_TEXT;
+                this.isLoading = false;
+            }.bind(this));
+        };
+        ;
+        AnnouncementsController._countUnreadAnnouncements = function (announcements) {
+            var count = 0;
+            for (var _i = 0, announcements_1 = announcements; _i < announcements_1.length; _i++) {
+                var announcement = announcements_1[_i];
+                if (!announcement.dateRead) {
+                    count++;
+                }
+            }
+            return count;
+        };
+        ;
+        AnnouncementsController.DEFAULT_ERROR_TEXT = "Oops! Something went wrong.";
+        AnnouncementsController.GET_URL = "/academy/announce/get-member-announce-list.ajax";
+        AnnouncementsController.MOMENT_FORMAT = "MMM D, YYYY h:mm:ss A";
+        AnnouncementsController.STORAGE_KEY_COUNT = "announcements-count";
+        AnnouncementsController.STORAGE_KEY_DATE = "announcements-date";
+        AnnouncementsController.UPDATE_URL = "/academy/announce/update-member-announce-list.ajax";
+        AnnouncementsController.WAIT_TIME_MINUTES = 60;
+        AnnouncementsController.$inject = ['$http', '$element'];
+        return AnnouncementsController;
+    }());
+    exports.AnnouncementsController = AnnouncementsController;
+    announcements.directive("studyAnnouncements", function () {
+        return {
+            restrict: 'E',
+            templateUrl: '/templates/global/announcements.tpl',
+            controller: AnnouncementsController,
+            controllerAs: 'adc'
+        };
+    });
+    announcements.directive("bindCompileUnsafe", ['$compile', '$sce', function ($compile, $sce) {
+            return {
+                restrict: 'A',
+                link: function (scope, element, attrs) {
+                    scope.$watch(function (scope) {
+                        return scope.$eval(attrs.bindCompileUnsafe);
+                    }, function (value) {
+                        element.html($sce.trustAsHtml(value).toString());
+                        $compile(element.contents())(scope);
+                    });
+                }
+            };
+        }]);
+});
+
+//# sourceMappingURL=announcements.directive.js.map

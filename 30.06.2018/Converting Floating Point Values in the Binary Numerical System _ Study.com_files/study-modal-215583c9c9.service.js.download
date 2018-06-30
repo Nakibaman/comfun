@@ -1,0 +1,62 @@
+define(["require", "exports", "angularDependency", "angular/modal/study-modal.directive", "lib/angular/ui-bootstrap"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var StudyModalService = (function () {
+        function StudyModalService($uibModalStack, $uibModal) {
+            this.SIZE_SMALL = "sm";
+            this.SIZE_MEDIUM = "md";
+            this.SIZE_LARGE = "lg";
+            this.$modalStack = $uibModalStack;
+            this.$uibModal = $uibModal;
+        }
+        StudyModalService.prototype.openModal = function (modalController, size, templateUrl, windowClass) {
+            var completeWindowClass = "academy-modal";
+            if (windowClass) {
+                completeWindowClass = completeWindowClass + " " + windowClass;
+            }
+            var modalOpts = {
+                bindToController: true,
+                controller: modalController,
+                controllerAs: 'modalCtrl',
+                keyboard: true,
+                size: size,
+                templateUrl: templateUrl,
+                windowClass: completeWindowClass
+            };
+            return this.$uibModal.open(modalOpts);
+        };
+        ;
+        StudyModalService.prototype.openModalByConfig = function (modalSettings) {
+            if (modalSettings.bindToController === undefined) {
+                modalSettings.bindToController = true;
+            }
+            if (modalSettings.keyboard === undefined) {
+                modalSettings.keyboard = true;
+            }
+            if (modalSettings.size === undefined) {
+                modalSettings.size = "sm";
+            }
+            var defaultWindowClass = "academy-modal";
+            if (modalSettings.windowClass === undefined) {
+                modalSettings.windowClass = defaultWindowClass;
+            }
+            else {
+                modalSettings.windowClass = modalSettings.windowClass + " " + defaultWindowClass;
+            }
+            return this.$uibModal.open(modalSettings);
+        };
+        StudyModalService.prototype.closeAllModals = function () {
+            this.$modalStack.dismissAll();
+        };
+        StudyModalService.SIZE_SMALL = "sm";
+        StudyModalService.SIZE_MEDIUM = "md";
+        StudyModalService.SIZE_LARGE = "lg";
+        StudyModalService.$inject = ["$uibModalStack", "$uibModal"];
+        return StudyModalService;
+    }());
+    exports.StudyModalService = StudyModalService;
+    var module = angular.module("study.modal", ["study.modal-directive", "ui.bootstrap"]);
+    module.service("studyModalService", StudyModalService);
+});
+
+//# sourceMappingURL=study-modal.service.js.map

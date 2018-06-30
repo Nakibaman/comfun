@@ -1,0 +1,16 @@
+define(["require", "exports", "angularDependency", "angularDependency", "academy/custom/customCourse"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    angular.module("custom-course-dropdown-trigger.directive", ["customCourse"]).directive("customCourseDropdownTrigger", ["CUSTOM_COURSE_OPEN_DROPDOWN_EVENT", function (CUSTOM_COURSE_OPEN_DROPDOWN_EVENT) {
+            return {
+                restrict: "A",
+                link: function (scope, element) {
+                    element.on("click", function () {
+                        scope.$emit(CUSTOM_COURSE_OPEN_DROPDOWN_EVENT);
+                    });
+                }
+            };
+        }]);
+});
+
+//# sourceMappingURL=custom-course-dropdown-trigger.directive.js.map

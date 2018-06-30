@@ -1,0 +1,143 @@
+define(["require", "exports", "angularDependency", "util/value-proxy", "angularDependency", "angular/util/http-post-params-as-form.provider", "util/value-pro"], function (require, exports, angular, ValueProxy) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("profile.service", ["study.http-post-params-as-form"]);
+    var ProfileService = (function () {
+        function ProfileService($http, $q, $rootScope, httpPostParamsAsFormConfig) {
+            this.hiddenLevelOfEducation = "";
+            this.instructorUserType = 'INSTRUCTOR';
+            this.levelsOfEducation = [
+                "College",
+                "High School",
+                "Adult Education",
+                "Middle School",
+                "Graduate & Post-Graduate",
+                "Elementary School",
+                "Pre-K",
+                "Professional Development"
+            ];
+            this.$http = $http;
+            this.$q = $q;
+            this.$rootScope = $rootScope;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            this.profileProxy = new ValueProxy({}, function () {
+                return this.$http.get("/member/profile/my-profile.ajax")
+                    .then(function (response) {
+                    var rawProfile = response.data;
+                    return this._extendProfileWithFeatureChecksAndExtraFields(rawProfile);
+                }.bind(this));
+            }.bind(this));
+            this.profileProxy.getValue();
+        }
+        ProfileService.prototype.updateProfile = function (profile) {
+            var defer = this.$q.defer();
+            this.$http.post("/member/profile/submit-profile.ajax", profile, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                this.profileProxy.reloadValue()
+                    .then(function () {
+                    var submitProfileHttpResponse = response.data;
+                    defer.resolve(submitProfileHttpResponse);
+                });
+            }.bind(this))["catch"](function (response) {
+                defer.reject(response);
+            });
+            return defer.promise;
+        };
+        ;
+        ProfileService.prototype.updateSmsSettings = function (smsSettings) {
+            return this.$http.post("/member/profile/update-sms-notification-setting.ajax", smsSettings, this.httpPostParamsAsFormConfig);
+        };
+        ProfileService.prototype._buildCourseDirectoryLink = function (profile) {
+            var uri = '/academy/course/index.html#';
+            var addedOne = false;
+            angular.forEach(profile.interest.academyGoalIdList, function (value) {
+                if (!addedOne) {
+                    addedOne = true;
+                }
+                else {
+                    uri = uri + '&';
+                }
+                uri = uri + 'goal=' + value;
+            });
+            angular.forEach(profile.interest.academySubjectIdList, function (value) {
+                if (!addedOne) {
+                    addedOne = true;
+                }
+                else {
+                    uri = uri + '&';
+                }
+                uri = uri + 'subject=' + value;
+            });
+            angular.forEach(profile.interest.academyLevelIdList, function (value) {
+                if (!addedOne) {
+                    addedOne = true;
+                }
+                else {
+                    uri = uri + '&';
+                }
+                uri = uri + 'level=' + value;
+            });
+            return uri;
+        };
+        ;
+        ProfileService.prototype._extendProfileWithFeatureChecksAndExtraFields = function (rawProfile) {
+            var extendedProfile = {};
+            extendedProfile.selection = {};
+            extendedProfile.selection.eduGoals = angular.copy(rawProfile.selection.eduGoals);
+            extendedProfile.selection.subjectAreas = angular.copy(rawProfile.selection.subjectAreas);
+            extendedProfile.selection.teacherGoals = angular.copy(rawProfile.selection.teacherGoals);
+            extendedProfile.selection.teachLevelOfEducation = rawProfile.selection.teachLevelOfEducation;
+            extendedProfile.courseDirectoryLink = this._buildCourseDirectoryLink(rawProfile);
+            extendedProfile.username = rawProfile.username;
+            extendedProfile.publicProfileUrl = rawProfile.publicProfileUrl;
+            extendedProfile.firstName = rawProfile.firstName;
+            extendedProfile.points = rawProfile.points;
+            extendedProfile.lastName = rawProfile.lastName;
+            extendedProfile.joinedOn = rawProfile.joinedOn;
+            extendedProfile.email = rawProfile.email;
+            if (rawProfile.planName) {
+                extendedProfile.planName = rawProfile.planName;
+            }
+            extendedProfile.planMonths = rawProfile.planMonths;
+            extendedProfile.bio = rawProfile.bio;
+            extendedProfile.institution = rawProfile.institution;
+            extendedProfile.licenseCodeInstitutionName = rawProfile.licenseCodeInstitutionName;
+            extendedProfile.userType = rawProfile.userType;
+            if (this.levelsOfEducation.indexOf(rawProfile.educationLevel) < 0) {
+                this.hiddenLevelOfEducation = rawProfile.educationLevel;
+                extendedProfile.educationLevel = rawProfile.educationLevel;
+            }
+            else {
+                extendedProfile.educationLevel = this.levelsOfEducation[this.levelsOfEducation.indexOf(rawProfile.educationLevel)];
+            }
+            extendedProfile.featureUpdateCode = extendedProfile.planName === null;
+            extendedProfile.isTeacher = rawProfile.isInstructorPersona;
+            extendedProfile.isTrialingBoomerang = rawProfile.isTrialingBoomerang;
+            extendedProfile.isBoomerang = rawProfile.isBoomerang;
+            extendedProfile.subjectAreas = angular.copy(rawProfile.interest.subjectAreas);
+            extendedProfile.eduGoals = extendedProfile.isTeacher ? [] : angular.copy(rawProfile.interest.eduGoals);
+            extendedProfile.teacherGoals = extendedProfile.isTeacher ? angular.copy(rawProfile.interest.teacherGoals) : [];
+            extendedProfile.gradeTaught = extendedProfile.selection.teachLevelOfEducation[extendedProfile.selection.teachLevelOfEducation.indexOf(rawProfile.interest.gradeTaught)];
+            extendedProfile.interest = {};
+            extendedProfile.interest.academyGoalIdList = rawProfile.interest.academyGoalIdList;
+            extendedProfile.interest.academySubjectIdList = rawProfile.interest.academySubjectIdList;
+            extendedProfile.interest.academyLevelIdList = rawProfile.interest.academyLevelIdList;
+            extendedProfile.cxDateUpgradeOffered = rawProfile.cxDateUpgradeOffered;
+            extendedProfile.cxNoUpgradeReason = rawProfile.cxNoUpgradeReason;
+            extendedProfile.cxPlannedSchool = rawProfile.cxPlannedSchool;
+            extendedProfile.allowReminderEmail = rawProfile.allowReminderEmail;
+            extendedProfile.allowSms = rawProfile.allowSms;
+            extendedProfile.phoneNumber = rawProfile.phoneNumber;
+            extendedProfile.validSmsCountry = rawProfile.validSmsCountry;
+            extendedProfile.timeZone = rawProfile.timeZone;
+            return extendedProfile;
+        };
+        ;
+        ProfileService.$inject = ["$http", "$q", "$rootScope", "httpPostParamsAsFormConfig"];
+        return ProfileService;
+    }());
+    exports.ProfileService = ProfileService;
+    module.service("profileService", ProfileService);
+});
+
+//# sourceMappingURL=profile.service.js.map

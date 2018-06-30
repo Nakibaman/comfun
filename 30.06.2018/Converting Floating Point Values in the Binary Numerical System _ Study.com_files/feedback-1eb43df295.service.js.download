@@ -1,0 +1,90 @@
+define(["require", "exports", "angularDependency", "angularDependency", "angular/util/http-post-params-as-form.provider", "lib/angular/cookie"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("feedback.service", ["ngCookies", "study.http-post-params-as-form"]);
+    var TargetUserType;
+    (function (TargetUserType) {
+        TargetUserType["ANY"] = "ANY";
+        TargetUserType["INSTRUCTOR"] = "INSTRUCTOR";
+    })(TargetUserType = exports.TargetUserType || (exports.TargetUserType = {}));
+    var FeedbackService = (function () {
+        function FeedbackService($cookies, $http, $q, httpPostParamsAsFormConfig) {
+            this.$cookies = $cookies;
+            this.$http = $http;
+            this.$q = $q;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+        }
+        FeedbackService.prototype.submitFeedback = function (feedback) {
+            return this.$http.post("/feedback/submit-feedback.ajax", feedback, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                return;
+            })["catch"](function (response) {
+                throw response.data;
+            });
+        };
+        FeedbackService.prototype.dismissFeedback = function () {
+            return this.$http.post("/feedback/dismiss-feedback.ajax", {})
+                .then(function (response) {
+                return;
+            })["catch"](function (response) {
+                throw response.data;
+            });
+        };
+        FeedbackService.prototype.getTestimonialsCached = function () {
+            var isTestingOverride = this.isTestingOverride();
+            if (window.sessionStorage && !isTestingOverride) {
+                var valueStr = window.sessionStorage.getItem(FeedbackService.TESTIMONIAL_CACHE_KEY);
+                if (valueStr) {
+                    var testimonialCache = JSON.parse(valueStr);
+                    if (testimonialCache != null && testimonialCache.date != null) {
+                        testimonialCache.date = new Date(testimonialCache.date);
+                        var millisSinceUpdate = new Date().getTime() - testimonialCache.date.getTime();
+                        var minutesSinceUpdate = millisSinceUpdate / 1000 / 60;
+                        if (minutesSinceUpdate < FeedbackService.TESTIMONIAL_CACHE_LIFE_MINUTES) {
+                            for (var _i = 0, _a = testimonialCache.testimonialList; _i < _a.length; _i++) {
+                                var testimonial = _a[_i];
+                                testimonial.date = new Date(testimonial.dateMillis);
+                            }
+                            return this.$q.when(testimonialCache.testimonialList);
+                        }
+                    }
+                }
+            }
+            return this.getTestimonials()
+                .then(function (testimonialList) {
+                if (window.sessionStorage) {
+                    var now = new Date();
+                    var cacheValue = {
+                        date: now,
+                        testimonialList: testimonialList
+                    };
+                    window.sessionStorage.setItem(FeedbackService.TESTIMONIAL_CACHE_KEY, JSON.stringify(cacheValue));
+                }
+                return testimonialList;
+            });
+        };
+        FeedbackService.prototype.getTestimonials = function () {
+            return this.$http.get("/feedback/list.ajax")
+                .then(function (response) {
+                for (var _i = 0, _a = response.data; _i < _a.length; _i++) {
+                    var testimonial = _a[_i];
+                    testimonial.date = new Date(testimonial.dateMillis);
+                }
+                return response.data;
+            })["catch"](function (response) {
+                throw "failed to read testimonial list";
+            });
+        };
+        FeedbackService.prototype.isTestingOverride = function () {
+            return this.$cookies.FeedbackFun === '#fun';
+        };
+        FeedbackService.TESTIMONIAL_CACHE_KEY = "Testimonials.value";
+        FeedbackService.TESTIMONIAL_CACHE_LIFE_MINUTES = 15;
+        FeedbackService.$inject = ["$cookies", "$http", "$q", "httpPostParamsAsFormConfig"];
+        return FeedbackService;
+    }());
+    exports.FeedbackService = FeedbackService;
+    module.service("FeedbackService", FeedbackService);
+});
+
+//# sourceMappingURL=feedback.service.js.map

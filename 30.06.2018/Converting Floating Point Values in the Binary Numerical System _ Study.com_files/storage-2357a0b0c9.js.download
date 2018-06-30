@@ -1,0 +1,126 @@
+(function () {
+   'use strict';
+
+    /**
+     * @param {function(...)} angular
+     * @param {function(...)} lscache
+     */
+    function init(angular, lscache) {
+        /**
+         * {$q} $q - ng promises
+         * @constructor
+         */
+        function MemoizedCache($q) {
+            this.$q = $q;
+
+            /**
+             * @type {Object.<promise>}
+             * @private
+             */
+            this._memoized = {};
+        }
+
+        /**
+         * @param {string} key - Key to load value for
+
+         * @return promise|null - null if no cached promise exists
+         */
+        MemoizedCache.prototype.get = function (key) {
+            var ret = this._memoized[key];
+
+            if (ret) {
+                return ret;
+            }
+
+            if (lscache) {
+                var cached = lscache.get(key);
+
+                if (cached) {
+                    return this.$q.when(cached);
+                }
+            }
+
+            return null;
+        };
+
+        /**
+         * @param {string} key - The key to store
+         * @param {promise} loadPromise - A promise that will return with the data to cache.
+         * @param {Number} [localStorageTTL=0] - If present, the promise result will be saved to local storage using lscache. TTL is in minutes.
+         */
+        MemoizedCache.prototype.set = function (key, loadPromise, localStorageTTL) {
+            var deferred = this.$q.defer();
+
+            this._memoized[key] = deferred.promise;
+            loadPromise.then(angular.bind(this, this._cacheToLocal, key, localStorageTTL, deferred), angular.bind(this, this.remove, key, deferred));
+        };
+
+        MemoizedCache.prototype.setValue = function (key, value, localStorageTTL) {
+            if (localStorageTTL && lscache) {
+                lscache.set(key, value, localStorageTTL);
+                delete this._memoized[key];
+            }
+            else {
+                this._memoized[key] = this.$q.when(value);
+            }
+        };
+
+        /**
+         * Store and memoize multiple values, such as from a batch call.
+         * @param {Array.<string>} keys - The keys to store
+         * @param {promise} loadPromise - A promise returning a hash of key -> value to store. Keys must math the keys parameter to be stored
+         * @param {Number} [localStorageTTL=0] - If present, the promise result will be saved to local storage using lscache. TTL is in minutes.
+         */
+        MemoizedCache.prototype.setAll = function (keys, loadPromise, localStorageTTL) {
+            var deferredMap = {};
+
+            for (var i = 0; i < keys.length; i++) {
+                var deferred = this.$q.defer();
+                this._memoized[keys[i]] = deferred.promise;
+                deferredMap[keys[i]] = deferred;
+            }
+
+            loadPromise.then(angular.bind(this, function (data) {
+                angular.forEach(data, function (value, key) {
+                    if (keys.indexOf(key) !== -1) {
+                        this._cacheToLocal(key, localStorageTTL, deferredMap[key], value);
+                    }
+                }, this);
+            }), function () {
+                angular.forEach(deferredMap, function (value, key) {
+                    this.remove(key, value);
+                }, this);
+            });
+        };
+
+        MemoizedCache.prototype._cacheToLocal = function (key, ttl, deferred, data) {
+            if (ttl && lscache) {
+                lscache.set(key, data, ttl);
+                delete this._memoized.key;
+            }
+
+            deferred.resolve(data);
+        };
+
+        MemoizedCache.prototype.remove = function (key, deferred) {
+            if (deferred) {
+                deferred.resolve(null);
+            }
+
+            if (lscache) {
+                lscache.remove(key);
+            }
+
+            delete this._memoized.key;
+        };
+
+        MemoizedCache.$inject = ['$q'];
+
+        var module = angular.module("storage", []);
+        module.service("MemoizedCache", MemoizedCache);
+        return module;
+    }
+
+
+    define(['angularDependency', 'lib/lscache'], init);
+})();

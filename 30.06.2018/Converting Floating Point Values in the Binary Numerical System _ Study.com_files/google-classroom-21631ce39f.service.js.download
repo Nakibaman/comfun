@@ -1,0 +1,42 @@
+define(["require", "exports", "angularDependency", "angularDependency", "angular/util/http-post-params-as-form.provider", "classroom/classroom.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("google-classroom.service", ["classroom.service", "study.http-post-params-as-form"]);
+    var GoogleClassroomService = (function () {
+        function GoogleClassroomService($http, classroomService, httpPostParamsAsFormConfigNoFunctions) {
+            this.$http = $http;
+            this.classroomService = classroomService;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfigNoFunctions;
+        }
+        GoogleClassroomService.prototype.lookupGoogleClassroomsByAuthCode = function (authCode) {
+            var config = { params: { authCode: authCode } };
+            return this.$http.get("/member/classrooms/google/get-classrooms.ajax", config)
+                .then(function (response) {
+                return response.data;
+            })["catch"](function (response) {
+                throw "An unexpected error has occurred. Try again later.";
+            });
+        };
+        GoogleClassroomService.prototype.importGoogleClassroom = function (googleClassroomId) {
+            var params = { courseId: googleClassroomId };
+            var importPromise = this.$http.post("/member/classrooms/google/import-classroom.ajax", params, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                var delayUntilAsyncInviteCreationIsProbablyDone = 5000;
+                setTimeout(function () {
+                    this.classroomService.reloadTeacherClassrooms();
+                }.bind(this), delayUntilAsyncInviteCreationIsProbablyDone);
+                return response.data;
+            }.bind(this));
+            importPromise = importPromise["catch"](function (response) {
+                throw "An unexpected error has occurred. Try again later.";
+            }.bind(this));
+            return importPromise;
+        };
+        GoogleClassroomService.$inject = ["$http", "classroomService", "httpPostParamsAsFormConfigNoFunctions"];
+        return GoogleClassroomService;
+    }());
+    exports.GoogleClassroomService = GoogleClassroomService;
+    module.service("GoogleClassroomService", GoogleClassroomService);
+});
+
+//# sourceMappingURL=google-classroom.service.js.map

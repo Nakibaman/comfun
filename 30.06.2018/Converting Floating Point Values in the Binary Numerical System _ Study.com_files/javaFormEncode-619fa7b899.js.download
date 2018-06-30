@@ -1,0 +1,42 @@
+(function () {
+    'use strict';
+
+    function init() {
+        function javaFormEncode(obj) {
+            var query = '', name, value, fullSubName, subName, subValue, innerObj, i;
+
+            for (name in obj) {
+                if (obj.hasOwnProperty(name)) {
+                    value = obj[name];
+
+                    if (value instanceof Array) {
+                        for (i = 0; i < value.length; ++i) {
+                            subValue = value[i];
+
+                            if (subValue instanceof Array || subValue instanceof Object) {
+                                throw "param " + name + " is too complex to serialize as x-www-form-urlencoded. Use JSON instead, or jquery.param";
+                            }
+
+                            query += _encodeParam(name, subValue) + '&';
+                        }
+                    }
+                    else if (value instanceof Object) {
+                        throw "param " + name + " is too complex to serialize as x-www-form-urlencoded. Use JSON instead, or jquery.param";
+                    }
+                    else if (value !== undefined && value !== null) {
+                        query += _encodeParam(name, value) + "&";
+                    }
+                }
+            }
+            return query.length ? query.substr(0, query.length - 1) : query;
+        }
+
+        function _encodeParam(name, value) {
+            return encodeURIComponent(name) + '=' + encodeURIComponent(value);
+        }
+
+        return javaFormEncode;
+    }
+
+    define([], init);
+})();

@@ -1,0 +1,123 @@
+define(["require", "exports", "angularDependency", "util/remspect", "angularDependency", "member/info/member-info.service"], function (require, exports, angular, Remspect) {
+    "use strict";
+    exports.__esModule = true;
+    var NoteCache = (function () {
+        function NoteCache() {
+            this.callbacks = [];
+            this.notesMap = {};
+        }
+        NoteCache.prototype.addChangeListener = function (callback) {
+            this.callbacks.push(callback);
+        };
+        NoteCache.prototype.setNotes = function (notes) {
+            this.clearNotes();
+            this.addNotes(notes);
+            this.notifyAll();
+        };
+        NoteCache.prototype.addNote = function (note, notify) {
+            if (notify === void 0) { notify = false; }
+            var cacheEntry = this.notesMap[note.videoOffsetFromStart];
+            if (cacheEntry) {
+                cacheEntry.push(note);
+                cacheEntry.sort(function (a, b) {
+                    return a.highlightNoteId - b.highlightNoteId;
+                });
+            }
+            else {
+                this.notesMap[note.videoOffsetFromStart] = [note];
+            }
+            if (notify) {
+                this.notifyAll();
+            }
+        };
+        NoteCache.prototype.removeNote = function (highlightNoteId, notify) {
+            var _this = this;
+            if (notify === void 0) { notify = false; }
+            Object.keys(this.notesMap).forEach(function (second) {
+                var noteBucket = _this.notesMap[second];
+                for (var i = 0; i < noteBucket.length; i++) {
+                    var cachedNote = noteBucket[i];
+                    if (highlightNoteId === cachedNote.highlightNoteId) {
+                        noteBucket.splice(i, 1);
+                        if (notify) {
+                            _this.notifyAll();
+                        }
+                        return;
+                    }
+                }
+            });
+        };
+        NoteCache.prototype.addNotes = function (notes) {
+            for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
+                var note = notes_1[_i];
+                this.addNote(note);
+            }
+        };
+        NoteCache.prototype.clearNotes = function (notify) {
+            var _this = this;
+            if (notify === void 0) { notify = false; }
+            Object.keys(this.notesMap).forEach(function (second) {
+                delete _this.notesMap[second];
+            });
+            if (notify) {
+                this.notifyAll();
+            }
+        };
+        NoteCache.prototype.notifyAll = function () {
+            for (var _i = 0, _a = this.callbacks; _i < _a.length; _i++) {
+                var callback = _a[_i];
+                callback();
+            }
+        };
+        return NoteCache;
+    }());
+    exports.NoteCache = NoteCache;
+    var module = angular.module("teacher-notes-plugin.service", ["member-info.service"]);
+    var TeacherNotesPluginService = (function () {
+        function TeacherNotesPluginService(memberInfoService) {
+            var _this = this;
+            this.notes = new NoteCache();
+            this.shouldNotify = false;
+            window.teacherNotes = this.notes;
+            this.broadcastPreInitEvent();
+            memberInfoService.memberInfoProxy.getValue()
+                .then(function (memberInfo) {
+                var isTeacher = memberInfo.accountType === "TEACHER";
+                if (!Remspect.isControl("teacherVideoNotes") && isTeacher) {
+                    _this.shouldNotify = true;
+                }
+            });
+        }
+        TeacherNotesPluginService.prototype.setNotes = function (notes) {
+            if (!this.shouldNotify) {
+                return;
+            }
+            this.notes.setNotes(notes);
+        };
+        TeacherNotesPluginService.prototype.addNote = function (note) {
+            if (!this.shouldNotify) {
+                return;
+            }
+            var notify = true;
+            this.notes.addNote(note, notify);
+        };
+        TeacherNotesPluginService.prototype.removeNote = function (highlightNoteId) {
+            if (!this.shouldNotify) {
+                return;
+            }
+            var notify = true;
+            this.notes.removeNote(highlightNoteId, notify);
+        };
+        TeacherNotesPluginService.prototype.broadcastPreInitEvent = function () {
+            var event = document.createEvent("CustomEvent");
+            event.initCustomEvent("teacherNotesPreInit", true, true, {});
+            document.body.dispatchEvent(event);
+        };
+        TeacherNotesPluginService.$inject = ["MemberInfoService"];
+        return TeacherNotesPluginService;
+    }());
+    exports.TeacherNotesPluginService = TeacherNotesPluginService;
+    module.service("TeacherNotesPluginService", TeacherNotesPluginService);
+});
+
+//# sourceMappingURL=teacher-notes-plugin.service.js.map

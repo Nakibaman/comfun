@@ -1,0 +1,29 @@
+(function (init) {
+    define(['jquery'], init);
+})(function ($) {
+    'use strict';
+
+    /**
+     * Todo paul My god this is such a stupid SEO hack? Can we please kill it?
+     * This asynchronously loads the course summary for the Chapter and Lesson pages.
+     *
+     * @param courseResourceName
+     * @constructor
+     */
+    function CourseInfo(courseResourceName) {
+        $.ajax({
+            type: "POST",
+            url: '/academy/getCourseInfo.ajax',
+            data: {
+                courseResourceName: courseResourceName
+            },
+            dataType: 'json',
+            success: function (data) {
+                $('[data-name="course"]').append(data['description']);
+                $('[data-name="courseName"]').append(data['title']);
+            }
+        });
+    }
+
+    return CourseInfo;
+});

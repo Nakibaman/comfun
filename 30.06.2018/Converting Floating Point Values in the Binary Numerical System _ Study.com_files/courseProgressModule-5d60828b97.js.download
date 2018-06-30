@@ -1,0 +1,32 @@
+(function () {
+    'use strict';
+	
+	define([
+		"angularDependency",
+		"courseProgress/generalCourseProgressController",
+		"angular/util/academy-asset.service",
+		"angular/util/storage",
+		"courseProgress/courseProgressService",
+	 "enroll/enroll-success-overlay.directive",
+	 "exam/practice-test-dropdown.directive",
+		"member/authentication/feature-check.service",
+		"participationScore/course-participation-snapshot.service",
+		"util/virtualOnClick"
+	], init);
+
+    function init(angular, controller) {
+        var module = angular.module("courseProgress", [
+			  "academy-asset.service",
+			  "courseParticipationSnapshotService",
+			  "CourseProgressService",
+			"enrollSuccessOverlay",
+			"practice-test-dropdown.directive",
+			  "storage",
+			  "study.feature-check"
+		  ]);
+        module.controller("CourseProgressController", controller);
+
+        return module;
+    }
+
+})();

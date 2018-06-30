@@ -1,0 +1,36 @@
+(function() {
+	'use strict';
+	
+	define(['angularDependency', 'angular/util/http-post-params-as-form.provider'], function(angular) {
+		ReportAnErrorService.$inject = ["$http", 'httpPostParamsAsFormConfig'];
+		
+		/**
+		 * @constructor
+		 * @param {$http} $http - ng http service
+		 */
+		function ReportAnErrorService($http, httpPostParamsAsFormConfig) {
+			this.$http = $http;
+			this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+		}
+		
+		ReportAnErrorService.prototype.submitReport = function(selectedError, userComments, errorLocation, itemId, courseId) {
+			var formData = new FormData();
+			
+			var data = {
+				userComments: userComments,
+				errorLocation: errorLocation,
+				itemId: itemId,
+				courseId: courseId,
+				selectedError: selectedError,
+				url: window.location.href
+			};
+			
+			return this.$http.post('/academy/support/submit-error.json', data, this.httpPostParamsAsFormConfig);
+		};
+		
+		var module = angular.module("report-an-error.service", ["study.http-post-params-as-form"]);
+		module.service("ReportAnErrorService", ReportAnErrorService);
+		
+		return ReportAnErrorService;
+	})
+})();

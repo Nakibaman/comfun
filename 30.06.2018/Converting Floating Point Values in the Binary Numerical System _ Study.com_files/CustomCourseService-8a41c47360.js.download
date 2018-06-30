@@ -1,0 +1,171 @@
+(function () {
+	"use strict";
+
+	function init($, angular, javaFormEncode) {
+		function CustomCourseService($http) {
+			this.$http = $http;
+		}
+
+		CustomCourseService.prototype.MAX_LESSONS = 50;
+		CustomCourseService.prototype.MIN_TITLE_LENGTH = 7;
+		CustomCourseService.prototype.ERRORS = {
+			GENERIC: "An error occurred",
+			BLANK_TITLE: "Title is blank",
+			SHORT_TITLE: "Title is too short",
+			DUPLICATE_TITLE: "There is already a course with this title",
+			INVALID: "Failed to send a valid request",
+			NOT_FOUND: "Error reaching service",
+			DENIED: "Failed to fulfill request"
+		};
+
+		CustomCourseService.prototype.POST_CONFIG = {
+			headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+			transformRequest: function (data) {return javaFormEncode(data);}
+		};
+
+		CustomCourseService.prototype.generateError = function(response) {
+			// success
+			if (response.status === 200 || response.status === 201) {
+				return null;
+			}
+
+			var message = this.ERRORS.GENERIC;
+			var errorDetail = "";
+
+			// bad request
+			if (response.status === 400) {
+				if (response.data.titleIsBlank) {
+					message = this.ERRORS.BLANK_TITLE;
+					errorDetail = "Must be at least " + this.MIN_TITLE_LENGTH + " characters long.";
+				}
+				else if (response.data.titleIsTooShort) {
+					message = this.ERRORS.SHORT_TITLE;
+					errorDetail = "Must be at least " + this.MIN_TITLE_LENGTH + " characters long.";
+				}
+				else {
+					message = this.ERRORS.INVALID;
+				}
+			}
+			// access denied
+			else if (response.status === 403 || response.status === 0) {
+				message = this.ERRORS.DENIED;
+			}
+			// not found
+			else if (response.status === 404) {
+				message = this.ERRORS.NOT_FOUND;
+			}
+			// conflict
+			else if (response.status === 409) {
+				message = this.ERRORS.DUPLICATE_TITLE;
+			}
+
+			return {
+				error: message,
+				errorDetail: errorDetail,
+				status: response.status
+			};
+		};
+
+		CustomCourseService.prototype.makeAjaxRequest = function(url, data) {
+			var promise = null;
+
+			if (data) {
+				promise = this.$http.post(url, data, this.POST_CONFIG);
+			}
+			else {
+				promise = this.$http.get(url);
+			}
+
+			return promise.then($.proxy(function (response) {
+				var error = this.generateError(response);
+
+				if (!error) {
+					return response['data'];
+				}
+				else {
+					return error;
+				}
+			}, this), $.proxy(function (response) {
+				return this.generateError(response);
+			}, this));
+		};
+
+		CustomCourseService.prototype.addLessonToTopic = function (lessonId, parentId) {
+			var requestData = {
+				lessonAcademyAssetId: lessonId,
+				parentAcademyAssetTreeId: parentId
+			};
+
+			return this.makeAjaxRequest("/academy/custom/add-lesson-to-topic.ajax", requestData);
+		};
+
+		CustomCourseService.prototype.addLessonToEmptyCourse = function (lessonId, courseId) {
+			var requestData = {
+				lessonAcademyAssetId: lessonId,
+				courseAcademyAssetTreeId: courseId
+			};
+
+			return this.makeAjaxRequest("/academy/custom/add-lesson-to-empty-course.ajax", requestData);
+		};
+
+		CustomCourseService.prototype.createTopic = function(courseId, title, sequence) {
+			var requestData = {
+				parentAcademyAssetTreeId: courseId,
+				title: title,
+				description: '',
+				sequence: sequence
+			};
+
+			return this.makeAjaxRequest("/academy/custom/create-topic.ajax", requestData);
+		};
+
+		CustomCourseService.prototype.createCourse = function(title, firstLessonId) {
+			var requestData = {
+				title: title,
+				description: ''
+			};
+
+			if (firstLessonId) {
+				requestData.firstLessonAcademyAssetId = firstLessonId;
+			}
+
+			return this.makeAjaxRequest("/academy/custom/create-course.ajax", requestData);
+		};
+
+		CustomCourseService.prototype.updateCourse = function(data) {
+			return this.makeAjaxRequest("/academy/custom/update.ajax", data);
+		};
+
+		CustomCourseService.prototype.removeItem = function(itemId, itemType) {
+			var requestData = {
+				academyAssetTreeId: itemId,
+				type: itemType
+			};
+
+			return this.makeAjaxRequest("/academy/custom/remove-item.ajax", requestData);
+		};
+
+		CustomCourseService.prototype.getCourseList = function() {
+			return this.makeAjaxRequest("/academy/custom/course-list.ajax");
+		};
+
+		CustomCourseService.prototype.getCourse = function (courseIdentifier) {
+			var requestData = {};
+			
+			if (typeof courseIdentifier === 'number') {
+				requestData['courseAcademyAssetTreeId'] = courseIdentifier;
+			}
+			else {
+				requestData['courseResourceName'] = courseIdentifier;
+			}
+			
+			return this.makeAjaxRequest("/academy/custom/get-course.ajax", requestData);
+		};
+
+		CustomCourseService['$inject'] = ['$http'];
+
+		angular.module("CustomCourse.service", []).service("CustomCourseService", CustomCourseService);
+	}
+
+	define(['jquery', 'angularDependency', 'util/javaFormEncode'], init);
+})();

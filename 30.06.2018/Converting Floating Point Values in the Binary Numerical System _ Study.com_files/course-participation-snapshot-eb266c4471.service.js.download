@@ -1,0 +1,41 @@
+(function () {
+	"use strict";
+
+	define(["angularDependency"], init);
+
+	function init(angular) {
+		
+		var deferredMap = {};
+		
+		CourseParticipationSnapshotService.$inject = ["$http", "$q"];
+		function CourseParticipationSnapshotService($http, $q) {
+			this.$http = $http;
+			this.$q = $q;
+		}
+
+		CourseParticipationSnapshotService.prototype.getCourseParticipationSnapshotPromise = function(courseAcademyAssetId) {
+			var deferred = deferredMap[courseAcademyAssetId];
+			if (!deferred) {
+				deferred = this.$q.defer();
+				deferredMap[courseAcademyAssetId] = deferred;
+				var params = {
+					academyAssetId: courseAcademyAssetId
+				};
+				this.$http.get("/member/course-participation-snapshot/list.ajax", {params: params})
+				.then(function(response) {
+					deferred.resolve(response);
+				})
+				.catch(function(error) {
+					deferred.reject(error);
+				});
+			}
+			return deferred.promise;
+		};
+		
+		var module = angular.module("courseParticipationSnapshotService", []);
+		module.service("courseParticipationSnapshotService", CourseParticipationSnapshotService);
+
+		return CourseParticipationSnapshotService;
+	}
+
+})();

@@ -1,0 +1,766 @@
+(function () {
+	"use strict";
+	
+	function init($, angular) {
+		var notesModule = angular.module("highlightNotes", ["ngAnimate", "highlight-note.service"]);
+		
+		function HighlightNotesController(elem, http, scope, highlightNoteService) {
+			this.elem = elem;
+			this.http = http;
+			this.scope = scope;
+			this.highlightNoteService = highlightNoteService;
+			this.lessonAcademyAssetId = scope.lessonId;
+			this.courseAcademyAssetId = scope.courseId;
+			
+			this.highlightableChildren = [];
+			this.notes = {};
+			
+			if (window.getSelection) {
+				this.getRange = this._getRange;
+				
+				this.highlightNoteService.loadHighlightNotes(this.courseAcademyAssetId, this.lessonAcademyAssetId)
+				.then(function (data) {
+					this.highlightableChildren = this.elem.find(" > " + this.HIGHLIGHTABLE_CHILDREN.join(", > "));
+					this.notHighlightableChildren = this.elem.find(" > *").not(this.highlightableChildren);
+					
+					scope.$watch(
+					 function watchExpression() {
+						 return this.popupText;
+					 }.bind(this),
+					 function listener(value) {
+						 this.charLimitError = value && value.length >= this.NOTE_CHAR_LIMIT;
+						 if (this.charLimitError) {
+							 this.popupText = value.substr(0, this.NOTE_CHAR_LIMIT);
+						 }
+					 }.bind(this)
+					);
+					
+					// Event listeners
+					$(document).on("mouseup", function (event) {
+						this.scope.$apply(function () {
+							this.checkHighlight(event.target, event);
+						}.bind(this));
+					}.bind(this));
+					
+					elem.on("mouseleave mouseenter", "[data-" + this.HIGHLIGHT_CLASS + "-id]", this.highlightHover.bind(this));
+					
+					this.scope.$watch(
+					 function watchExpression() {
+						 return this.popupState;
+					 }.bind(this),
+					 function listener(value) {
+						 if (value === this.EDIT_STATE) {
+							 this.elem.find("textarea").focus();
+						 }
+					 }.bind(this)
+					);
+					
+					for (var i = 0; i < data.length; i++) {
+						this.addHighlight(data[i]);
+					}
+					this.updateTranscriptNotesCount();
+				}.bind(this));
+			}
+		}
+		
+		HighlightNotesController.prototype.NOTE_CHAR_LIMIT = 1000;
+		HighlightNotesController.prototype.HIGHLIGHTABLE_CHILDREN = ["p", "ul"];
+		HighlightNotesController.prototype.HIGHLIGHT_TAG = "span";
+		HighlightNotesController.prototype.HIGHLIGHT_CLASS = "highlight";
+		HighlightNotesController.prototype.NEW_STATE = "new";
+		HighlightNotesController.prototype.VIEW_STATE = "view";
+		HighlightNotesController.prototype.EDIT_STATE = "edit";
+		
+		HighlightNotesController.prototype.highlightHover = function (event) {
+			var highlightParts = this._getAllHighlightParts(event.currentTarget);
+			
+			highlightParts.each(function () {
+				if (event.type === "mouseenter" && !$(this).hasClass("active")) {
+					$(this).addClass("active");
+				}
+				else if (event.type === "mouseleave") {
+					$(this).removeClass("active");
+				}
+			});
+		};
+		
+		HighlightNotesController.prototype.setActiveSelection = function (selection) {
+			this.activeSelection = selection;
+			this.popupText = this.activeSelection.note;
+			this.popupState = this.VIEW_STATE;
+			
+		};
+		
+		HighlightNotesController.prototype.checkHighlight = function (target) {
+			if (this.isShowingPopup && this.popupState === this.EDIT_STATE) {
+				return;
+			}
+			
+			var highlightId = parseInt(target.getAttribute("data-highlight-id"));
+			if (!!highlightId) {
+				this.isShowingPopup = true;
+				window.getSelection().removeAllRanges();
+				this.popupPosition = this._calcPopoverPositionFromHighlightParts(this._getAllHighlightParts(target));
+				this.setActiveSelection(this.notes[highlightId]);
+			}
+			else if (!this.elem.find(".highlightable-content-popup")[0].contains(target)) {
+				var range = this.getRange();
+				
+				if (range) {
+					var overlappingNote = this._doesSelectionOverlapWithOtherNotes(range);
+					
+					if (overlappingNote) {
+						this.setActiveSelection(overlappingNote);
+						var highlightParts = this.elem.find(
+						 "[data-" + this.HIGHLIGHT_CLASS + "-id=\"" + this.activeSelection.highlightNoteId + "\"]");
+						window.getSelection().removeAllRanges();
+						this.popupPosition = this._calcPopoverPositionFromHighlightParts(highlightParts);
+					}
+					else {
+						this.activeSelection = range;
+						this.popupPosition = this._calcPopoverPositionFromSelection(this.activeSelection);
+						this.popupState = this.NEW_STATE;
+					}
+					
+					this.isShowingPopup = true;
+				}
+				else if (this.isShowingPopup) {
+					this.activeSelection = null;
+					this.isShowingPopup = false;
+				}
+			}
+		};
+		
+		HighlightNotesController.prototype.saveActiveHighlight = function (noteText) {
+			this.activeSelection["note"] = noteText;
+			var highlightNoteToUpdate = this._createBackendHighlightNote(this.activeSelection);
+			
+			highlightNoteToUpdate.lessonAcademyAssetId = this.lessonAcademyAssetId;
+			highlightNoteToUpdate.courseAcademyAssetId = this.courseAcademyAssetId;
+			
+			if (this.activeSelection.highlightNoteId) {
+				this.highlightNoteService.update(highlightNoteToUpdate);
+				this.notes[highlightNoteToUpdate.highlightNoteId] = highlightNoteToUpdate;
+				this.setActiveSelection(highlightNoteToUpdate);
+			}
+			else {
+				this.removeHighlight(highlightNoteToUpdate);
+				
+				this.highlightNoteService.create(highlightNoteToUpdate).then(function (highlightNote) {
+					this.scope.$apply(function () {
+						this.addHighlight(highlightNote);
+					}.bind(this));
+					this.updateTranscriptNotesCount();
+				}.bind(this));
+			}
+		};
+		
+		HighlightNotesController.prototype.addHighlight = function (note) {
+			if (note.type == "VIDEO") {
+				return;
+			}
+			var noteId = note.highlightNoteId || "temp";
+			var startElem = $(this.highlightableChildren[note.startElementIndex]);
+			
+			if (note.startElementIndex === note.endElementIndex) {
+				this._highlightSubSection(noteId, startElem, note.startCharIndex, note.endCharIndex);
+			}
+			else {
+				this._highlightSubSection(noteId, startElem, note.startCharIndex);
+				
+				for (var elemIndex = note.startElementIndex + 1; elemIndex < note.endElementIndex; elemIndex++) {
+					this._highlightSubSection(noteId, $(this.highlightableChildren[elemIndex]), 0);
+				}
+				
+				var endElem = $(this.highlightableChildren[note.endElementIndex]);
+				this._highlightSubSection(noteId, endElem, 0, note.endCharIndex);
+			}
+			
+			if (note.highlightNoteId) {
+				this.notes[note.highlightNoteId] = note;
+				this.updateTranscriptNotesCount();
+			}
+			this.setActiveSelection(note);
+			
+			this.isShowingPopup = false;
+			window.getSelection().removeAllRanges();
+		};
+		
+		HighlightNotesController.prototype.showNewNotePopup = function () {
+			this.addHighlight(this.activeSelection);
+			this.isShowingPopup = true;
+			this.popupState = this.EDIT_STATE;
+			this.popupText = "";
+		};
+		
+		HighlightNotesController.prototype.cancelPopupEdit = function () {
+			if (this.activeSelection.highlightNoteId) {
+				this.activeSelection = this.notes[this.activeSelection.highlightNoteId];
+				this.popupState = this.VIEW_STATE;
+			}
+			else {
+				this.removeHighlight(this.activeSelection);
+				this.activeSelection = null;
+				this.popupState = false;
+				this.isShowingPopup = false;
+			}
+		};
+		
+		HighlightNotesController.prototype.removeHighlight = function (note) {
+			var noteId = note.highlightNoteId || "temp";
+			
+			for (var i = note.startElementIndex; i <= note.endElementIndex; i++) {
+				var node = this.highlightableChildren[i];
+				$(node).find("[data-highlight-id=" + noteId + "]").each(function () {
+					// this is the element here
+					this.parentNode.insertBefore(document.createTextNode(this.textContent), this);
+					this.parentNode.removeChild(this);
+				});
+			}
+			
+			this.isShowingPopup = false;
+			if (this.notes[note.highlightNoteId]) {
+				delete this.notes[note.highlightNoteId];
+				this.highlightNoteService.delete(note.highlightNoteId);
+				this.updateTranscriptNotesCount();
+			}
+		};
+		
+		HighlightNotesController.prototype._getAllHighlightParts = function (highlightNode) {
+			var highlightSegment = $(highlightNode);
+			var highlightId = highlightSegment.data(this.HIGHLIGHT_CLASS + "-id");
+			return this.elem.find("[data-" + this.HIGHLIGHT_CLASS + "-id=\"" + highlightId + "\"]");
+		};
+		
+		HighlightNotesController.prototype._calcPopoverPositionFromHighlightParts = function (highlightParts) {
+			var leftOffset = highlightParts[0].getClientRects()[0].left - this.elem[0].getClientRects()[0].left;
+			
+			var position = {
+				bottom: (this.elem.height() - (highlightParts.offset().top - this.elem.offset().top)) + "px",
+				left: leftOffset + "px"
+			};
+			
+			if (leftOffset > this.elem.width() / 2) {
+				position.left = "auto";
+				position.right = 0;
+			}
+			
+			return position;
+		};
+		
+		HighlightNotesController.prototype._calcPopoverPositionFromSelection = function (selection) {
+			return {
+				bottom: (this.elem.height() - (selection.top - this.elem.offset().top)) + "px",
+				left: (selection.left - this.elem.offset().left) + "px"
+			};
+		};
+		
+		HighlightNotesController.prototype._getTopLevelChild = function (elem, charOffset) {
+			var parents = $(elem).parents();
+			var actualOffset = charOffset;
+			var topLevelChild = null;
+			
+			angular.forEach(parents, function (parent) {
+				if (this.highlightableChildren.index(parent) > -1) {
+					topLevelChild = parent;
+				}
+				else if (this.notHighlightableChildren.index(parent) > -1) {
+					topLevelChild = parent.nextElementSibling;
+					actualOffset = 0;
+					
+					while (this.highlightableChildren.index(topLevelChild) === -1 && !!topLevelChild.nextElementSibling) {
+						topLevelChild = topLevelChild.nextElementSibling;
+					}
+				}
+			}.bind(this));
+			
+			return {
+				elem: topLevelChild,
+				char: actualOffset
+			};
+		};
+		
+		HighlightNotesController.prototype._createBackendHighlightNote = function (range) {
+			return {
+				highlightNoteId: range.highlightNoteId,
+				memberId: range.memberId,
+				lessonAcademyAssetId: range.lessonAcademyAssetId,
+				courseAcademyAssetId: range.courseAcademyAssetId,
+				startElementIndex: range.startElementIndex,
+				startCharIndex: range.startCharIndex,
+				endElementIndex: range.endElementIndex,
+				endCharIndex: range.endCharIndex,
+				highlightText: range.highlightText,
+				dateCreated: range.dateCreated,
+				status: range.status,
+				note: range.note,
+				dateNoteUpdated: range.dateNoteUpdated
+			};
+		};
+		
+		function isBetween(value, lowerBound, upperBound) {
+			return lowerBound < value && value < upperBound;
+		}
+		
+		HighlightNotesController.prototype._doesSelectionOverlapWithOtherNotes = function (selection) {
+			var overlappingNote = null;
+			
+			angular.forEach(this.notes, function (note) {
+				if (// The selection starts or ends in a middle paragraph
+				isBetween(selection.startElementIndex, note.startElementIndex, note.endElementIndex) ||
+				isBetween(selection.endElementIndex, note.startElementIndex, note.endElementIndex) ||
+				// If this note starts and ends in the same child
+				note.startElementIndex === note.endElementIndex && (
+				 // If the selection starts inside the note
+				selection.startElementIndex === note.startElementIndex &&
+				isBetween(selection.startCharIndex, note.startCharIndex - 1, note.endCharIndex + 1) ||
+				// If the selection ends inside the note
+				selection.endElementIndex === note.endElementIndex &&
+				isBetween(selection.endCharIndex, note.startCharIndex - 1, note.endCharIndex + 1)) ||
+				note.startElementIndex !== note.endElementIndex && (
+				 // If starting point is just inside the start of the note
+				selection.startElementIndex === note.startElementIndex && note.startCharIndex <= selection.startCharIndex ||
+				// If ending point is just inside the start of the note
+				selection.endElementIndex === note.startElementIndex && note.startCharIndex <= selection.endCharIndex ||
+				// If starting point is just inside the end of the note
+				selection.startElementIndex === note.endElementIndex && note.endCharIndex >= selection.startCharIndex ||
+				// If ending point is just inside the end of the note
+				selection.endElementIndex === note.endElementIndex && note.endCharIndex >= selection.endCharIndex) ||
+				// If the selection surrounds a current note
+				selection.startElementIndex < note.startElementIndex && selection.endElementIndex > note.endElementIndex ||
+				selection.startElementIndex === note.startElementIndex && selection.endElementIndex === note.endElementIndex &&
+				selection.startCharIndex < note.startCharIndex && selection.endCharIndex > note.endCharIndex ||
+				selection.startElementIndex < note.startElementIndex &&
+				selection.endElementIndex === note.endElementIndex && selection.endCharIndex > note.endCharIndex ||
+				selection.endElementIndex > note.endElementIndex &&
+				selection.startElementIndex === note.startElementIndex && selection.startCharIndex < note.startCharIndex
+				) {
+					overlappingNote = note;
+				}
+			});
+			
+			return overlappingNote;
+		};
+		
+		HighlightNotesController.prototype._highlightSubSection = function (noteId, node, startIndex, endIndex) {
+			var charCount = 0;
+			var nodeHtml = node.html();
+			var newHtml = "";
+			var isInHtmlTag = false; // When we are between < and > of an html tag
+			var isHighlighting = false; // For when we are between the start and end index
+			var isInHighlightTag = false; // When we've opened a highlight specific tag
+			
+			for (var i = 0; i < nodeHtml.length; i++) {
+				var char = nodeHtml.charAt(i);
+				
+				if (!isInHtmlTag) {
+					if (charCount === startIndex && !isInHighlightTag) {
+						newHtml += this._createHighlightOpenTag(noteId);
+						isInHighlightTag = true;
+						isHighlighting = true;
+					}
+					else if (isHighlighting && (charCount === endIndex || i === nodeHtml.length - 1)) {
+						newHtml += this._createHighlightCloseTag();
+						isInHighlightTag = false;
+						isHighlighting = false;
+					}
+				}
+				
+				if (char === "<") {
+					isInHtmlTag = true;
+					
+					if (isHighlighting) {
+						newHtml += this._createHighlightCloseTag();
+						isInHighlightTag = false;
+					}
+					newHtml += char;
+				}
+				else if (char === ">") {
+					isInHtmlTag = false;
+					newHtml += char;
+					
+					if (isHighlighting && !isInHighlightTag) {
+						newHtml += this._createHighlightOpenTag(noteId);
+						isInHighlightTag = true;
+					}
+				}
+				else {
+					if (!isInHtmlTag) {
+						charCount++;
+					}
+					newHtml += char;
+				}
+			}
+			
+			node.html(newHtml);
+		};
+		
+		HighlightNotesController.prototype._createHighlightOpenTag = function (id) {
+			return "<" + this.HIGHLIGHT_TAG + " data-" + this.HIGHLIGHT_CLASS + "-id=\"" + id + "\" class=\"" + this.HIGHLIGHT_CLASS + "\">";
+		};
+		
+		HighlightNotesController.prototype._createHighlightCloseTag = function () {
+			return "</" + this.HIGHLIGHT_TAG + ">";
+		};
+		
+		/**
+		 * For getting the selection Object for modern browsers
+		 *
+		 * @returns {Object}
+		 * @private
+		 */
+		HighlightNotesController.prototype._getRange = function () {
+			var selection = window.getSelection();
+			
+			if (!selection.toString()) {
+				return null;
+			}
+			
+			var range = selection.getRangeAt(0);
+			
+			if (range.startContainer.parentNode.nodeName == "TD") {
+				return null;
+			}
+			
+			var start = this._getTopLevelChild(range.startContainer, range.startOffset);
+			var end = this._getTopLevelChild(range.endContainer, range.endOffset);
+			
+			if (!end.elem || this.highlightableChildren.index(end.elem) === -1) {
+				end.elem = this.highlightableChildren[this.highlightableChildren.length - 1];
+				end.char = end.elem.textContent.length;
+			}
+			
+			if (!start.elem || start.elem.length === 0 || !end.elem || end.elem.length === 0) {
+				return null;
+			}
+			
+			var startIndex = this.highlightableChildren.index(start.elem);
+			var startCharIndex = this._getHighlightOffset(start.elem, range.startContainer) + start.char;
+			
+			var endIndex = this.highlightableChildren.index(end.elem);
+			var endCharIndex = this._getHighlightOffset(end.elem, range.endContainer) + end.char;
+			
+			var selectionObj = {
+				highlightText: ""
+			};
+			
+			if (startIndex > endIndex || (startIndex === endIndex && startCharIndex > endCharIndex)) {
+				selectionObj.startElementIndex = endIndex;
+				selectionObj.startCharIndex = endCharIndex;
+				selectionObj.endElementIndex = startIndex;
+				selectionObj.endCharIndex = startCharIndex;
+			}
+			else {
+				selectionObj.startElementIndex = startIndex;
+				selectionObj.startCharIndex = startCharIndex;
+				selectionObj.endElementIndex = endIndex;
+				selectionObj.endCharIndex = endCharIndex;
+			}
+			
+			selectionObj.top = $(start.elem).offset().top + range.getClientRects()[0].top - start.elem.getClientRects()[0].top;
+			selectionObj.left = range.getClientRects()[0].left;
+			selectionObj.width = range.getBoundingClientRect().width;
+			
+			for (var i = selectionObj.startElementIndex; i <= selectionObj.endElementIndex; i++) {
+				var startTextIndex = selectionObj.startElementIndex === i ? selectionObj.startCharIndex : 0;
+				if (selectionObj.endElementIndex === i) {
+					selectionObj.highlightText += this.highlightableChildren[i].textContent.substring(startTextIndex, selectionObj.endCharIndex);
+				}
+				else {
+					selectionObj.highlightText += this.highlightableChildren[i].textContent.substring(startTextIndex);
+				}
+			}
+			
+			if (selectionObj.highlightText) {
+				selectionObj.highlightText = window.escape(selectionObj.highlightText);
+				return selectionObj;
+			}
+			else {
+				return null;
+			}
+		};
+		
+		function doesNodeContainSubNode(node, subNode) {
+			var doesContain = false;
+			
+			for (var n = 0; n < node.childNodes.length; n++) {
+				var child = node.childNodes.item(n);
+				
+				if (child.hasChildNodes()) {
+					doesContain = doesContain || doesNodeContainSubNode(child, subNode);
+				}
+				
+				doesContain = doesContain || child.isEqualNode(subNode);
+			}
+			
+			return doesContain;
+		}
+		
+		HighlightNotesController.prototype._getHighlightOffset = function (edgeElem, subNode) {
+			var contents = $(edgeElem).contents();
+			var offset = 0;
+			
+			for (var i = 0; i < contents.length; i++) {
+				var content = contents[i];
+				
+				if (content.isEqualNode(subNode) && content.parentNode.isEqualNode(subNode.parentNode)) {
+					return offset;
+				}
+				else if (content.hasChildNodes() && doesNodeContainSubNode(content, subNode)) {
+					return offset + this._getHighlightOffset(content, subNode);
+				}
+				else {
+					offset += content.textContent.length;
+				}
+			}
+			
+			return 0;
+		};
+		
+		HighlightNotesController.prototype.updateTranscriptNotesCount = function () {
+			var count = Object.keys(this.notes).length;
+			var element = $(".highlightNotesTranscriptCount").show().find(".count");
+			if (count > 1) {
+				element.text("" + count + " notes");
+			}
+			else if (count > 0) {
+				element.text("1 note");
+			}
+			else {
+				element.text("No notes taken");
+			}
+		};
+		
+		notesModule.directive("highlightNotes", ["$compile", "$templateRequest", function ($compile, $templateRequest) {
+			return {
+				restrict: "A",
+				scope: {
+					extraClasses: "@",
+					lessonId: "@",
+					courseId: "@"
+				},
+				controller: ["$element", "$http", "$scope", "HighlightNoteService", HighlightNotesController],
+				controllerAs: "highlightNotes",
+				link: function (scope, element) {
+					$templateRequest("/templates/study-notes.tpl").then(function (template) {
+						var notePopoverElement = angular.element("<div>");
+						notePopoverElement.append(template);
+						$compile(notePopoverElement)(scope);
+						element.prepend(notePopoverElement.find("> .highlightable-content-popup"));
+					});
+				}
+			};
+		}]);
+		
+		VideoNotesController.$inject = ["$element", "$scope", "HighlightNoteService", "MemberInfoService"];
+		function VideoNotesController($element, $scope, highlightNoteService, memberInfoService) {
+			this.element = $(".notetaking-sidebar-lesson");
+			this.$scope = $scope;
+			this.showTeacherNotesModule = window.location.href.indexOf('#/courseInfo') === -1;
+			this.courseId = parseInt(this.element.attr("course-id"));
+			this.lessonId = parseInt(this.element.attr("lesson-id"));
+			this.highlightNoteService = highlightNoteService;
+			this.memberInfoService = memberInfoService;
+			
+			var teacherVideoNotesDataElement = $('#teacher-video-notes-data');
+			
+			// Just to make sure that users can actually use the feature.
+			var defaultMaxNumberOfTeacherVideoNotes = 100;
+			
+			if (teacherVideoNotesDataElement) {
+				try {
+					this.maximumNumberOfTeacherVideoNotes = parseInt(teacherVideoNotesDataElement.data("maximum-number-of-teacher-video-notes"));
+				}
+				catch(e) {
+					console.warn("Failed to read max video notes value");
+					this.maximumNumberOfTeacherVideoNotes = defaultMaxNumberOfTeacherVideoNotes;
+				}
+			}
+			else {
+				this.maximumNumberOfTeacherVideoNotes = defaultMaxNumberOfTeacherVideoNotes;
+			}
+			
+			var videoNotesController = this;
+			
+			this.memberInfoService.memberInfoProxy.getValue().then(function(memberInfo) {
+				this.firstName = memberInfo.firstName;
+			}.bind(this));
+			
+			this.highlightNoteService.loadHighlightNotes(this.courseId, this.lessonId).then(function (notes) {
+				var videoNotes = [];
+				for (var index in notes) {
+					var note = notes[index];
+					if ("video" === (note.type || "").toLowerCase()) {
+						videoNotes.push(note);
+					}
+				}
+				videoNotesController.notes = videoNotes;
+			}.bind(this));
+			
+			this.videoTime = 0;
+			this.holdTimestamp = false;
+			this.newNoteInput = this.element.find(".new-note textarea");
+			this._initializeWistiaEventHandlers();
+			this._initializeNoteInputEventHandlers();
+			
+			$("a[data-target='#lessonTab']").on("shown.bs.tab", function(event) {
+				videoNotesController.showTeacherNotesModule = true;
+				videoNotesController.$scope.$apply();
+			}.bind(this));
+			$("a[data-target='#courseInfoTab']").on("shown.bs.tab", function(event) {
+				videoNotesController.showTeacherNotesModule = false;
+				videoNotesController.$scope.$apply();
+			}.bind(this));
+		}
+		
+		VideoNotesController.prototype._initializeWistiaEventHandlers = function () {
+			var videoNotesController = this;
+			
+			// _wq is just "Wistia Queue" - an array with no special properties, that Wistia empties out as fast as it can.
+			window._wq = window._wq || [];
+			
+			var wistiaEventHandler = {};
+			/*
+			 This keeps the "new video note" timestamp in sync with the lesson's video.
+			 This assumes that there's only ever one video embedded on the page.
+			 It would be annoying to recreate, say, the embed ID resolution logic in the captions test.
+			 But, if it ever becomes necessary, key the event handler on the accurate embed ID instead of "_all".
+			 */
+			wistiaEventHandler["_all"] = function (video) {
+				videoNotesController.video = video;
+				video.bind("timechange", function (time) {
+					if (!videoNotesController.holdTimestamp) {
+						videoNotesController.videoTime = time;
+						videoNotesController.$scope.$apply(); // because Wistia events aren't in Angular's digest cycles
+					}
+				});
+			};
+			window._wq.push(wistiaEventHandler);
+		};
+		
+		function createEnterKeyHandler(elements, callback) {
+			if (!elements || !callback || typeof callback !== "function") {
+				return;
+			}
+			var array = Array.isArray(elements) ? elements : [elements];
+			if (array.length < 1) {
+				return;
+			}
+			var keydownEventListener = function (event) {
+				if (event.key === "Enter" && !event.shiftKey) {
+					callback.apply(this, arguments);
+				}
+			};
+			for (var index in array) {
+				var eventTarget = array[index];
+				if (typeof eventTarget.addEventListener === "function") {
+					eventTarget.addEventListener("keydown", keydownEventListener);
+				}
+			}
+		}
+		
+		VideoNotesController.prototype._initializeNoteInputEventHandlers = function () {
+			var videoNotesController = this;
+			createEnterKeyHandler(videoNotesController.newNoteInput, function (event) {
+				videoNotesController.createNewNote();
+				event.preventDefault();
+				videoNotesController.$scope.$apply(); // key events strangely don't trigger angular?  possibly it relies on not calling preventDefault()
+			});
+		};
+		
+		VideoNotesController.prototype.playAtVideoTime = function (seconds) {
+			this.video.play();
+			this.video.time(seconds);
+			this.newNoteInput.focus();
+		};
+		
+		VideoNotesController.prototype.createNewNote = function () {
+			var videoNotesController = this;
+			this.highlightNoteService.create({
+				type: "VIDEO",
+				courseAcademyAssetId: this.courseId,
+				lessonAcademyAssetId: this.lessonId,
+				videoOffsetFromStart: Math.floor(videoNotesController.videoTime),
+				note: videoNotesController.newNoteInput.val()
+			}).then(function (note) {
+				videoNotesController.notes.push(note);
+				videoNotesController.clearNewNote();
+				videoNotesController.$scope.$apply();
+			}.bind(this));
+		};
+		
+		VideoNotesController.prototype.clearNewNote = function () {
+			var videoNotesController = this;
+			videoNotesController.$scope.note.draft = "";
+			videoNotesController.holdTimestamp = false;
+			videoNotesController.newNoteInput.focus();
+		};
+		
+		VideoNotesController.prototype.updateNote = function (note, draft) {
+			this.highlightNoteService
+			.update(angular.extend(note, {
+				note: draft
+			}))
+			.then(function (updatedNote) {
+				angular.extend(note, updatedNote);
+			});
+		};
+		
+		VideoNotesController.prototype.handleKeydownOnExistingNote = function (event, note, draft) {
+			var videoNotesController = this;
+			if (event.key === "Enter" && !event.shiftKey) {
+				videoNotesController.updateNote(note, draft);
+				note.isEditing = false;
+				event.preventDefault();
+			}
+		};
+		
+		VideoNotesController.prototype.deleteNote = function (note) {
+			var videoNotesController = this;
+			this.highlightNoteService.delete(note.highlightNoteId).then(function () {
+				for (var index = 0; index < videoNotesController.notes.length; index++) {
+					if (videoNotesController.notes[index].highlightNoteId === note.highlightNoteId) {
+						videoNotesController.notes.splice(index, 1);
+						videoNotesController.$scope.$apply(); // because the timeout took us out of the digest cycle
+						break;
+					}
+				}
+			}.bind(this));
+		};
+		
+		notesModule.filter("duration", function () {
+			return function (value, truncatingFunctionName) {
+				if (typeof value !== "number") {
+					return value;
+				}
+				var truncatingFunction = Math[truncatingFunctionName] || Math.floor;
+				var truncatedValue = truncatingFunction(value);
+				var minutes = Math.floor(truncatedValue / 60);
+				var seconds = Math.floor(truncatedValue % 60);
+				return "" + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+			};
+		});
+		
+		notesModule.controller("VideoNotesController", VideoNotesController);
+		
+		notesModule.directive("notetakingLessonTip", function () {
+			return {
+				restrict: "A",
+				link: function (scope, element, attributes) {
+					if (window.localStorage) {
+						var LOCAL_STORAGE_KEY = "userHasSeenNotesTipOnLesson";
+						var userHasSeenNotesTipOnLesson = window.localStorage.getItem(LOCAL_STORAGE_KEY);
+						if (!Boolean(userHasSeenNotesTipOnLesson)) {
+							$(element).slideDown();
+						}
+						scope.setUserHasSeenNotesTipOnLesson = function (hasSeen) {
+							window.localStorage.setItem(LOCAL_STORAGE_KEY, !!hasSeen);
+						};
+					}
+				}
+			};
+		});
+	}
+	
+	define(["jquery", "angularDependency", "redesign/lesson/highlight-note.service", "member/info/member-info.service", "lib/angular/animate"], init);
+})();

@@ -1,0 +1,167 @@
+(function() {
+	'use strict';
+	
+	define(['jquery', 'angularDependency', 'lib/toastr','angular/util/http-post-params-as-form.provider'], function($, angular, toastr) {
+		AskExpertService.$inject = ["$http", "$rootScope", "$sce", 'httpPostParamsAsFormConfig'];
+		
+		/**
+		 * @constructor
+		 * @param {$http} $http - ng http service
+		 * @param {$rootScope} $rootScope - root scope
+		 * @param {$sce} $sce - ng sce service
+		 * @param httpPostParamsAsFormConfig - angular post params as form config
+		 */
+		function AskExpertService($http, $rootScope, $sce, httpPostParamsAsFormConfig) {
+			this.$http = $http;
+			this.$rootScope = $rootScope;
+			this.$sce = $sce;
+			this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+			
+			this.askAllowCount = undefined;
+			this.unviewedCountWrapper = {};
+		}
+
+		AskExpertService.prototype.getUnviewedQuestionCount = function(){
+			return this.$http.get('/member/ask/get-unviewed-question-count.ajax')
+			 .then( function(data) {
+				 this.unviewedCountWrapper.count = data.data;
+			 }.bind(this));
+		};
+
+		AskExpertService.prototype.markAsViewed = function(questionId){
+			var data = {
+				questionId: questionId
+			};
+
+			this.$http.post('/member/ask/set-question-to-viewed.ajax', data, this.httpPostParamsAsFormConfig);
+			
+			this.unviewedCountWrapper.count--;
+		};
+		
+		AskExpertService.prototype.getQuestions = function(numQuestions) {
+			var config = {params: {count: numQuestions}};
+			return this.$http.get("/member/ask/get-recent-questions.ajax", config)
+		};
+		AskExpertService.prototype.getQuestionById = function(questionId) {
+			var config = {params: {questionId: questionId}};
+			return this.$http.get("/member/ask/get-question-by-id.ajax", config)
+			 .then(function(response) {
+			 	return response.data;
+			 });
+		};
+		AskExpertService.prototype.getAllowedQuestionCount = function(){
+			return this.$http.get("/member/ask/get-allowed-question-count.ajax");
+		};
+		
+		AskExpertService.prototype.optIntoSms = function (phoneNumber){
+			var data = {
+				phoneNumber: phoneNumber,
+				allowSms: true
+			};
+			
+			return this.$http.post('/member/profile/update-sms-notification-setting.ajax', data, this.httpPostParamsAsFormConfig);
+		};
+
+		AskExpertService.prototype.askQuestion = function(question, subject, attachment, questionType) {
+			
+			var formData = new FormData();
+			formData.append("category", subject);
+			if (question && question != ""){
+				formData.append("question", question);
+			}
+			if (attachment){
+				formData.append("attachment", attachment);
+			}
+			if(questionType){
+				formData.append("questionType",questionType)
+			}
+
+			return this.$http.post("/member/ask/create-instant-answer-question.ajax", formData, {
+				headers: {
+					"Accept": "application/json",
+					"Content-Type": undefined
+				},
+				transformRequest: angular.identity
+			}).then(function(data){
+
+				//if its customer support, it doesnt eat up a question asked
+				if(subject !== "Customer Support"){
+					this.$rootScope.$broadcast("instant-answers-question-submitted");
+				}
+
+				return data
+			}.bind(this))
+			.catch(function(error){
+				toastr.error("An error occured when submitting. Please try again, or contact customer support if it continues.", 'Error', {
+					positionClass: 'toast-top-center'
+				});
+			})
+		};
+		
+		AskExpertService.prototype.getWordCountOfFile = function(attachment){
+			var formData = new FormData();
+			formData.append("attachment", attachment);
+			
+			return this.$http.post("/member/ask/word-count.ajax", formData, {
+				headers: {
+					"Accept": "application/json",
+					"Content-Type": undefined
+				},
+				transformRequest: angular.identity
+			}).then(function(response) {
+				return response
+			}.bind(this))
+		};
+		
+		AskExpertService.prototype.getRelatedLessons = function(search, subject) {
+			// convert the rich text (html) into plain text
+			var justText = $('<p/>').html(search).text().replace(/(<([^>]+)>)/ig,"");
+			var config = {params: {textSearchQuery: justText, subject: subject}};
+			return this.$http.get("/member/ask/get-related-lessons.ajax", config)
+			 .then(function(response) {
+			 	return response.data;
+			 });
+		};
+		
+		AskExpertService.prototype.rateAnswer = function(questionId, helpful) {
+			var data = {
+				questionId: questionId,
+				helpful: helpful
+			};
+			
+			return this.$http.post('/member/ask/rate-answer.ajax', data, this.httpPostParamsAsFormConfig);
+		};
+		
+		AskExpertService.prototype.saveFeedback = function(questionId, feedback) {
+			var data = {
+				questionId: questionId,
+				feedbackText: feedback
+			};
+			
+			return this.$http.post('/member/ask/give-answer-feedback.ajax', data, this.httpPostParamsAsFormConfig);
+		};
+		
+		AskExpertService.prototype.getEssayDailyCountSubmitted = function(){
+			return this.$http.get("/member/ask/get-daily-essay-count.ajax").catch(function(e){
+				var event = document.createEvent("CustomEvent");
+				event.initCustomEvent("Get daily essay count failed: ", true, true, e);
+				document.body.dispatchEvent(event);
+			})
+		};
+		
+		AskExpertService.prototype.trustHtml = function(html) {
+			return this.$sce.trustAsHtml(html);
+		};
+		
+		var module = angular.module("ask-expert.service", ["study.http-post-params-as-form"])
+		 .service("AskExpertService", AskExpertService)
+		 .filter('htmlToPlaintext', function() {
+			 return function(text) {
+				 return  text ? String(text).replace(/<[^>]+>/gm, '') : '';
+			 };
+		 }
+		);
+		
+		return AskExpertService;
+	})
+})();

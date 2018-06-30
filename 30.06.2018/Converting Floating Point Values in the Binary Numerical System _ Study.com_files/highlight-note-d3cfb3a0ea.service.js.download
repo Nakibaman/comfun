@@ -1,0 +1,191 @@
+define(["require", "exports", "angularDependency", "jquery", "lib/Q", "angularDependency", "jquery", "lib/Q", "video/teacherNotes/teacher-notes-plugin.service"], function (require, exports, angular, $, Q) {
+    "use strict";
+    exports.__esModule = true;
+    var NoteType;
+    (function (NoteType) {
+        NoteType["VIDEO"] = "VIDEO";
+    })(NoteType || (NoteType = {}));
+    var module = angular.module("highlight-note.service", ["teacher-notes-plugin.service"]);
+    var HighlightNoteService = (function () {
+        function HighlightNoteService(teacherNotesPluginService) {
+            this._notes = {};
+            this.teacherNotesPluginService = teacherNotesPluginService;
+        }
+        HighlightNoteService.prototype.create = function (highlightNote) {
+            var promise = this.makeRequest({
+                note: JSON.stringify(highlightNote)
+            }, HighlightNoteService.CREATE_URL, "Error creating highlight note");
+            promise.then(function (note) {
+                this.teacherNotesPluginService.addNote(note);
+                return note;
+            }.bind(this));
+            return promise;
+        };
+        ;
+        HighlightNoteService.prototype.update = function (highlightNote) {
+            return this.makeRequest({
+                note: JSON.stringify(highlightNote)
+            }, HighlightNoteService.UPDATE_URL, "Error creating highlight note");
+        };
+        ;
+        HighlightNoteService.prototype["delete"] = function (highlightNoteId) {
+            var promise = this.makeRequest({
+                highlightNoteId: highlightNoteId
+            }, HighlightNoteService.DELETE_URL, "Error deleting highlight note [" + highlightNoteId + "]");
+            promise.then(function () {
+                this.teacherNotesPluginService.removeNote(highlightNoteId);
+                return null;
+            }.bind(this));
+            return promise;
+        };
+        ;
+        HighlightNoteService.prototype.loadHighlightNotes = function (courseAcademyAssetId, lessonAcademyAssetId) {
+            if (!lessonAcademyAssetId) {
+                return this.loadHighlightNotesForCourse(courseAcademyAssetId);
+            }
+            else {
+                var promise = this.loadHighlightNotesForLesson(courseAcademyAssetId, lessonAcademyAssetId);
+                promise.then(function (notes) {
+                    this.teacherNotesPluginService.setNotes(notes);
+                    return notes;
+                }.bind(this));
+                return promise;
+            }
+        };
+        ;
+        HighlightNoteService.prototype.loadAllHighlightNotes = function (limit, offset) {
+            var deferred = Q.defer();
+            $.ajax({
+                method: "POST",
+                url: HighlightNoteService.GET_HIGHLIGHT_NOTES_URL,
+                data: {
+                    limit: limit,
+                    offset: offset
+                },
+                dataType: 'json',
+                success: function (data) {
+                    if (data['error']) {
+                        deferred.reject(data['error']);
+                    }
+                    else {
+                        deferred.resolve(this.parseNotesJson(data['highlightNotes']));
+                    }
+                }.bind(this),
+                error: function () {
+                    deferred.reject("ERROR");
+                }
+            });
+            return deferred.promise;
+        };
+        ;
+        HighlightNoteService.prototype.parseNotesJson = function (data) {
+            var notes = [];
+            for (var _i = 0, data_1 = data; _i < data_1.length; _i++) {
+                var note = data_1[_i];
+                var highlightText = note.highlightText;
+                if (highlightText !== undefined && highlightText !== null) {
+                    note.highlightText = decodeURI(highlightText);
+                }
+                if (note.type === NoteType.VIDEO) {
+                    notes.push(note);
+                }
+            }
+            return notes;
+        };
+        HighlightNoteService.prototype.makeRequest = function (data, url, errorMessage) {
+            var deferred = Q.defer();
+            $.ajax({
+                method: "POST",
+                url: url,
+                data: data,
+                dataType: 'json',
+                success: function (data) {
+                    if (data['error']) {
+                        deferred.reject(data['error']);
+                    }
+                    else {
+                        deferred.resolve(data);
+                    }
+                },
+                error: function () {
+                    deferred.reject(errorMessage);
+                }
+            });
+            return deferred.promise;
+        };
+        HighlightNoteService.prototype.loadHighlightNotesForCourse = function (courseAcademyAssetId) {
+            var deferred = Q.defer();
+            if (this._notes[courseAcademyAssetId]) {
+                deferred.resolve(this._notes[courseAcademyAssetId]);
+            }
+            else {
+                $.ajax({
+                    method: "POST",
+                    url: HighlightNoteService.GET_HIGHLIGHT_NOTES_COURSE_URL,
+                    data: {
+                        courseAcademyAssetId: courseAcademyAssetId
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data['error']) {
+                            deferred.reject(data['error']);
+                        }
+                        else {
+                            var parsedNotes = this.parseNotesJson(data['highlightNotes']);
+                            this._notes[courseAcademyAssetId] = parsedNotes;
+                            deferred.resolve(parsedNotes);
+                        }
+                    }.bind(this),
+                    error: function () {
+                        deferred.reject("ERROR");
+                    }
+                });
+            }
+            return deferred.promise;
+        };
+        ;
+        HighlightNoteService.prototype.loadHighlightNotesForLesson = function (courseAcademyAssetId, lessonAcademyAssetId) {
+            var deferred = Q.defer();
+            $.ajax({
+                method: "POST",
+                url: HighlightNoteService.GET_HIGHLIGHT_NOTES_LESSON_URL,
+                data: {
+                    lessonAcademyAssetId: lessonAcademyAssetId,
+                    courseAcademyAssetId: courseAcademyAssetId
+                },
+                dataType: 'json',
+                success: function (data) {
+                    if (data['error']) {
+                        deferred.reject(data['error']);
+                    }
+                    else {
+                        if (!this._notes[courseAcademyAssetId]) {
+                            this._notes[courseAcademyAssetId] = {};
+                        }
+                        var parsedNotes = this.parseNotesJson(data['highlightNotes']);
+                        this._notes[courseAcademyAssetId][lessonAcademyAssetId] = parsedNotes;
+                        deferred.resolve(parsedNotes);
+                    }
+                }.bind(this),
+                error: function () {
+                    deferred.reject("ERROR");
+                }
+            });
+            return deferred.promise;
+        };
+        ;
+        HighlightNoteService.TEACHER_VIDEO_NOTE_MAXIMUM_CHARACTERS = 180;
+        HighlightNoteService.CREATE_URL = '/member/highlight/create-highlight-note.ajax';
+        HighlightNoteService.UPDATE_URL = '/member/highlight/update-highlight-note.ajax';
+        HighlightNoteService.DELETE_URL = '/member/highlight/delete-highlight-note.ajax';
+        HighlightNoteService.GET_HIGHLIGHT_NOTES_URL = '/member/highlight/get-highlight-notes-for-member.ajax';
+        HighlightNoteService.GET_HIGHLIGHT_NOTES_COURSE_URL = '/member/highlight/get-highlight-notes-for-course.ajax';
+        HighlightNoteService.GET_HIGHLIGHT_NOTES_LESSON_URL = '/member/highlight/get-highlight-notes-for-lesson.ajax';
+        HighlightNoteService.$inject = ["TeacherNotesPluginService"];
+        return HighlightNoteService;
+    }());
+    exports.HighlightNoteService = HighlightNoteService;
+    module.service('HighlightNoteService', HighlightNoteService);
+});
+
+//# sourceMappingURL=highlight-note.service.js.map

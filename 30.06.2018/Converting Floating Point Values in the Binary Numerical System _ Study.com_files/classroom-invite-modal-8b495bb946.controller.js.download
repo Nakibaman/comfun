@@ -1,0 +1,82 @@
+define(["require", "exports", "angularDependency", "angularDependency", "classroom/classroom.service", "classroom/teacher/classroom/classroom-modal.service", "classroom/student-invite.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("classroomInviteModalController", ['classroom.service', 'classroom-modal.service', 'studentInviteService']);
+    var ClassroomInviteModalController = (function () {
+        function ClassroomInviteModalController($scope, classroom, classroomService, classroomModalService, studentInviteService, modalState, emailAddresses) {
+            this.INVITE_BY_EMAIL = "email";
+            this.INVITE_BY_CODE = "code";
+            this.SUCCESSFUL_INVITE = "success";
+            this.isSendingInvites = false;
+            this.successfulInviteCount = 0;
+            this.$scope = $scope;
+            this.classroomService = classroomService;
+            this.classroomModalService = classroomModalService;
+            this.teacherClassroomsProxy = classroomService.teacherClassroomsProxy;
+            this.studentInviteService = studentInviteService;
+            this.modalState = modalState;
+            this.emailAddresses = emailAddresses;
+            this.baseUrl = location.protocol + "//" + location.host;
+            if (classroom) {
+                this.selectedClassroom = classroom;
+            }
+            this.teacherClassroomsProxy.getValue()
+                .then(function (classrooms) {
+                if (!this.selectedClassroom) {
+                    this.selectedClassroom = classrooms[0];
+                }
+            }.bind(this));
+        }
+        ClassroomInviteModalController.prototype.sendInvites = function () {
+            this.isSendingInvites = true;
+            this.studentInviteService.inviteStudents(this.emailAddresses, this.selectedClassroom.code)
+                .then(this.handleInviteResponse.bind(this, this.selectedClassroom.code))["catch"](this.classroomModalService.handleError)["finally"](function () {
+                this.isSendingInvites = false;
+            }.bind(this));
+        };
+        ClassroomInviteModalController.prototype.handleInviteResponse = function (classroomCode, responseMessages) {
+            var successMessages = [];
+            var closeAfterDone = true;
+            this.successfulInviteCount = 0;
+            angular.forEach(responseMessages, function (responseMessage) {
+                if (this.studentInviteService.INVITE_MESSAGE_SUCCESS === responseMessage.type) {
+                    successMessages.push(responseMessage.message);
+                    this.successfulInviteCount += responseMessage.message.split(",").length;
+                }
+                else if (this.studentInviteService.INVITE_MESSAGE_WARNING === responseMessage.type) {
+                    this.classroomModalService.showWarningMessage(responseMessage.message);
+                    closeAfterDone = false;
+                }
+                else if (this.studentInviteService.INVITE_MESSAGE_ERROR === responseMessage.type) {
+                    this.classroomModalService.handleError(responseMessage.message);
+                    closeAfterDone = false;
+                }
+            }.bind(this));
+            if (successMessages.length > 0) {
+                var previousStudentCount = this.selectedClassroom.students.length;
+                var isOnDashboard = window.location.pathname.indexOf("/member/my-dashboard.html") !== -1;
+                if (previousStudentCount == 0 && isOnDashboard) {
+                    this.modalState = this.SUCCESSFUL_INVITE;
+                    closeAfterDone = false;
+                }
+                else {
+                    this.classroomModalService.showSuccessMessage(successMessages.join("<br/>"));
+                }
+                var classroomProxy = this.classroomService.getClassroomProxyByCode(classroomCode);
+                if (classroomProxy) {
+                    classroomProxy.reloadValue();
+                }
+            }
+            if (closeAfterDone) {
+                this.$scope.$close();
+            }
+        };
+        ;
+        ClassroomInviteModalController.$inject = ["$scope", "classroom", "classroomService", "classroomModalService", "studentInviteService", "modalState", "emailAddresses"];
+        return ClassroomInviteModalController;
+    }());
+    exports.ClassroomInviteModalController = ClassroomInviteModalController;
+    module.controller("ClassroomInviteModalController", ClassroomInviteModalController);
+});
+
+//# sourceMappingURL=classroom-invite-modal.controller.js.map

@@ -1,0 +1,94 @@
+(function() {
+	"use strict";
+	
+	define(['angularDependency'], init);
+	
+	function init(angular) {
+	
+		/**
+		 * @constructor
+		 * @public
+		 */
+		function RegistrationFormSettingsProvider() {
+			this._settings = {
+				successRedirectUrl: null,
+				postUrl: null,
+				productRedirectUrl: null,
+				submitButtonText: 'Submit',
+				newSubscriber: true,
+				couponCheckUrl: '/member/coupon.ajax',
+				beforeRedirect: function() {},
+				onError: function() {},
+				onSuccess: $.proxy(function(redirectUrl) {
+					this.beforeRedirect();
+					window.location.href = this._settings.successRedirectUrl || redirectUrl;
+				}, this),
+				startingPage: 1
+			};
+		}
+		
+		RegistrationFormSettingsProvider.prototype.beforeRedirect = function(callback) {
+			if (callback === null) {
+				this._settings.beforeRedirect = undefined;
+			}
+			else if (callback === undefined) {
+				this._settings.beforeRedirect && this._settings.beforeRedirect();
+			}
+			else {
+				this._settings.beforeRedirect = callback;
+			}
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.onError = function(callback) {
+			this._settings.onError = callback;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.successRedirectUrl = function(successRedirectUrl) {
+			this._settings.successRedirectUrl = successRedirectUrl;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.postUrl = function(url) {
+			this._settings.postUrl = url;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.productRedirectUrl = function(url) {
+			this._settings.productRedirectUrl = url;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.submitButtonText = function(text) {
+			this._settings.submitButtonText = text;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.newSubscriber = function(isNew) {
+			this._settings.newSubscriber = isNew;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.couponCheckUrl = function(url) {
+			this._settings.couponCheckUrl = url;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.startingPage = function(pageNumber) {
+			this._settings.startingPage = pageNumber;
+			return this;
+		};
+		
+		RegistrationFormSettingsProvider.prototype.$get = function() {
+			if (!this._settings.postUrl) {
+				throw "registrationFormSettingsProvider - Missing required configuration postUrl";
+			}
+			
+			return this._settings;
+		};
+		
+		var module = angular.module("registration-form-settings.provider", []);
+		module.provider('registrationFormSettings', RegistrationFormSettingsProvider);
+	}
+})();

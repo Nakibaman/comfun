@@ -1,0 +1,94 @@
+define(["require", "exports", "util/remspect", "angularDependency", "jquery", "lib/toastr", "studyGoals/study-goals.service", "angular/util/academy-asset.service", "member/authentication/feature-check.service", "angularDependency", "jquery", "lib/angular/ui-utils", "lib/jquery/bootstrap/datetimepicker", "lib/moment", "lib/ngMask", "lib/toastr", "member/profile/profile.service", "studyGoals/study-goals.service"], function (require, exports, Remspect, angular, $, toastr, study_goals_service_1, academyAssetService, feature_check_service_1) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("study-goal-controls.directive", ["ngMask", "study-goals.service", "ui.utils",
+        academyAssetService.AcademyAssetService.MODULE_NAME,
+        feature_check_service_1.FeatureCheckService.MODULE_NAME]);
+    var StudyGoalController = (function () {
+        function StudyGoalController($scope, $timeout, studyGoalsService, aaService, featureCheckService) {
+            this.END_DATE_FORMAT = study_goals_service_1.StudyGoalsService.END_DATE_FORMAT;
+            this.$timeout = $timeout;
+            this.studyGoalsService = studyGoalsService;
+            this.profile = studyGoalsService.profile;
+            this.isOptedOut = false;
+            var endDate = studyGoalsService.getDefaultEndDate();
+            this.selectDate(endDate);
+            featureCheckService.hasFeature(featureCheckService.FEATURE_PROCTORED_EXAM).then(function (hasFeature) {
+                this.showAssignmentAwareness = hasFeature && !Remspect.isControl("assignmentAwareness");
+            }.bind(this));
+            window.setTimeout(function () {
+                aaService.getAssets("course", this.courseAssetId, ["academyAssetId", "topics_s"]).then(function (course) {
+                    this.chapterCount = course.topics.length;
+                }.bind(this));
+                aaService.getCourseProjects(this.courseAssetId).then(function (projects) {
+                    this.assignmentCount = projects.length;
+                }.bind(this));
+            }.bind(this), 500);
+        }
+        StudyGoalController.prototype.showCalendar = function () {
+            this.studyGoalsService.showCalendar('datePickerCreateSched-' + this.uniqueId);
+        };
+        StudyGoalController.prototype.optIn = function () {
+            this.isOptedOut = false;
+            var endDate = this.studyGoalsService.getDefaultEndDate();
+            this.selectDate(endDate);
+            this.studyGoalsService.updateStudyPlan(endDate, this.courseAssetId);
+        };
+        StudyGoalController.prototype.optOut = function () {
+            this.isOptedOut = true;
+            this.endDate = null;
+            this.endDateString = "";
+            this.studyGoalsService.deleteSchedule(this.studyPlanId)["catch"](function () {
+                var errorMessage = "Failed to update";
+                toastr.error(errorMessage, "A problem occurred", {
+                    positionClass: 'toast-top-center'
+                });
+            });
+        };
+        StudyGoalController.prototype.selectDateAndSave = function (event) {
+            var endDate = this.studyGoalsService.convertDate(event.date);
+            this.endDateError = !this.studyGoalsService.isDateValid(endDate);
+            this.studyGoalsService.selectDateAndSave(event, this.courseAssetId);
+        };
+        StudyGoalController.prototype.selectDate = function (date) {
+            this.endDateError = !this.studyGoalsService.isDateValid(date);
+            this.endDate = date;
+            this.endDateString = this.endDate.format(this.END_DATE_FORMAT);
+        };
+        StudyGoalController.prototype.toggleSms = function () {
+            this.studyGoalsService.toggleSms(this.profile);
+        };
+        StudyGoalController.prototype.phoneNumberIsValid = function () {
+            return this.studyGoalsService.phoneNumberIsValid(this.profile);
+        };
+        StudyGoalController.prototype.saveSmsSettings = function () {
+            this.studyGoalsService.saveReminderSettings();
+            toastr.success("You've updated your settings.", "Success!", {
+                positionClass: 'toast-top-center'
+            });
+        };
+        StudyGoalController.prototype.goToDashboard = function () {
+            $("#" + this.uniqueId).modal("hide");
+            window.location.href = "/member/my-dashboard.html#/dashboard";
+        };
+        StudyGoalController.$inject = ["$scope", "$timeout", "studyGoalsService", academyAssetService.AcademyAssetService.SERVICE_NAME,
+            feature_check_service_1.FeatureCheckService.SERVICE_NAME];
+        return StudyGoalController;
+    }());
+    module.directive("studyGoalControls", function () {
+        var studyGoalControls = {
+            bindToController: true,
+            controller: StudyGoalController,
+            controllerAs: 'studyGoalCtrl',
+            scope: {
+                courseAssetId: "=",
+                studyPlanId: "=",
+                uniqueId: "="
+            },
+            templateUrl: "/templates/studyGoals/study-goal-controls.tpl"
+        };
+        return studyGoalControls;
+    });
+});
+
+//# sourceMappingURL=study-goal-controls.directive.js.map

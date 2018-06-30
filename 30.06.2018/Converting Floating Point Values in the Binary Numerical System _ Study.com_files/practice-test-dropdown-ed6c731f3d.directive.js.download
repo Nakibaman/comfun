@@ -1,0 +1,145 @@
+(function () {
+	'use strict';
+	
+	define(["angularDependency"], init);
+	
+	function init(angular) {
+		var module = angular.module("practice-test-dropdown.directive", []);
+		
+		PracticeTestDropdownController.$inject = [];
+		
+		function PracticeTestDropdownController() {
+			this.practiceTestDropdownSubmenu = false;
+			
+			this.practiceTestDropdownValue = null;
+			
+			this.parentPlaceholder = "AP, SAT, ACT, GMAT, etc...";
+			
+			this.practiceTestDropdownPlaceholder = this.parentPlaceholder;
+			
+			this.allPracticeTestCourses = [
+				{name: "ACT", url: "/academy/course/act.html#exam"},
+				{name: "SAT", url: "/academy/course/sat.html#exam"},
+				{name: "AP ➜", placeholder: "Select an AP Test", subMenu: [
+					{name: "AP World History", url: "/academy/course/ap-world-history.html#exam"},
+					{name: "AP European History", url: "/academy/course/ap-european-history.html#exam"},
+					{name: "AP Physics 1", url: "/academy/course/ap-physics-b.html#exam"},
+					{name: "AP Biology", url: "/academy/course/ap-biology.html#exam"},
+					{name: "AP English Literature", url: "/academy/course/ap-english-literature.html#exam"},
+					{name: "AP US Government and Politics", url: "/academy/course/ap-us-government-and-politics-exam-prep.html#exam"},
+					{name: "AP Psychology", url: "/academy/course/ap-psychology.html#exam"},
+					{name: "AP Chemistry", url: "/academy/course/ap-chemistry.html#exam"},
+					{name: "AP Statistics", url: "/academy/course/ap-statistics-exam-prep.html#exam"},
+					{name: "AP Comparative Government and Politics", url: "/academy/course/ap-comparative-government-and-politics-exam-prep.html#exam"},
+					{name: "AP Art History", url: "/academy/course/ap-art-history-exam-prep.html#exam"},
+					{name: "AP Music Theory", url: "/academy/course/ap-music-theory.html#exam"},
+					{name: "AP Human Geography", url: "/academy/course/ap-human-geography-exam-prep.html#exam"},
+					{name: "AP Physics 2", url: "/academy/course/ap-physics-2-exam-prep.html#exam"},
+					{name: "AP Microeconomics", url: "/academy/course/ap-microeconomics-exam-prep.html#exam"},
+					{name: "AP Environmental Science", url: "/academy/course/ap-environmental-science.html#exam"},
+					{name: "AP Macroeconomics", url: "/academy/course/ap-macroeconomics.html#exam"},
+					{name: "AP English Language", url: "/academy/course/ap-english-language.html#exam"},
+					{name: "AP US History", url: "/academy/course/ap-us-history.html#exam"},
+					{name: "AP Calculus AB & BC", url: "/academy/course/ap-calculus.html#exam"},
+					{name: "AP Calculus AB", url: "/academy/course/ap-calculus-ab-exam-prep.html#exam"},
+					{name: "AP Physics C - Electricity & Magnetism", url: "/academy/course/ap-physics-c-electricity-magnetism-exam-prep.html#exam"},
+					{name: "AP Calculus BC", url: "/academy/course/ap-calculus-bc-exam-prep.html"}
+				]},
+				{name: "GED", url: "/academy/course/ged-study-guide.html#exam"},
+				{name: "CLEP ➜", placeholder: "Select a CLEP Test", subMenu: [
+					{name: "CLEP Biology", url: "/academy/course/clep-biology-course.html#exam"},
+					{name: "CLEP Natural Sciences", url: "/academy/course/clep-natural-sciences-course.html#exam"},
+					{name: "CLEP Social Sciences and History", url: "/academy/course/clep-social-sciences-and-history-study-guide-test-prep.html#exam"},
+					{name: "CLEP Humanities", url: "/academy/course/clep-humanities-course.html#exam"},
+					{name: "CLEP Introductory Psychology Exam", url: "/academy/course/clep-introductory-psychology-course.html#exam"},
+					{name: "CLEP History of the United States I", url: "/academy/course/clep-history-of-the-united-states-i-study-guide-test-prep.html#exam"},
+					{name: "CLEP Chemistry", url: "/academy/course/clep-chemistry-course.html#exam"},
+					{name: "CLEP History of the United States II", url: "/academy/course/clep-history-of-the-united-states-ii-study-guide-test-prep.html#exam"},
+					{name: "CLEP American Literature", url: "/academy/course/clep-american-literature-course.html#exam"},
+					{name: "CLEP Analyzing & Interpreting Literature", url: "/academy/course/clep-analyzing-interpreting-literature-study-guide-test-prep.html#exam"},
+					{name: "CLEP American Government", url: "/academy/course/clep-american-government-course.html#exam"},
+					{name: "CLEP Introductory Sociology", url: "/academy/course/clep-introductory-sociology-study-guide-test-prep.html#exam"},
+					{name: "CLEP College Mathematics", url: "/academy/course/clep-college-mathematics-course.html#exam"},
+					{name: "CLEP College Algebra", url: "/academy/course/clep-college-algebra-course.html#exam"},
+					{name: "CLEP Human Growth and Development", url: "/academy/course/clep-human-growth-and-development-course.html#exam"},
+					{name: "CLEP Principles of Marketing", url: "/academy/course/clep-principles-of-marketing-course.html#exam"},
+					{name: "CLEP Information Systems", url: "/academy/course/clep-information-systems-and-computer-applications-course.html#exam"},
+					{name: "CLEP College Composition", url: "/academy/course/clep-college-composition-course.html#exam"},
+					{name: "CLEP Principles of Management", url: "/academy/course/clep-principles-of-management-course.html#exam"},
+					{name: "CLEP Western Civilization II", url: "/academy/course/clep-western-civilization-ii-study-guide-test-prep.html#exam"},
+					{name: "CLEP Precalculus", url: "/academy/course/clep-precalculus-course.html#exam"},
+					{name: "CLEP Financial Accounting", url: "/academy/course/clep-financial-accounting-course.html#exam"},
+					{name: "CLEP Introduction to Educational Psychology", url: "/academy/course/clep-introduction-to-educational-psychology-course.html#exam"},
+					{name: "CLEP Principles of Macroeconomics", url: "/academy/course/clep-principles-of-macroeconomics-course.html#exam"},
+					{name: "CLEP Spanish Language", url: "/academy/course/clep-spanish-language-study-guide-test-prep.html#exam"},
+					{name: "CLEP Western Civilization I", url: "/academy/course/clep-western-civilization-i-course.html#exam"},
+					{name: "CLEP Introductory Business Law", url: "/academy/course/clep-introductory-business-law-course.html#exam"},
+					{name: "CLEP Calculus", url: "/academy/course/clep-calculus-course.html#exam"},
+					{name: "CLEP English Literature", url: "/academy/course/clep-english-literature-course.html#exam"}
+				]},
+				{name: "GMAT", url: "/academy/course/gmat-test.html#exam"},
+				{name: "GRE", url: "/academy/course/gre-test.html#exam"},
+				{name: "LSAT", url: "/academy/course/lsat-test.html#exam"},
+				{name: "MCAT", url: "/academy/course/mcat-test.html#exam"},
+				{name: "Teacher Certification ➜", placeholder: "Select a Teacher Certification Test", subMenu: [
+					{name: "Praxis Exams", url: "/academy/goal/professional-licensure/teacher-certification/praxis-exams.html#exam"},
+					{name: "CSET - California Subject Examination for Teachers", url: "/academy/goal/professional-licensure/teacher-certification/cset-california-subject-examination-for-teachers.html#exam"},
+					{name: "TExES - Texas Examinations of Educator Standards", url: "/academy/goal/professional-licensure/teacher-certification/texes-texas-examinations-of-educator-standards.html#exam"},
+					{name: "NYSTCE - New York State Teacher Certification Examination", url: "/academy/goal/professional-licensure/teacher-certification/nystce-new-york-state-teacher-certification-examination.html#exam"},
+					{name: "FTCE - Florida Teacher Certification Examination", url: "/academy/goal/professional-licensure/teacher-certification/ftce-florida-teacher-certification-examination.html"},
+					{name: "ILTS - Illinois Licensure Testing System", url: "/academy/goal/professional-licensure/teacher-certification/ilts-illinois-licensure-testing-system.html#exam"},
+					{name: "MTEL - Massachusetts Test for Educator Licensure", url: "/academy/goal/professional-licensure/teacher-certification/mtel-massachusetts-test-for-educator-licensure.html#exam"},
+					{name: "MTTC - Michigan Test for Teacher Certification", url: "/academy/goal/professional-licensure/teacher-certification/mttc-michigan-test-for-teacher-certification.html#exam"},
+					{name: "NMTA - New Mexico Teacher Assessments", url: "/academy/goal/professional-licensure/teacher-certification/nmta-new-mexico-teacher-assessments.html#exam"},
+					{name: "Ohio Assessments for Educators", url: "/academy/goal/professional-licensure/teacher-certification/ohio-assessments-for-educators.html#exam"},
+					{name: "ORELA - Oregon Educator Licensure Assessments", url: "/academy/goal/professional-licensure/teacher-certification/orela-oregon-educator-licensure-assessments.html#exam"},
+					{name: "PLACE - Program for Licensing Assessments for Colorado Educators", url: "/academy/goal/professional-licensure/teacher-certification/place-program-for-licensing-assessments-for-colorado-educators.html#exam"},
+					{name: "AEPA - Arizona Educator Proficiency Assessments", url: "/academy/goal/professional-licensure/teacher-certification/aepa-arizona-educator-proficiency-assessments.html#exam"},
+					{name: "GACE - Georgia Assessments for Certification of Educators", url: "/academy/goal/professional-licensure/teacher-certification/gace-georgia-assessments-for-certification-of-educators.html#exam"},
+					{name: "WEST - Washington Educator Skills Test", url: "/academy/goal/professional-licensure/teacher-certification/west-washington-educator-skills-test.html#exam"},
+					{name: "CEOE - Certification Examinations for Oklahoma Educators", url: "/academy/goal/professional-licensure/teacher-certification/ceoe-certification-examinations-for-oklahoma-educators.html#exam"},
+					{name: "MoGEA - Missouri General Education Assessments", url: "/academy/goal/professional-licensure/teacher-certification/mogea-missouri-general-education-assessments.html#exam"},
+					{name: "MTLE - Minnesota Teacher Licensure Examinations", url: "/academy/course/mtle-basic-skills-practice-study-guide.html#exam"},
+					{name: "Wisconsin Teacher Certification Examinations", url: "/academy/course/wisconsin-foundations-of-reading-practice-study-guide.html#exam"},
+					{name: "NES Exams- National Evaluation Series", url: "/academy/goal/professional-licensure/teacher-certification/nes-exams-national-evaluation-series.html#exam"}
+				]}
+			];
+			
+			this.practiceTestCourses = this.allPracticeTestCourses;
+			
+		}
+		
+		PracticeTestDropdownController.prototype.handlePracticeTestDropdownChange = function() {
+			if (this.practiceTestDropdownValue.url) {
+				window.location.href = this.practiceTestDropdownValue.url;
+			}
+			else if (this.practiceTestDropdownValue.subMenu) {
+				this.practiceTestDropdownPlaceholder = this.practiceTestDropdownValue.placeholder;
+				this.practiceTestCourses = this.practiceTestDropdownValue.subMenu;
+				this.practiceTestDropdownSubmenu = true;
+			}
+		};
+		
+		PracticeTestDropdownController.prototype.goToParent = function() {
+			this.practiceTestDropdownPlaceholder = this.parentPlaceholder;
+			this.practiceTestCourses = this.allPracticeTestCourses;
+			this.practiceTestDropdownValue = null;
+			this.practiceTestDropdownSubmenu = false;
+		};
+		
+		
+		module.directive("practiceTestDropdown", function() {
+			return {
+				restrict: "E",
+				scope: {
+				},
+				templateUrl: '/templates/exam/practice-test-dropdown.tpl',
+				bindToController: true,
+				controllerAs: "practiceTestDropdownController",
+				controller: PracticeTestDropdownController
+			};
+		});
+		
+		return module;
+	}
+})();

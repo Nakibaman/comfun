@@ -1,0 +1,53 @@
+define(["require", "exports", "angularDependency", "angularDependency", "classroom/teacher/assignments/create/assignment-creation-modal.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var AssignmentCreationLinkController = (function () {
+        function AssignmentCreationLinkController($scope, assignmentCreationModalService) {
+            this.hideLinkText = false;
+            this.$scope = $scope;
+            this.assignmentCreationModalService = assignmentCreationModalService;
+        }
+        AssignmentCreationLinkController.prototype.openModal = function () {
+            var assignmentCreationInput = {
+                contentType: this.contentType,
+                resourcePreviewUri: this.resourcePreviewUri,
+                resourceTitle: this.resourceTitle,
+                resourceType: this.resourceType,
+                resourceUri: this.resourceUri,
+                academyAssetId: this.academyAssetId,
+                courseAssetId: this.courseAssetId,
+                allowEmptyCourseId: false
+            };
+            this.assignmentCreationModalService.openAssignmentModal(assignmentCreationInput);
+        };
+        AssignmentCreationLinkController.$inject = ["$scope", "AssignmentCreationModalService"];
+        return AssignmentCreationLinkController;
+    }());
+    var module = angular.module("assignment-creation-link.directive", ["assignment-creation-modal.service"]);
+    module.directive("assignmentCreationLink", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/teacher/assignments/create/assignment-creation-link.tpl",
+            scope: {
+                cssClass: '@',
+                cname: '@',
+                linkText: '@?',
+                hideLinkText: '@?',
+                testid: '@',
+                contentType: '@',
+                hideIcon: '@?',
+                resourceType: '@',
+                resourceTitle: '@',
+                resourcePreviewUri: '@',
+                academyAssetId: '=?',
+                courseAssetId: '=?',
+                resourceUri: '@?'
+            },
+            bindToController: true,
+            controller: AssignmentCreationLinkController,
+            controllerAs: "linkCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=assignment-creation-link.directive.js.map

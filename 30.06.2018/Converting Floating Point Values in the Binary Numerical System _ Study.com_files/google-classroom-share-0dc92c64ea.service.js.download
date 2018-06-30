@@ -1,0 +1,47 @@
+define(["require", "exports", "angular/util/http-post-params-as-form.provider", "classroom/assignment.service", "lib/toastr", "angular/util/http-post-params-as-form.provider", "classroom/assignment.service", "lib/toastr"], function (require, exports, http_post_params_as_form_provider_1, assignment_service_1, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var GoogleClassroomShareService = (function () {
+        function GoogleClassroomShareService() {
+        }
+        GoogleClassroomShareService.isConfigValid = function (config) {
+            if (!config.assignmentId || !config.classroomCode) {
+                return false;
+            }
+            return true;
+        };
+        GoogleClassroomShareService.navigateWindowToGoogleClassroom = function (window, config) {
+            var googleShareLink = GoogleClassroomShareService.createLink(config);
+            window.location.href = googleShareLink;
+        };
+        GoogleClassroomShareService.createLink = function (config) {
+            if (!this.isConfigValid(config)) {
+                throw "Invalid config for creating google classroom share link";
+            }
+            var assignmentShareLink = assignment_service_1.AssignmentService.createAssignmentShareLink(config.classroomCode, config.assignmentId);
+            var params = {
+                body: config.message,
+                title: config.title,
+                url: assignmentShareLink
+            };
+            var serializer = new http_post_params_as_form_provider_1.StudyHttpParamSerializerJQLike();
+            var queryString = serializer.serializeLikeJQuery(params);
+            return GoogleClassroomShareService.SHARE_URL + queryString;
+        };
+        GoogleClassroomShareService.openBlankWindow = function () {
+            return window.open("", "_blank");
+        };
+        GoogleClassroomShareService.closeWindowAndShowErrorMessage = function (window) {
+            window.close();
+            GoogleClassroomShareService.showErrorMessage();
+        };
+        GoogleClassroomShareService.showErrorMessage = function () {
+            toastr.error("A problem occurred while share to Google Classroom. Please try again.");
+        };
+        GoogleClassroomShareService.SHARE_URL = "https://classroom.google.com/share?";
+        return GoogleClassroomShareService;
+    }());
+    exports.GoogleClassroomShareService = GoogleClassroomShareService;
+});
+
+//# sourceMappingURL=google-classroom-share.service.js.map

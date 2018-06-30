@@ -1,0 +1,40 @@
+define(["require", "exports", "angularDependency", "angularDependency", "angular/util/http-post-params-as-form.provider"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("google-classroom-assignment.service", ["study.http-post-params-as-form"]);
+    var GoogleClassroomAssignmentService = (function () {
+        function GoogleClassroomAssignmentService($http, $q, httpPostParamsAsFormConfig) {
+            this.$http = $http;
+            this.$q = $q;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+        }
+        GoogleClassroomAssignmentService.prototype.createAssignment = function (assignmentRequest) {
+            var deferred = this.$q.defer();
+            this.$http.post("/member/assignments/google/create-assignment.ajax", assignmentRequest, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                var assignment = response.data;
+                deferred.resolve(assignment);
+            })["catch"](function () {
+                deferred.reject();
+            });
+            return deferred.promise;
+        };
+        GoogleClassroomAssignmentService.prototype.getAssignment = function (assignmentId) {
+            var config = {
+                params: {
+                    assignmentId: assignmentId
+                }
+            };
+            return this.$http.get("/member/assignments/google/get-assignment-info-by-id.ajax", config)
+                .then(function (response) {
+                return response.data;
+            });
+        };
+        GoogleClassroomAssignmentService.$inject = ["$http", "$q", "httpPostParamsAsFormConfig"];
+        return GoogleClassroomAssignmentService;
+    }());
+    exports.GoogleClassroomAssignmentService = GoogleClassroomAssignmentService;
+    module.service("googleClassroomAssignmentService", GoogleClassroomAssignmentService);
+});
+
+//# sourceMappingURL=google-classroom-assignment.service.js.map

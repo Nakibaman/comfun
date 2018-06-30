@@ -1,0 +1,144 @@
+define(["require", "exports", "angularDependency", "classroom/assignment.service", "classroom/manage/create-classroom-form.directive", "classroom/share/google/google-classroom-share.service", "lib/toastr", "angularDependency", "angular/inputs/input-with-copy-button.directive", "classroom/assignment.service", "classroom/classroom.service", "classroom/manage/create-classroom-form.directive", "classroom/share/assignment-preview.directive", "classroom/share/google/google-classroom-assignment.service", "classroom/teacher/classroom-picker.directive", "lib/toastr", "util/value-proxy"], function (require, exports, angular, assignment_service_1, create_classroom_form_directive_1, google_classroom_share_service_1, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("share-assignment-modal.controller", ["assignment-preview.directive", "classroom-modal.service", "classroom-picker.directive", "classroom.service", "create-classroom-form.directive",
+        "google-classroom-assignment.service", "input-with-copy-button.directive"]);
+    var ShareMode;
+    (function (ShareMode) {
+        ShareMode["GOOGLE_CLASSROOMS"] = "GOOGLE_CLASSROOMS";
+        ShareMode["STUDY_CLASSROOMS"] = "STUDY_CLASSROOMS";
+    })(ShareMode = exports.ShareMode || (exports.ShareMode = {}));
+    var ShareGoogleClassroomModalState;
+    (function (ShareGoogleClassroomModalState) {
+        ShareGoogleClassroomModalState["CREATE_FIRST_CLASSROOM"] = "CREATE_FIRST_CLASSROOM";
+        ShareGoogleClassroomModalState["PICK_CLASSROOM"] = "PICK_CLASSROOM";
+        ShareGoogleClassroomModalState["COMPLETED_SHOW_LINK"] = "COMPLETED_SHOW_LINK";
+    })(ShareGoogleClassroomModalState || (ShareGoogleClassroomModalState = {}));
+    var ShareAssignmentModalController = (function () {
+        function ShareAssignmentModalController($scope, classroomService, classroomModalService, googleClassroomAssignmentService, shareModalScopeParams) {
+            this.classroomFormValues = new create_classroom_form_directive_1.CreateClassroomFormValues();
+            this.showFirstClassroomCreatedBanner = false;
+            this.$scope = $scope;
+            this.classroomModalService = classroomModalService;
+            this.classroomService = classroomService;
+            this.googleClassroomAssignmentService = googleClassroomAssignmentService;
+            this.params = shareModalScopeParams;
+            this.teacherClassroomsProxy = classroomService.teacherClassroomsProxy;
+            this.validateDirectiveParams();
+            this.initializeState();
+        }
+        ShareAssignmentModalController.prototype.initializeState = function () {
+            var assignmentId = this.params.assignmentId;
+            var classroomCode = this.params.classroomCode;
+            if (ShareMode.STUDY_CLASSROOMS === this.params.shareMode && assignmentId && classroomCode) {
+                this.state = ShareGoogleClassroomModalState.COMPLETED_SHOW_LINK;
+                this.assignmentShareLink = assignment_service_1.AssignmentService.createAssignmentShareLink(classroomCode, assignmentId);
+                this.loadClassroomsAndSelectClassroomWithCode(this.params.classroomCode);
+                return;
+            }
+            this.teacherClassroomsProxy.getValue()
+                .then(function (classrooms) {
+                if (classrooms.length === 0) {
+                    this.state = ShareGoogleClassroomModalState.CREATE_FIRST_CLASSROOM;
+                    if (ShareMode.GOOGLE_CLASSROOMS === this.params.shareMode) {
+                        this.classroomModalService.initGoogleLoginService();
+                    }
+                }
+                else {
+                    this.state = ShareGoogleClassroomModalState.PICK_CLASSROOM;
+                }
+            }.bind(this));
+        };
+        ShareAssignmentModalController.prototype.createNewClassroomAndAdvanceToNextStep = function () {
+            this.state = ShareGoogleClassroomModalState.PICK_CLASSROOM;
+            var classroom = {
+                displayName: this.classroomFormValues.classroomName,
+                school: this.classroomFormValues.school
+            };
+            this.classroomService.createClassroom(classroom)
+                .then(function (classroom) {
+                this.showFirstClassroomCreatedBanner = true;
+                this.selectedClassroom = classroom;
+            }.bind(this))["catch"](google_classroom_share_service_1.GoogleClassroomShareService.showErrorMessage);
+        };
+        ShareAssignmentModalController.prototype.createAssignmentAndOpenGoogleClassroomWindow = function () {
+            var googleClassroomWindow = google_classroom_share_service_1.GoogleClassroomShareService.openBlankWindow();
+            var classroomCode = this.selectedClassroom.code;
+            this.createAssignment()
+                .then(function (assignment) {
+                var config = {
+                    assignmentId: assignment.id,
+                    classroomCode: classroomCode,
+                    title: assignment.name,
+                    message: assignment.instructions
+                };
+                google_classroom_share_service_1.GoogleClassroomShareService.navigateWindowToGoogleClassroom(googleClassroomWindow, config);
+                this.closeModal();
+            }.bind(this))["catch"](function () {
+                google_classroom_share_service_1.GoogleClassroomShareService.closeWindowAndShowErrorMessage(googleClassroomWindow);
+            });
+        };
+        ShareAssignmentModalController.prototype.createAssignmentAndShowShareLink = function () {
+            this.state = ShareGoogleClassroomModalState.COMPLETED_SHOW_LINK;
+            var classroomCode = this.selectedClassroom.code;
+            this.createAssignment()
+                .then(function (assignment) {
+                this.assignmentShareLink = assignment_service_1.AssignmentService.createAssignmentShareLink(classroomCode, assignment.id);
+            }.bind(this))["catch"](function () {
+                this.state = ShareGoogleClassroomModalState.PICK_CLASSROOM;
+                toastr.error("A problem occurred while sharing your assignment. Please try again.");
+            });
+        };
+        ShareAssignmentModalController.prototype.importClassroomsFromGoogle = function () {
+            this.classroomModalService.openImportGoogleClassroomModal()
+                .then(function () {
+                this.state = ShareGoogleClassroomModalState.PICK_CLASSROOM;
+            }.bind(this));
+        };
+        ShareAssignmentModalController.prototype.createAssignment = function () {
+            this.newAssignmentCreated = true;
+            var assignmentRequest = {
+                classroomId: this.selectedClassroom.id,
+                academyAssetId: this.params.academyAssetId,
+                courseAssetId: this.params.courseAssetId,
+                contentType: this.params.assignmentContentType,
+                resourceType: this.params.assignmentResourceType
+            };
+            return this.googleClassroomAssignmentService.createAssignment(assignmentRequest);
+        };
+        ShareAssignmentModalController.prototype.validateDirectiveParams = function () {
+            if (ShareMode.STUDY_CLASSROOMS === this.params.shareMode && this.params.assignmentId && this.params.classroomCode) {
+                return;
+            }
+            if (this.params.academyAssetId && this.params.courseAssetId && this.params.assignmentContentType && this.params.assignmentResourceType) {
+                return;
+            }
+            throw "Invalid parameters provided to google-classroom-share or study-classroom-share directive";
+        };
+        ShareAssignmentModalController.prototype.closeModal = function () {
+            return this.$scope.$close();
+        };
+        ShareAssignmentModalController.prototype.loadClassroomsAndSelectClassroomWithCode = function (classroomCode) {
+            this.teacherClassroomsProxy.getValue()
+                .then(function (classrooms) {
+                for (var _i = 0, classrooms_1 = classrooms; _i < classrooms_1.length; _i++) {
+                    var classroom = classrooms_1[_i];
+                    if (classroom.code === classroomCode) {
+                        this.selectedClassroom = classroom;
+                        return;
+                    }
+                }
+            }.bind(this));
+        };
+        ShareAssignmentModalController.$inject = ["$scope",
+            "classroomService",
+            "classroomModalService",
+            "googleClassroomAssignmentService",
+            "shareModalScopeParams"];
+        return ShareAssignmentModalController;
+    }());
+    exports.ShareAssignmentModalController = ShareAssignmentModalController;
+    module.controller("ShareAssignmentModalController", ShareAssignmentModalController);
+});
+
+//# sourceMappingURL=share-assignment-modal.controller.js.map

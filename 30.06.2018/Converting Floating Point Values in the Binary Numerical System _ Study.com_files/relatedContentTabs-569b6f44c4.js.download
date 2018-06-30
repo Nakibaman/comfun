@@ -1,0 +1,24 @@
+(function (init) {
+	"use strict";
+
+		define(['jquery'], init);
+})(function ($) {
+	"use strict";
+
+	$(document).ready(function () {
+		$('[data-expand-carousel-list]').on('click',function() {
+			var $this = $(this);
+			if ($this.hasClass('open')) {
+				$this.parent().find('.carousel-inner .item').not(":first-child").slideUp();
+				$this.removeClass('open');
+				$('html, body').animate({
+					scrollTop: $('#relatedContentContainer').offset().top
+				});
+			}
+			else {
+				$this.parent().find('.carousel-inner .item').slideDown();
+				$this.addClass('open');
+			}
+		});
+	});
+});

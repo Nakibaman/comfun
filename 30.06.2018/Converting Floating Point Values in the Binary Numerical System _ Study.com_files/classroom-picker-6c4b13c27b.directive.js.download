@@ -1,0 +1,35 @@
+define(["require", "exports", "angularDependency", "angularDependency", "classroom/classroom.service", "util/value-proxy"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("classroom-picker.directive", ["classroom.service"]);
+    var ClassroomPickerController = (function () {
+        function ClassroomPickerController(classroomService) {
+            this.teacherClassroomsProxy = classroomService.teacherClassroomsProxy;
+            this.teacherClassroomsProxy.getValue()
+                .then(function (classrooms) {
+                if (classrooms.length === 1) {
+                    this.selectedClassroomNgModel = classrooms[0];
+                }
+            }.bind(this));
+        }
+        ClassroomPickerController.$inject = ["classroomService"];
+        return ClassroomPickerController;
+    }());
+    exports.ClassroomPickerController = ClassroomPickerController;
+    module.directive("classroomPicker", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/teacher/classroom-picker.tpl",
+            scope: {
+                instructions: '@',
+                optionsNgDisabled: '=',
+                selectedClassroomNgModel: '='
+            },
+            bindToController: true,
+            controller: ClassroomPickerController,
+            controllerAs: "classroomPickerCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=classroom-picker.directive.js.map

@@ -1,0 +1,37 @@
+define(["require", "exports", "jquery", "jquery", "lib/jquery/cookie"], function (require, exports, $) {
+    "use strict";
+    exports.__esModule = true;
+    function cleanUrlAndSetCookie(element) {
+        var isAnchorElement = (element.tagName === 'A');
+        var dataVirtualValue = element.getAttribute("data-virtual");
+        var hrefValue = element.getAttribute("href");
+        if (isAnchorElement && dataVirtualValue && hrefValue) {
+            var url = hrefValue.replace(/^.*\/\/[^\/]+/, '');
+            $.cookie('virtualAA', dataVirtualValue, { path: url, expires: 730 });
+            return url;
+        }
+        return null;
+    }
+    $(document.body).on("click", "a", function (e) {
+        var element = e.currentTarget;
+        var url = cleanUrlAndSetCookie(element);
+        if (url !== null && !e.ctrlKey && !e.metaKey && !e.isDefaultPrevented()) {
+            e.preventDefault();
+            var targetAttr = element.getAttribute("target");
+            if (targetAttr === "_blank") {
+                window.open(url, targetAttr);
+            }
+            else {
+                window.location.href = url;
+            }
+        }
+    });
+    $(document.body).on("contextmenu", "a", function (e) {
+        cleanUrlAndSetCookie(e.currentTarget);
+    });
+    $(document.body).on("mousedown", "a", function (e) {
+        cleanUrlAndSetCookie(e.currentTarget);
+    });
+});
+
+//# sourceMappingURL=virtualOnClick.js.map

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<!-- saved from url=(0052)https://www.tutorialspoint.com/cgi-bin/printpage.cgi -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Computer Number Conversion</title>
+<link rel="shortcut icon" href="https://www.tutorialspoint.com/favicon.ico" type="image/x-icon">
+<!--<base href="https://www.tutorialspoint.com">--><base href=".">
+<script type="text/x-mathjax-config;executed=true">
+MathJax.Hub.Config({
+tex2jax: { inlineMath: [["$","$"],["\(","\)"]] },
+"HTML-CSS": {
+  linebreaks: { automatic: true, width: "container" }          
+}              
+});
+</script>
+<script src="./Computer Number Conversion_files/MathJax.js.download" id=""> </script>
+<script type="text/javascript" src="./Computer Number Conversion_files/jquery.min.js.download"></script>
+<script type="text/javascript" src="./Computer Number Conversion_files/jquery-ui.min.js.download"></script>
+<link rel="stylesheet" href="./Computer Number Conversion_files/jquery-ui.css">
+<link rel="stylesheet" type="text/css" href="./Computer Number Conversion_files/print.css">
+<link rel="stylesheet" type="text/css" href="./Computer Number Conversion_files/prettify.css">
+<script type="text/javascript" src="./Computer Number Conversion_files/prettify.js.download"></script>
+<style type="text/css">.MathJax_Hover_Frame {border-radius: .25em; -webkit-border-radius: .25em; -moz-border-radius: .25em; -khtml-border-radius: .25em; box-shadow: 0px 0px 15px #83A; -webkit-box-shadow: 0px 0px 15px #83A; -moz-box-shadow: 0px 0px 15px #83A; -khtml-box-shadow: 0px 0px 15px #83A; border: 1px solid #A6D ! important; display: inline-block; position: absolute}
+.MathJax_Menu_Button .MathJax_Hover_Arrow {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 4px; -webkit-border-radius: 4px; -moz-border-radius: 4px; -khtml-border-radius: 4px; font-family: 'Courier New',Courier; font-size: 9px; color: #F0F0F0}
+.MathJax_Menu_Button .MathJax_Hover_Arrow span {display: block; background-color: #AAA; border: 1px solid; border-radius: 3px; line-height: 0; padding: 4px}
+.MathJax_Hover_Arrow:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_Hover_Arrow:hover span {background-color: #CCC!important}
+</style><style type="text/css">#MathJax_About {position: fixed; left: 50%; width: auto; text-align: center; border: 3px outset; padding: 1em 2em; background-color: #DDDDDD; color: black; cursor: default; font-family: message-box; font-size: 120%; font-style: normal; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 15px; -webkit-border-radius: 15px; -moz-border-radius: 15px; -khtml-border-radius: 15px; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_About.MathJax_MousePost {outline: none}
+.MathJax_Menu {position: absolute; background-color: white; color: black; width: auto; padding: 2px; border: 1px solid #CCCCCC; margin: 0; cursor: default; font: menu; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; z-index: 201; box-shadow: 0px 10px 20px #808080; -webkit-box-shadow: 0px 10px 20px #808080; -moz-box-shadow: 0px 10px 20px #808080; -khtml-box-shadow: 0px 10px 20px #808080; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+.MathJax_MenuItem {padding: 2px 2em; background: transparent}
+.MathJax_MenuArrow {position: absolute; right: .5em; padding-top: .25em; color: #666666; font-size: .75em}
+.MathJax_MenuActive .MathJax_MenuArrow {color: white}
+.MathJax_MenuArrow.RTL {left: .5em; right: auto}
+.MathJax_MenuCheck {position: absolute; left: .7em}
+.MathJax_MenuCheck.RTL {right: .7em; left: auto}
+.MathJax_MenuRadioCheck {position: absolute; left: 1em}
+.MathJax_MenuRadioCheck.RTL {right: 1em; left: auto}
+.MathJax_MenuLabel {padding: 2px 2em 4px 1.33em; font-style: italic}
+.MathJax_MenuRule {border-top: 1px solid #CCCCCC; margin: 4px 1px 0px}
+.MathJax_MenuDisabled {color: GrayText}
+.MathJax_MenuActive {background-color: Highlight; color: HighlightText}
+.MathJax_MenuDisabled:focus, .MathJax_MenuLabel:focus {background-color: #E8E8E8}
+.MathJax_ContextMenu:focus {outline: none}
+.MathJax_ContextMenu .MathJax_MenuItem:focus {outline: none}
+#MathJax_AboutClose {top: .2em; right: .2em}
+.MathJax_Menu .MathJax_MenuClose {top: -10px; left: -10px}
+.MathJax_MenuClose {position: absolute; cursor: pointer; display: inline-block; border: 2px solid #AAA; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; font-family: 'Courier New',Courier; font-size: 24px; color: #F0F0F0}
+.MathJax_MenuClose span {display: block; background-color: #AAA; border: 1.5px solid; border-radius: 18px; -webkit-border-radius: 18px; -moz-border-radius: 18px; -khtml-border-radius: 18px; line-height: 0; padding: 8px 0 6px}
+.MathJax_MenuClose:hover {color: white!important; border: 2px solid #CCC!important}
+.MathJax_MenuClose:hover span {background-color: #CCC!important}
+.MathJax_MenuClose:hover:focus {outline: none}
+</style><style type="text/css">.MathJax_Preview .MJXf-math {color: inherit!important}
+</style><style type="text/css">.MJX_Assistive_MathML {position: absolute!important; top: 0; left: 0; clip: rect(1px, 1px, 1px, 1px); padding: 1px 0 0 0!important; border: 0!important; height: 1px!important; width: 1px!important; overflow: hidden!important; display: block!important; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; -moz-user-select: none; -ms-user-select: none; user-select: none}
+.MJX_Assistive_MathML.MJX_Assistive_MathML_Block {width: 100%!important}
+</style><style type="text/css">#MathJax_Zoom {position: absolute; background-color: #F0F0F0; overflow: auto; display: block; z-index: 301; padding: .5em; border: 1px solid black; margin: 0; font-weight: normal; font-style: normal; text-align: left; text-indent: 0; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; -webkit-box-sizing: content-box; -moz-box-sizing: content-box; box-sizing: content-box; box-shadow: 5px 5px 15px #AAAAAA; -webkit-box-shadow: 5px 5px 15px #AAAAAA; -moz-box-shadow: 5px 5px 15px #AAAAAA; -khtml-box-shadow: 5px 5px 15px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true')}
+#MathJax_ZoomOverlay {position: absolute; left: 0; top: 0; z-index: 300; display: inline-block; width: 100%; height: 100%; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+#MathJax_ZoomFrame {position: relative; display: inline-block; height: 0; width: 0}
+#MathJax_ZoomEventTrap {position: absolute; left: 0; top: 0; z-index: 302; display: inline-block; border: 0; padding: 0; margin: 0; background-color: white; opacity: 0; filter: alpha(opacity=0)}
+</style><style type="text/css">.MathJax_Preview {color: #888}
+#MathJax_Message {position: fixed; left: 1em; bottom: 1.5em; background-color: #E6E6E6; border: 1px solid #959595; margin: 0px; padding: 2px 8px; z-index: 102; color: black; font-size: 80%; width: auto; white-space: nowrap}
+#MathJax_MSIE_Frame {position: absolute; top: 0; left: 0; width: 0px; z-index: 101; border: 0px; margin: 0px; padding: 0px}
+.MathJax_Error {color: #CC0000; font-style: italic}
+</style><style type="text/css">.MJXp-script {font-size: .8em}
+.MJXp-right {-webkit-transform-origin: right; -moz-transform-origin: right; -ms-transform-origin: right; -o-transform-origin: right; transform-origin: right}
+.MJXp-bold {font-weight: bold}
+.MJXp-italic {font-style: italic}
+.MJXp-scr {font-family: MathJax_Script,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-frak {font-family: MathJax_Fraktur,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-sf {font-family: MathJax_SansSerif,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-cal {font-family: MathJax_Caligraphic,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-mono {font-family: MathJax_Typewriter,'Times New Roman',Times,STIXGeneral,serif}
+.MJXp-largeop {font-size: 150%}
+.MJXp-largeop.MJXp-int {vertical-align: -.2em}
+.MJXp-math {display: inline-block; line-height: 1.2; text-indent: 0; font-family: 'Times New Roman',Times,STIXGeneral,serif; white-space: nowrap; border-collapse: collapse}
+.MJXp-display {display: block; text-align: center; margin: 1em 0}
+.MJXp-math span {display: inline-block}
+.MJXp-box {display: block!important; text-align: center}
+.MJXp-box:after {content: " "}
+.MJXp-rule {display: block!important; margin-top: .1em}
+.MJXp-char {display: block!important}
+.MJXp-mo {margin: 0 .15em}
+.MJXp-mfrac {margin: 0 .125em; vertical-align: .25em}
+.MJXp-denom {display: inline-table!important; width: 100%}
+.MJXp-denom > * {display: table-row!important}
+.MJXp-surd {vertical-align: top}
+.MJXp-surd > * {display: block!important}
+.MJXp-script-box > *  {display: table!important; height: 50%}
+.MJXp-script-box > * > * {display: table-cell!important; vertical-align: top}
+.MJXp-script-box > *:last-child > * {vertical-align: bottom}
+.MJXp-script-box > * > * > * {display: block!important}
+.MJXp-mphantom {visibility: hidden}
+.MJXp-munderover {display: inline-table!important}
+.MJXp-over {display: inline-block!important; text-align: center}
+.MJXp-over > * {display: block!important}
+.MJXp-munderover > * {display: table-row!important}
+.MJXp-mtable {vertical-align: .25em; margin: 0 .125em}
+.MJXp-mtable > * {display: inline-table!important; vertical-align: middle}
+.MJXp-mtr {display: table-row!important}
+.MJXp-mtd {display: table-cell!important; text-align: center; padding: .5em 0 0 .5em}
+.MJXp-mtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-mlabeledtr {display: table-row!important}
+.MJXp-mlabeledtr > .MJXp-mtd:first-child {padding-left: 0}
+.MJXp-mlabeledtr:first-child > .MJXp-mtd {padding-top: 0}
+.MJXp-merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MJXp-scale0 {-webkit-transform: scaleX(.0); -moz-transform: scaleX(.0); -ms-transform: scaleX(.0); -o-transform: scaleX(.0); transform: scaleX(.0)}
+.MJXp-scale1 {-webkit-transform: scaleX(.1); -moz-transform: scaleX(.1); -ms-transform: scaleX(.1); -o-transform: scaleX(.1); transform: scaleX(.1)}
+.MJXp-scale2 {-webkit-transform: scaleX(.2); -moz-transform: scaleX(.2); -ms-transform: scaleX(.2); -o-transform: scaleX(.2); transform: scaleX(.2)}
+.MJXp-scale3 {-webkit-transform: scaleX(.3); -moz-transform: scaleX(.3); -ms-transform: scaleX(.3); -o-transform: scaleX(.3); transform: scaleX(.3)}
+.MJXp-scale4 {-webkit-transform: scaleX(.4); -moz-transform: scaleX(.4); -ms-transform: scaleX(.4); -o-transform: scaleX(.4); transform: scaleX(.4)}
+.MJXp-scale5 {-webkit-transform: scaleX(.5); -moz-transform: scaleX(.5); -ms-transform: scaleX(.5); -o-transform: scaleX(.5); transform: scaleX(.5)}
+.MJXp-scale6 {-webkit-transform: scaleX(.6); -moz-transform: scaleX(.6); -ms-transform: scaleX(.6); -o-transform: scaleX(.6); transform: scaleX(.6)}
+.MJXp-scale7 {-webkit-transform: scaleX(.7); -moz-transform: scaleX(.7); -ms-transform: scaleX(.7); -o-transform: scaleX(.7); transform: scaleX(.7)}
+.MJXp-scale8 {-webkit-transform: scaleX(.8); -moz-transform: scaleX(.8); -ms-transform: scaleX(.8); -o-transform: scaleX(.8); transform: scaleX(.8)}
+.MJXp-scale9 {-webkit-transform: scaleX(.9); -moz-transform: scaleX(.9); -ms-transform: scaleX(.9); -o-transform: scaleX(.9); transform: scaleX(.9)}
+.MathJax_PHTML .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style><style type="text/css">.MathJax_Display {text-align: center; margin: 1em 0em; position: relative; display: block!important; text-indent: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; width: 100%}
+.MathJax .merror {background-color: #FFFF88; color: #CC0000; border: 1px solid #CC0000; padding: 1px 3px; font-style: normal; font-size: 90%}
+.MathJax .MJX-monospace {font-family: monospace}
+.MathJax .MJX-sans-serif {font-family: sans-serif}
+#MathJax_Tooltip {background-color: InfoBackground; color: InfoText; border: 1px solid black; box-shadow: 2px 2px 5px #AAAAAA; -webkit-box-shadow: 2px 2px 5px #AAAAAA; -moz-box-shadow: 2px 2px 5px #AAAAAA; -khtml-box-shadow: 2px 2px 5px #AAAAAA; filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=2, OffY=2, Color='gray', Positive='true'); padding: 3px 4px; z-index: 401; position: absolute; left: 0; top: 0; width: auto; height: auto; display: none}
+.MathJax {display: inline; font-style: normal; font-weight: normal; line-height: normal; font-size: 100%; font-size-adjust: none; text-indent: 0; text-align: left; text-transform: none; letter-spacing: normal; word-spacing: normal; word-wrap: normal; white-space: nowrap; float: none; direction: ltr; max-width: none; max-height: none; min-width: 0; min-height: 0; border: 0; padding: 0; margin: 0}
+.MathJax:focus, body :focus .MathJax {display: inline-table}
+.MathJax.MathJax_FullWidth {text-align: center; display: table-cell!important; width: 10000em!important}
+.MathJax img, .MathJax nobr, .MathJax a {border: 0; padding: 0; margin: 0; max-width: none; max-height: none; min-width: 0; min-height: 0; vertical-align: 0; line-height: normal; text-decoration: none}
+img.MathJax_strut {border: 0!important; padding: 0!important; margin: 0!important; vertical-align: 0!important}
+.MathJax span {display: inline; position: static; border: 0; padding: 0; margin: 0; vertical-align: 0; line-height: normal; text-decoration: none}
+.MathJax nobr {white-space: nowrap!important}
+.MathJax img {display: inline!important; float: none!important}
+.MathJax * {transition: none; -webkit-transition: none; -moz-transition: none; -ms-transition: none; -o-transition: none}
+.MathJax_Processing {visibility: hidden; position: fixed; width: 0; height: 0; overflow: hidden}
+.MathJax_Processed {display: none!important}
+.MathJax_ExBox {display: block!important; overflow: hidden; width: 1px; height: 60ex; min-height: 0; max-height: none}
+.MathJax .MathJax_EmBox {display: block!important; overflow: hidden; width: 1px; height: 60em; min-height: 0; max-height: none}
+.MathJax_LineBox {display: table!important}
+.MathJax_LineBox span {display: table-cell!important; width: 10000em!important; min-width: 0; max-width: none; padding: 0; border: 0; margin: 0}
+.MathJax .MathJax_HitBox {cursor: text; background: white; opacity: 0; filter: alpha(opacity=0)}
+.MathJax .MathJax_HitBox * {filter: none; opacity: 1; background: transparent}
+#MathJax_Tooltip * {filter: none; opacity: 1; background: transparent}
+@font-face {font-family: MathJax_Main; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Main-bold; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Main-Bold.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Main-Bold.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Main-italic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Math-italic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Caligraphic; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Caligraphic-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Caligraphic-Regular.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Size1; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Size2; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Size2-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Size2-Regular.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Size3; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf?V=2.7.1') format('opentype')}
+@font-face {font-family: MathJax_Size4; src: url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/woff/MathJax_Size4-Regular.woff?V=2.7.1') format('woff'), url('https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/fonts/HTML-CSS/TeX/otf/MathJax_Size4-Regular.otf?V=2.7.1') format('opentype')}
+.MathJax .noError {vertical-align: ; font-size: 90%; text-align: left; color: black; padding: 1px 3px; border: 1px solid}
+</style></head>
+<body onload="prettyPrint()"><div style="visibility: hidden; overflow: hidden; position: absolute; top: 0px; height: 1px; width: auto; padding: 0px; border: 0px; margin: 0px; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal;"><div id="MathJax_Hidden"></div></div><div id="MathJax_Message" style="display: none;"></div>
+<div id="print-wrapper">
+   <div id="print-area-wrapper">
+      <div class="clearfix" id="actual-print-area">
+<div class="row">
+             <h1 class="title">Computer - Number Conversion</h1>
+             <a href="https://www.tutorialspoint.com/computer_fundamentals/computer_number_conversion.htm" id="print-source">https://www.tutorialspoint.com/computer_fundamentals/computer_number_conversion.htm</a><div id="page-print-copy">Copyright © tutorialspoint.com</div>
+             <div style="clear:both"></div>
+             <br>
+	     <div id="page-content">
+<p>There are many methods or techniques which can be used to convert numbers from one base to another. In this chapter, we'll demonstrate the following −</p>
+<ul class="list">
+<li>Decimal to Other Base System</li>
+<li>Other Base System to Decimal</li>
+<li>Other Base System to Non-Decimal</li>
+<li>Shortcut method - Binary to Octal</li>
+<li>Shortcut method - Octal to Binary</li>
+<li>Shortcut method - Binary to Hexadecimal</li>
+<li>Shortcut method - Hexadecimal to Binary</li>
+</ul>
+<h2>Decimal to Other Base System</h2>
+<p><b>Step 1</b> − Divide the decimal number to be converted by the value of the new base.</p>
+<p><b>Step 2</b> − Get the remainder from Step 1 as the rightmost digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-1-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-1" style="width: 9.765em; display: inline-block;"><span style="display: inline-block; position: relative; width: 9.289em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1009.23em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-2"><span class="mi" id="MathJax-Span-3" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-4" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-5" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-6" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-7" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-8" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-9" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-10" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-11" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-12" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-13" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-14" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-15" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-16" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-17" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-18" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-19" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-20" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-21" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-22" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-23" style="font-family: MathJax_Math-italic;">t</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>l</mi><mi>e</mi><mi>a</mi><mi>s</mi><mi>t</mi><mi>s</mi><mi>i</mi><mi>g</mi><mi>n</mi><mi>i</mi><mi>f</mi><mi>i</mi><mi>c</mi><mi>a</mi><mi>n</mi><mi>t</mi><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi></math></span></span><script type="math/tex" id="MathJax-Element-1">least significant digit</script> of the new base number.</p>
+<p><b>Step 3</b> − Divide the quotient of the previous divide by the new base.</p>
+<p><b>Step 4</b> − Record the remainder from Step 3 as the next digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-2-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-24" style="width: 4.289em; display: inline-block;"><span style="display: inline-block; position: relative; width: 4.051em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1003.99em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-25"><span class="mi" id="MathJax-Span-26" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-27" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-28" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-29" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-30" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-31" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-32" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-33" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-34" style="font-family: MathJax_Math-italic;">t</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>t</mi><mi>o</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>l</mi><mi>e</mi><mi>f</mi><mi>t</mi></math></span></span><script type="math/tex" id="MathJax-Element-2">to the left</script> of the new base number.</p>
+<p>Repeat Steps 3 and 4, getting remainders from right to left, until the quotient becomes zero in Step 3.</p>
+<p>The last remainder thus obtained will be the Most Significant Digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-3-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;M&lt;/mi&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mi&gt;D&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-35" style="width: 2.622em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.503em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1002.5em, 2.324em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-36"><span class="mi" id="MathJax-Span-37" style="font-family: MathJax_Math-italic;">M<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-38" style="font-family: MathJax_Math-italic;">S<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-39" style="font-family: MathJax_Math-italic;">D</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.059em; border-left: 0px solid; width: 0px; height: 0.878em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>M</mi><mi>S</mi><mi>D</mi></math></span></span><script type="math/tex" id="MathJax-Element-3">MSD</script> of the new base number.</p>
+<h3>Example</h3>
+<p>Decimal Number: 29<sub>10</sub></p>
+<p>Calculating Binary Equivalent −</p>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Operation</th>
+<th style="text-align:center;">Result</th>
+<th style="text-align:center;">Remainder</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>29 / 2</td>
+<td>14</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>14 / 2</td>
+<td>7</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>7 / 2</td>
+<td>3</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Step 4</td>
+<td>3 / 2</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Step 5</td>
+<td>1 / 2</td>
+<td>0</td>
+<td>1</td>
+</tr>
+</tbody></table>
+<p>As mentioned in Steps 2 and 4, the remainders have to be arranged in the reverse order so that the first remainder becomes the Least Significant Digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-4-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;L&lt;/mi&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mi&gt;D&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-40" style="width: 2.265em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.146em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1002.15em, 2.324em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-41"><span class="mi" id="MathJax-Span-42" style="font-family: MathJax_Math-italic;">L</span><span class="mi" id="MathJax-Span-43" style="font-family: MathJax_Math-italic;">S<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-44" style="font-family: MathJax_Math-italic;">D</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.059em; border-left: 0px solid; width: 0px; height: 0.878em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>L</mi><mi>S</mi><mi>D</mi></math></span></span><script type="math/tex" id="MathJax-Element-4">LSD</script> and the last remainder becomes the Most Significant Digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-5-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;M&lt;/mi&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mi&gt;D&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-45" style="width: 2.622em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.503em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1002.5em, 2.324em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-46"><span class="mi" id="MathJax-Span-47" style="font-family: MathJax_Math-italic;">M<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-48" style="font-family: MathJax_Math-italic;">S<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-49" style="font-family: MathJax_Math-italic;">D</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.059em; border-left: 0px solid; width: 0px; height: 0.878em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>M</mi><mi>S</mi><mi>D</mi></math></span></span><script type="math/tex" id="MathJax-Element-5">MSD</script>.</p>
+<p>Decimal Number : 29<sub>10</sub> = Binary Number : 11101<sub>2.</sub></p>
+<h2>Other Base System to Decimal System</h2>
+<p><b>Step 1</b> − Determine the column <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-6-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;p&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-50" style="width: 4.705em; display: inline-block;"><span style="display: inline-block; position: relative; width: 4.467em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1004.41em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-51"><span class="mi" id="MathJax-Span-52" style="font-family: MathJax_Math-italic;">p</span><span class="mi" id="MathJax-Span-53" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-54" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-55" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-56" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-57" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-58" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-59" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-60" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-61" style="font-family: MathJax_Math-italic;">l</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>p</mi><mi>o</mi><mi>s</mi><mi>i</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mi>a</mi><mi>l</mi></math></span></span><script type="math/tex" id="MathJax-Element-6">positional</script> value of each digit <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-7-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;p&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;p&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;u&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-62" style="width: 31.848em; display: inline-block;"><span style="display: inline-block; position: relative; width: 30.301em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1030.3em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-63"><span class="mi" id="MathJax-Span-64" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-65" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-66" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-67" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-68" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-69" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-70" style="font-family: MathJax_Math-italic;">p</span><span class="mi" id="MathJax-Span-71" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-72" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-73" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-74" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-75" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-76" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-77" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-78" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-79" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-80" style="font-family: MathJax_Math-italic;">p</span><span class="mi" id="MathJax-Span-81" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-82" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-83" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-84" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-85" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-86" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-87" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-88" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-89" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-90" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-91" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-92" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-93" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-94" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-95" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-96" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-97" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-98" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-99" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-100" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-101" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-102" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-103" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-104" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-105" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-106" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-107" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-108" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-109" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-110" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-111" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-112" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-113" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-114" style="font-family: MathJax_Math-italic;">u</span><span class="mi" id="MathJax-Span-115" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-116" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-117" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-118" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-119" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-120" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-121" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-122" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-123" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-124" style="font-family: MathJax_Math-italic;">m</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mi>d</mi><mi>e</mi><mi>p</mi><mi>e</mi><mi>n</mi><mi>d</mi><mi>s</mi><mi>o</mi><mi>n</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>p</mi><mi>o</mi><mi>s</mi><mi>i</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mi>o</mi><mi>f</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi><mi>a</mi><mi>n</mi><mi>d</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>b</mi><mi>a</mi><mi>s</mi><mi>e</mi><mi>o</mi><mi>f</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>n</mi><mi>u</mi><mi>m</mi><mi>b</mi><mi>e</mi><mi>r</mi><mi>s</mi><mi>y</mi><mi>s</mi><mi>t</mi><mi>e</mi><mi>m</mi></math></span></span><script type="math/tex" id="MathJax-Element-7">this depends on the position of the digit and the base of the number system</script>.</p>
+<p><b>Step 2</b> − Multiply the obtained column values <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-8-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;S&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;p&lt;/mi&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-125" style="width: 3.574em; display: inline-block;"><span style="display: inline-block; position: relative; width: 3.396em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.313em, 1003.34em, 2.562em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-126"><span class="mi" id="MathJax-Span-127" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-128" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-129" style="font-family: MathJax_Math-italic;">S<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-130" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-131" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-132" style="font-family: MathJax_Math-italic;">p</span><span class="mn" id="MathJax-Span-133" style="font-family: MathJax_Main;">1</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>i</mi><mi>n</mi><mi>S</mi><mi>t</mi><mi>e</mi><mi>p</mi><mn>1</mn></math></span></span><script type="math/tex" id="MathJax-Element-8">in Step 1</script> by the digits in the corresponding columns.</p>
+<p><b>Step 3</b> − Sum the products calculated in Step 2. The total is the equivalent value in decimal.</p>
+<h3>Example</h3>
+<p>Binary Number: 11101<sub>2</sub></p>
+<p>Calculating Decimal Equivalent −</p>
+<table class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Binary Number</th>
+<th style="text-align:center;">Decimal Number</th>
+</tr>
+<tr>
+<td style="text-align:center;">Step 1</td>
+<td style="text-align:center;">11101<sub>2</sub></td>
+<td>((1 x 2<sup>4</sup>) + (1 x 2<sup>3</sup>) + (1 x 2<sup>2</sup>) + (0 x 2<sup>1</sup>) + (1 x 2<sup>0</sup>))<sub>10</sub></td>
+</tr>
+<tr>
+<td style="text-align:center;">Step 2</td>
+<td style="text-align:center;">11101<sub>2</sub></td>
+<td><span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-9-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mn&gt;16&lt;/mn&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;8&lt;/mn&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;0&lt;/mn&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;1&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-134" style="width: 8.098em; display: inline-block;"><span style="display: inline-block; position: relative; width: 7.682em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.372em, 1007.62em, 2.443em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-135"><span class="mn" id="MathJax-Span-136" style="font-family: MathJax_Main;">16</span><span class="mo" id="MathJax-Span-137" style="font-family: MathJax_Main; padding-left: 0.241em;">+</span><span class="mn" id="MathJax-Span-138" style="font-family: MathJax_Main; padding-left: 0.241em;">8</span><span class="mo" id="MathJax-Span-139" style="font-family: MathJax_Main; padding-left: 0.241em;">+</span><span class="mn" id="MathJax-Span-140" style="font-family: MathJax_Main; padding-left: 0.241em;">4</span><span class="mo" id="MathJax-Span-141" style="font-family: MathJax_Main; padding-left: 0.241em;">+</span><span class="mn" id="MathJax-Span-142" style="font-family: MathJax_Main; padding-left: 0.241em;">0</span><span class="mo" id="MathJax-Span-143" style="font-family: MathJax_Main; padding-left: 0.241em;">+</span><span class="mn" id="MathJax-Span-144" style="font-family: MathJax_Main; padding-left: 0.241em;">1</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.122em; border-left: 0px solid; width: 0px; height: 0.941em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>16</mn><mo>+</mo><mn>8</mn><mo>+</mo><mn>4</mn><mo>+</mo><mn>0</mn><mo>+</mo><mn>1</mn></math></span></span><script type="math/tex" id="MathJax-Element-9">16 + 8 + 4 + 0 + 1</script><sub>10</sub></td>
+</tr>
+<tr>
+<td style="text-align:center;">Step 3</td>
+<td style="text-align:center;">11101<sub>2</sub></td>
+<td>29<sub>10</sub></td>
+</tr>
+</tbody></table>
+<p>Binary Number : 11101<sub>2</sub> = Decimal Number : 29<sub>10</sub></p>
+<h2>Other Base System to Non-Decimal System</h2>
+<p><b>Step 1</b> − Convert the original number to a decimal number <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-10-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mn&gt;10&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-145" style="width: 3.098em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.92em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.313em, 1002.86em, 2.384em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-146"><span class="mi" id="MathJax-Span-147" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-148" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-149" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-150" style="font-family: MathJax_Math-italic;">e</span><span class="mn" id="MathJax-Span-151" style="font-family: MathJax_Main;">10</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.059em; border-left: 0px solid; width: 0px; height: 0.878em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>b</mi><mi>a</mi><mi>s</mi><mi>e</mi><mn>10</mn></math></span></span><script type="math/tex" id="MathJax-Element-10">base 10</script>.</p>
+<p><b>Step 2</b> − Convert the decimal number so obtained to the new base number.</p>
+<h3>Example</h3>
+<p>Octal Number : 25<sub>8</sub></p>
+<p>Calculating Binary Equivalent −</p>
+<h3>Step 1 - Convert to Decimal</h3>
+<table class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Octal Number</th>
+<th style="text-align:center;">Decimal Number</th>
+</tr>
+<tr>
+<td style="text-align:center;">Step 1</td>
+<td style="text-align:center;">25<sub>8</sub></td>
+<td>((2 x 8<sup>1</sup>) + (5 x 8<sup>0</sup>))<sub>10</sub></td>
+</tr>
+<tr>
+<td style="text-align:center;">Step 2</td>
+<td style="text-align:center;">25<sub>8</sub></td>
+<td><span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-11-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mn&gt;16&lt;/mn&gt;&lt;mo&gt;+&lt;/mo&gt;&lt;mn&gt;5&lt;/mn&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-152" style="width: 2.86em; display: inline-block;"><span style="display: inline-block; position: relative; width: 2.682em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.372em, 1002.62em, 2.443em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-153"><span class="mn" id="MathJax-Span-154" style="font-family: MathJax_Main;">16</span><span class="mo" id="MathJax-Span-155" style="font-family: MathJax_Main; padding-left: 0.241em;">+</span><span class="mn" id="MathJax-Span-156" style="font-family: MathJax_Main; padding-left: 0.241em;">5</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.122em; border-left: 0px solid; width: 0px; height: 0.941em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mn>16</mn><mo>+</mo><mn>5</mn></math></span></span><script type="math/tex" id="MathJax-Element-11">16 + 5</script><sub>10</sub></td>
+</tr>
+<tr>
+<td style="text-align:center;">Step 3</td>
+<td style="text-align:center;">25<sub>8</sub></td>
+<td>21<sub>10</sub></td>
+</tr>
+</tbody></table>
+<p>Octal Number : 25<sub>8</sub> = Decimal Number : 21<sub>10</sub></p>
+<h3>Step 2 - Convert Decimal to Binary</h3>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Operation</th>
+<th style="text-align:center;">Result </th>
+<th style="text-align:center;">Remainder</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>21 / 2</td>
+<td>10</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>10 / 2</td>
+<td>5</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>5 / 2</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr>
+<td>Step 4</td>
+<td>2 / 2</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Step 5</td>
+<td>1 / 2</td>
+<td>0</td>
+<td>1</td>
+</tr>
+</tbody></table>
+<p>Decimal Number : 21<sub>10</sub> = Binary Number : 10101<sub>2</sub></p>
+<p>Octal Number : 25<sub>8</sub> = Binary Number : 10101<sub>2</sub></p>
+<h2>Shortcut Method ─ Binary to Octal</h2>
+<p><b>Step 1</b> − Divide the binary digits into groups of three <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-12-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-157" style="width: 10.122em; display: inline-block;"><span style="display: inline-block; position: relative; width: 9.646em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1009.59em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-158"><span class="mi" id="MathJax-Span-159" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-160" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-161" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-162" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-163" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-164" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-165" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-166" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-167" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-168" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-169" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-170" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-171" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-172" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-173" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-174" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-175" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-176" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-177" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-178" style="font-family: MathJax_Math-italic;">t</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>s</mi><mi>t</mi><mi>a</mi><mi>r</mi><mi>t</mi><mi>i</mi><mi>n</mi><mi>g</mi><mi>f</mi><mi>r</mi><mi>o</mi><mi>m</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>r</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi></math></span></span><script type="math/tex" id="MathJax-Element-12">starting from the right</script>.</p>
+<p><b>Step 2</b> − Convert each group of three binary digits to one octal digit.</p>
+<h3>Example</h3>
+<p>Binary Number : 10101<sub>2</sub></p>
+<p>Calculating Octal Equivalent −</p>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Binary Number</th>
+<th style="text-align:center;">Octal Number</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>10101<sub>2</sub></td>
+<td>010 101</td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>10101<sub>2</sub></td>
+<td>2<sub>8</sub> 5<sub>8</sub></td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>10101<sub>2</sub></td>
+<td>25<sub>8</sub></td>
+</tr>
+</tbody></table>
+<p>Binary Number : 10101<sub>2</sub> = Octal Number : 25<sub>8</sub></p>
+<h2>Shortcut Method ─ Octal to Binary</h2>
+<p><b>Step 1</b> − Convert each octal digit to a 3-digit binary number <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-13-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;v&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-179" style="width: 26.074em; display: inline-block;"><span style="display: inline-block; position: relative; width: 24.824em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1024.82em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-180"><span class="mi" id="MathJax-Span-181" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-182" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-183" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-184" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-185" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-186" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-187" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-188" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-189" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-190" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-191" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-192" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-193" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-194" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-195" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-196" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-197" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-198" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-199" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-200" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-201" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-202" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-203" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-204" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-205" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-206" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-207" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-208" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-209" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-210" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-211" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-212" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-213" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-214" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-215" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-216" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-217" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-218" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-219" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-220" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-221" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-222" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-223" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-224" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-225" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-226" style="font-family: MathJax_Math-italic;">v</span><span class="mi" id="MathJax-Span-227" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-228" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-229" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-230" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-231" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-232" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>t</mi><mi>h</mi><mi>e</mi><mi>o</mi><mi>c</mi><mi>t</mi><mi>a</mi><mi>l</mi><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi><mi>s</mi><mi>m</mi><mi>a</mi><mi>y</mi><mi>b</mi><mi>e</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>d</mi><mi>a</mi><mi>s</mi><mi>d</mi><mi>e</mi><mi>c</mi><mi>i</mi><mi>m</mi><mi>a</mi><mi>l</mi><mi>f</mi><mi>o</mi><mi>r</mi><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mi>c</mi><mi>o</mi><mi>n</mi><mi>v</mi><mi>e</mi><mi>r</mi><mi>s</mi><mi>i</mi><mi>o</mi><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-13">the octal digits may be treated as decimal for this conversion</script>.</p>
+<p><b>Step 2</b> − Combine all the resulting binary groups <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-14-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mn&gt;3&lt;/mn&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-233" style="width: 6.432em; display: inline-block;"><span style="display: inline-block; position: relative; width: 6.134em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.313em, 1006.13em, 2.562em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-234"><span class="mi" id="MathJax-Span-235" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-236" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mn" id="MathJax-Span-237" style="font-family: MathJax_Main;">3</span><span class="mi" id="MathJax-Span-238" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-239" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-240" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-241" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-242" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-243" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-244" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-245" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-246" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-247" style="font-family: MathJax_Math-italic;">h</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>o</mi><mi>f</mi><mn>3</mn><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi><mi>s</mi><mi>e</mi><mi>a</mi><mi>c</mi><mi>h</mi></math></span></span><script type="math/tex" id="MathJax-Element-14">of 3 digits each</script> into a single binary number.</p>
+<h3>Example</h3>
+<p>Octal Number : 25<sub>8</sub></p>
+<p>Calculating Binary Equivalent −</p>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Octal Number</th>
+<th style="text-align:center;">Binary Number</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>25<sub>8</sub></td>
+<td>2<sub>10</sub> 5<sub>10</sub></td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>25<sub>8</sub></td>
+<td>010<sub>2</sub> 101<sub>2</sub></td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>25<sub>8</sub></td>
+<td>010101<sub>2</sub></td>
+</tr>
+</tbody></table>
+<p>Octal Number : 25<sub>8</sub> = Binary Number : 10101<sub>2</sub></p>
+<h2>Shortcut Method ─ Binary to Hexadecimal</h2>
+<p><b>Step 1</b> − Divide the binary digits into groups of four <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-15-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-248" style="width: 10.122em; display: inline-block;"><span style="display: inline-block; position: relative; width: 9.646em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1009.59em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-249"><span class="mi" id="MathJax-Span-250" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-251" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-252" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-253" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-254" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-255" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-256" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-257" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-258" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-259" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-260" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-261" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-262" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-263" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-264" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-265" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-266" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-267" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-268" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-269" style="font-family: MathJax_Math-italic;">t</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>s</mi><mi>t</mi><mi>a</mi><mi>r</mi><mi>t</mi><mi>i</mi><mi>n</mi><mi>g</mi><mi>f</mi><mi>r</mi><mi>o</mi><mi>m</mi><mi>t</mi><mi>h</mi><mi>e</mi><mi>r</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi></math></span></span><script type="math/tex" id="MathJax-Element-15">starting from the right</script>.</p>
+<p><b>Step 2</b> − Convert each group of four binary digits to one hexadecimal symbol.</p>
+<h3>Example</h3>
+<p>Binary Number : 10101<sub>2</sub></p>
+<p>Calculating hexadecimal Equivalent −</p>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Binary Number</th>
+<th style="text-align:center;">Hexadecimal Number</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>10101<sub>2</sub></td>
+<td>0001 0101</td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>10101<sub>2</sub></td>
+<td>1<sub>10</sub> 5<sub>10</sub></td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>10101<sub>2</sub></td>
+<td>15<sub>16</sub></td>
+</tr>
+</tbody></table>
+<p>Binary Number : 10101<sub>2</sub> = Hexadecimal Number : 15<sub>16</sub></p>
+<h2>Shortcut Method - Hexadecimal to Binary</h2>
+<p><b>Step 1</b> − Convert each hexadecimal digit to a 4-digit binary number <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-16-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;x&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;y&lt;/mi&gt;&lt;mi&gt;b&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;m&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;l&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;mi&gt;v&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;r&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;n&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-270" style="width: 29.824em; display: inline-block;"><span style="display: inline-block; position: relative; width: 28.396em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.253em, 1028.4em, 2.503em, -999.997em); top: -2.14em; left: 0em;"><span class="mrow" id="MathJax-Span-271"><span class="mi" id="MathJax-Span-272" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-273" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-274" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-275" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-276" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-277" style="font-family: MathJax_Math-italic;">x</span><span class="mi" id="MathJax-Span-278" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-279" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-280" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-281" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-282" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-283" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-284" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-285" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-286" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-287" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-288" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-289" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-290" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-291" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-292" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-293" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-294" style="font-family: MathJax_Math-italic;">y<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-295" style="font-family: MathJax_Math-italic;">b</span><span class="mi" id="MathJax-Span-296" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-297" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-298" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-299" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-300" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-301" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-302" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-303" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-304" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-305" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-306" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-307" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-308" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-309" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-310" style="font-family: MathJax_Math-italic;">m</span><span class="mi" id="MathJax-Span-311" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-312" style="font-family: MathJax_Math-italic;">l</span><span class="mi" id="MathJax-Span-313" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mi" id="MathJax-Span-314" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-315" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-316" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-317" style="font-family: MathJax_Math-italic;">h</span><span class="mi" id="MathJax-Span-318" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-319" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-320" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-321" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-322" style="font-family: MathJax_Math-italic;">n</span><span class="mi" id="MathJax-Span-323" style="font-family: MathJax_Math-italic;">v</span><span class="mi" id="MathJax-Span-324" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-325" style="font-family: MathJax_Math-italic;">r</span><span class="mi" id="MathJax-Span-326" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-327" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-328" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-329" style="font-family: MathJax_Math-italic;">n</span></span><span style="display: inline-block; width: 0px; height: 2.146em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>t</mi><mi>h</mi><mi>e</mi><mi>h</mi><mi>e</mi><mi>x</mi><mi>a</mi><mi>d</mi><mi>e</mi><mi>c</mi><mi>i</mi><mi>m</mi><mi>a</mi><mi>l</mi><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi><mi>s</mi><mi>m</mi><mi>a</mi><mi>y</mi><mi>b</mi><mi>e</mi><mi>t</mi><mi>r</mi><mi>e</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>d</mi><mi>a</mi><mi>s</mi><mi>d</mi><mi>e</mi><mi>c</mi><mi>i</mi><mi>m</mi><mi>a</mi><mi>l</mi><mi>f</mi><mi>o</mi><mi>r</mi><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mi>c</mi><mi>o</mi><mi>n</mi><mi>v</mi><mi>e</mi><mi>r</mi><mi>s</mi><mi>i</mi><mi>o</mi><mi>n</mi></math></span></span><script type="math/tex" id="MathJax-Element-16">the hexadecimal digits may be treated as decimal for this conversion</script>.</p>
+<p><b>Step 2</b> − Combine all the resulting binary groups <span class="MathJax_Preview" style="color: inherit; display: none;"></span><span class="MathJax" id="MathJax-Element-17-Frame" tabindex="0" data-mathml="&lt;math xmlns=&quot;http://www.w3.org/1998/Math/MathML&quot;&gt;&lt;mi&gt;o&lt;/mi&gt;&lt;mi&gt;f&lt;/mi&gt;&lt;mn&gt;4&lt;/mn&gt;&lt;mi&gt;d&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;g&lt;/mi&gt;&lt;mi&gt;i&lt;/mi&gt;&lt;mi&gt;t&lt;/mi&gt;&lt;mi&gt;s&lt;/mi&gt;&lt;mi&gt;e&lt;/mi&gt;&lt;mi&gt;a&lt;/mi&gt;&lt;mi&gt;c&lt;/mi&gt;&lt;mi&gt;h&lt;/mi&gt;&lt;/math&gt;" role="presentation" style="position: relative;"><nobr aria-hidden="true"><span class="math" id="MathJax-Span-330" style="width: 6.432em; display: inline-block;"><span style="display: inline-block; position: relative; width: 6.134em; height: 0px; font-size: 105%;"><span style="position: absolute; clip: rect(1.313em, 1006.13em, 2.562em, -999.997em); top: -2.199em; left: 0em;"><span class="mrow" id="MathJax-Span-331"><span class="mi" id="MathJax-Span-332" style="font-family: MathJax_Math-italic;">o</span><span class="mi" id="MathJax-Span-333" style="font-family: MathJax_Math-italic;">f<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.063em;"></span></span><span class="mn" id="MathJax-Span-334" style="font-family: MathJax_Main;">4</span><span class="mi" id="MathJax-Span-335" style="font-family: MathJax_Math-italic;">d<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-336" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-337" style="font-family: MathJax_Math-italic;">g<span style="display: inline-block; overflow: hidden; height: 1px; width: 0.003em;"></span></span><span class="mi" id="MathJax-Span-338" style="font-family: MathJax_Math-italic;">i</span><span class="mi" id="MathJax-Span-339" style="font-family: MathJax_Math-italic;">t</span><span class="mi" id="MathJax-Span-340" style="font-family: MathJax_Math-italic;">s</span><span class="mi" id="MathJax-Span-341" style="font-family: MathJax_Math-italic;">e</span><span class="mi" id="MathJax-Span-342" style="font-family: MathJax_Math-italic;">a</span><span class="mi" id="MathJax-Span-343" style="font-family: MathJax_Math-italic;">c</span><span class="mi" id="MathJax-Span-344" style="font-family: MathJax_Math-italic;">h</span></span><span style="display: inline-block; width: 0px; height: 2.205em;"></span></span></span><span style="display: inline-block; overflow: hidden; vertical-align: -0.247em; border-left: 0px solid; width: 0px; height: 1.066em;"></span></span></nobr><span class="MJX_Assistive_MathML" role="presentation"><math xmlns="http://www.w3.org/1998/Math/MathML"><mi>o</mi><mi>f</mi><mn>4</mn><mi>d</mi><mi>i</mi><mi>g</mi><mi>i</mi><mi>t</mi><mi>s</mi><mi>e</mi><mi>a</mi><mi>c</mi><mi>h</mi></math></span></span><script type="math/tex" id="MathJax-Element-17">of 4 digits each</script> into a single binary number.</p>
+<h3>Example</h3>
+<p>Hexadecimal Number : 15<sub>16</sub></p>
+<p>Calculating Binary Equivalent −</p>
+<table style="text-align:center;" class="table table-bordered">
+<tbody><tr>
+<th style="text-align:center;">Step</th>
+<th style="text-align:center;">Hexadecimal Number</th>
+<th style="text-align:center;">Binary Number</th>
+</tr>
+<tr>
+<td>Step 1</td>
+<td>15<sub>16</sub></td>
+<td>1<sub>10</sub> 5<sub>10</sub></td>
+</tr>
+<tr>
+<td>Step 2</td>
+<td>15<sub>16</sub></td>
+<td>0001<sub>2</sub> 0101<sub>2</sub></td>
+</tr>
+<tr>
+<td>Step 3</td>
+<td>15<sub>16</sub></td>
+<td>00010101<sub>2</sub></td>
+</tr>
+</tbody></table>
+<p>Hexadecimal Number : 15<sub>16</sub> = Binary Number : 10101<sub>2</sub></p>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
+
+
+<div style="position: absolute; width: 0px; height: 0px; overflow: hidden; padding: 0px; border: 0px; margin: 0px;"><div id="MathJax_Font_Test" style="position: absolute; visibility: hidden; top: 0px; left: 0px; width: auto; padding: 0px; border: 0px; margin: 0px; white-space: nowrap; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; font-size: 40px; font-weight: normal; font-style: normal; font-family: MathJax_Main, sans-serif;"></div></div></body></html>

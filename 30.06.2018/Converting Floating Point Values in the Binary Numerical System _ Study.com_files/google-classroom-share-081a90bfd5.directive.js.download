@@ -1,0 +1,72 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+define(["require", "exports", "angularDependency", "classroom/share/google/google-classroom-share.service", "classroom/share/share-assignment-modal.controller", "classroom/share/classroom-share.controller", "angularDependency", "classroom/share/classroom-share.controller", "classroom/share/google/google-classroom-assignment.service", "classroom/share/google/google-classroom-share.service"], function (require, exports, angular, google_classroom_share_service_1, share_assignment_modal_controller_1, classroom_share_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("google-classroom-share.directive", ["google-classroom-assignment.service", "share-assignment-modal.controller", "study.modal"]);
+    var GoogleClassroomShareController = (function (_super) {
+        __extends(GoogleClassroomShareController, _super);
+        function GoogleClassroomShareController(googleClassroomAssignmentService, studyModalService) {
+            var _this = _super.call(this, studyModalService, share_assignment_modal_controller_1.ShareMode.GOOGLE_CLASSROOMS) || this;
+            _this.googleClassroomAssignmentService = googleClassroomAssignmentService;
+            return _this;
+        }
+        GoogleClassroomShareController.prototype.openGoogleClassroomWindowOrOpenModal = function () {
+            if (this.assignmentId) {
+                this.lookupAssignmentAndOpenGoogleClassroomWindow();
+            }
+            else {
+                this.openShareModal();
+            }
+        };
+        GoogleClassroomShareController.prototype.lookupAssignmentAndOpenGoogleClassroomWindow = function () {
+            var googleClassroomWindow = window.open("", "_blank");
+            this.googleClassroomAssignmentService.getAssignment(this.assignmentId)
+                .then(function (assignment) {
+                var config = {
+                    assignmentId: assignment.id,
+                    classroomCode: assignment.classroom.code,
+                    title: assignment.name,
+                    message: assignment.instructions
+                };
+                google_classroom_share_service_1.GoogleClassroomShareService.navigateWindowToGoogleClassroom(googleClassroomWindow, config);
+            }.bind(this))["catch"](function () {
+                google_classroom_share_service_1.GoogleClassroomShareService.closeWindowAndShowErrorMessage(googleClassroomWindow);
+            });
+        };
+        GoogleClassroomShareController.$inject = ["googleClassroomAssignmentService", "studyModalService"];
+        return GoogleClassroomShareController;
+    }(classroom_share_controller_1.ClassroomShareController));
+    exports.GoogleClassroomShareController = GoogleClassroomShareController;
+    module.directive("googleClassroomShare", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/share/google/google-classroom-share.tpl",
+            scope: {
+                academyAssetId: '=?',
+                assignmentContentType: '=?',
+                assignmentId: '=?',
+                assignmentResourceType: '=?',
+                classroomCode: '=?',
+                cnameSuffix: '@',
+                courseAssetId: '=?',
+                extraClass: '@?',
+                hideLinkIcon: '@?',
+                linkText: '@?'
+            },
+            bindToController: true,
+            controller: GoogleClassroomShareController,
+            controllerAs: "googleClassroomShareCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=google-classroom-share.directive.js.map

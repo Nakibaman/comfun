@@ -1,0 +1,16 @@
+define(["require", "exports", "angularDependency", "logging/visible/visibility-tester", "angularDependency", "logging/visible/visibility-tester"], function (require, exports, angular, visibility_tester_1) {
+    "use strict";
+    exports.__esModule = true;
+    var VisibilityTesterService = (function () {
+        function VisibilityTesterService() {
+            this.visibilityTester = new visibility_tester_1.VisibilityTester();
+            this.visibilityTester.start();
+        }
+        return VisibilityTesterService;
+    }());
+    exports.VisibilityTesterService = VisibilityTesterService;
+    var module = angular.module("visibility-tester.service", []);
+    module.service("visibilityTesterService", VisibilityTesterService);
+});
+
+//# sourceMappingURL=visibility-tester.service.js.map

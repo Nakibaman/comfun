@@ -1,0 +1,65 @@
+(function () {
+	'use strict';
+
+	function init($) {
+		var likeButtonHandler = function () {
+			var $this = $(this);
+			var isLiked = !$this.hasClass('liked');
+			var titleText = isLiked ? 'Unlike' : 'Like';
+			var siteResourceId = $this.data('like-site-resource') || $this.data('like-all-site-resource');
+			var siteResourceType = $this.data('like-site-resource-type');
+			var trigger = 'LIKED_' + siteResourceType.toUpperCase();
+
+			if (isLiked) {
+				// Add the 'liked' class to each like button, if it doesn't already have it.
+				$this.each(function () {
+					if (!$(this).hasClass('liked')) {
+						$(this).addClass('liked');
+					}
+				});
+			}
+			else {
+				// Remove the 'liked' class from all like buttons
+				$this.removeClass('liked');
+			}
+
+			$this.find('[data-like-action]').text(titleText);
+
+			$this.each(function () {
+				if ($(this).data('original-title')) {
+					// Update the title text
+					$(this).attr('title', titleText);
+
+					// Destroy and recreate the tooltip with the new text
+					$(this).tooltip('hide');
+					$(this).tooltip('destroy').tooltip();
+				}
+			});
+
+			var isMember = $.cookie("member") == 1;
+			var data = {
+				siteResourceId: siteResourceId,
+				thumbsUp: isLiked,
+				isMember: isMember,
+				trigger: trigger
+			};
+
+			$.ajax({
+				type: "POST",
+				url: '/user-rating/set-resource-rating.ajax',
+				data: data,
+				dataType: 'json'
+			});
+		};
+
+		$('body').on('click', '[data-like-site-resource]', likeButtonHandler);
+		$('body').on('click', '[data-like-all-site-resource]', likeButtonHandler);
+	}
+
+	if (typeof define !== 'undefined' && define.amd) {
+		define(['jquery'], init);
+	}
+	else {
+		init(window.$);
+	}
+})();

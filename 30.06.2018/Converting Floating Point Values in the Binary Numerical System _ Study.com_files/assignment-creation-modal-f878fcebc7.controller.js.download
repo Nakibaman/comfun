@@ -1,0 +1,49 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+define(["require", "exports", "angularDependency", "classroom/teacher/assignments/create/teacher-assign.controller", "angularDependency", "classroom/teacher/assignments/create/teacher-assign.controller", "classroom/teacher/classroom-picker.directive", "util/support-article-link.directive"], function (require, exports, angular, teacher_assign_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var modalModule = angular.module("assignment-creation-modal.controller", ["account-type.directive", "arrowKeyInput",
+        "assignment.service", "classroom-picker.directive", "classroom.service", "classroom-modal.service",
+        "member-info.service", "persona.directive", "studentInviteDirective", "studentNameDirective", "study.modal", "study.remspect-directives",
+        "support-article-link.directive", "ui.utils"]);
+    var AssignmentCreationModalController = (function (_super) {
+        __extends(AssignmentCreationModalController, _super);
+        function AssignmentCreationModalController($filter, $scope, assignmentCreationInput, assignmentService, classroomService, classroomModalService, memberInfoService, studyModalService, classroomNameInputPattern, classroomNameMinLength, classroomNameMaxLength) {
+            var _this = _super.call(this, $filter, $scope, assignmentService, classroomService, classroomModalService, memberInfoService, studyModalService, classroomNameInputPattern, classroomNameMinLength, classroomNameMaxLength) || this;
+            _this.academyAssetId = assignmentCreationInput.academyAssetId;
+            _this.contentType = assignmentCreationInput.contentType;
+            _this.courseAssetId = assignmentCreationInput.courseAssetId;
+            _this.resourceType = assignmentCreationInput.resourceType;
+            _this.resourceTitle = assignmentCreationInput.resourceTitle;
+            _this.resourceUri = assignmentCreationInput.resourceUri;
+            _this.resourcePreviewUri = assignmentCreationInput.resourcePreviewUri;
+            _this.allowEmptyCourseId = assignmentCreationInput.allowEmptyCourseId;
+            _this.resourceTypeDisplay = _this.convertAssetTypeToDisplayType(assignmentCreationInput.resourceType, assignmentCreationInput.contentType);
+            _this.assetIcon = _this.convertAssetTypeToIconType(assignmentCreationInput.resourceType, assignmentCreationInput.contentType);
+            return _this;
+        }
+        AssignmentCreationModalController.prototype.getDatePickerSelector = function () {
+            return "#teacher-assign-modal-body [data-date-picker]";
+        };
+        AssignmentCreationModalController.prototype.closeIfModal = function () {
+            this.$scope.$close();
+        };
+        AssignmentCreationModalController.$inject = ['$filter', '$scope', 'assignmentCreationInput', 'AssignmentService',
+            'classroomService', 'classroomModalService', 'MemberInfoService', 'studyModalService',
+            "CLASSROOM_NAME_INPUT_PATTERN", "CLASSROOM_NAME_MIN_LENGTH", "CLASSROOM_NAME_MAX_LENGTH"];
+        return AssignmentCreationModalController;
+    }(teacher_assign_controller_1.TeacherAssignController));
+    exports.AssignmentCreationModalController = AssignmentCreationModalController;
+    modalModule.controller("assignmentCreationInline", AssignmentCreationModalController);
+});
+
+//# sourceMappingURL=assignment-creation-modal.controller.js.map

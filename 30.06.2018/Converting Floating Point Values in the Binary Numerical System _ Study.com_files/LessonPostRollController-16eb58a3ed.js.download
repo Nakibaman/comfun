@@ -1,0 +1,55 @@
+(function() {
+	"use strict";
+
+	function init($) {
+		function LessonPostRollController($http, $scope) {
+			this.$http = $http;
+
+			this.recommendedLessons = [];
+			this.recommendationSource = '';
+			this.lessonLimit = 2;
+			this.initialized = false;
+
+			var largePlayerMedia = window.matchMedia("(min-width: 600px) and (max-width: 767px), (min-width: 930px)");
+			if (largePlayerMedia.matches) {
+				this.lessonLimit = 3;
+			}
+			largePlayerMedia.addListener($.proxy(function(mediaQuery) {
+				$scope.$apply($.proxy(function() {
+					if (mediaQuery.matches) {
+						this.lessonLimit = 3;
+					}
+					else {
+						this.lessonLimit = 2;
+					}
+				}, this));
+			}, this));
+
+			$scope.$watch($.proxy(function() {
+				return this.recommendationSource;
+			}, this), $.proxy(function (value) {
+				this.addRecommendedLesson(value === 'subjects' ? this.SUBJECTS_URL : this.MEMBER_ACTIVITY_URL);
+			}, this));
+
+		}
+
+		LessonPostRollController.prototype.MEMBER_ACTIVITY_URL = "/member/activity/getRecommendedLessonsByMemberActivity.ajax";
+		LessonPostRollController.prototype.SUBJECTS_URL = "/member/profile/getRecommendedLessonsByProngs.ajax";
+
+		LessonPostRollController.prototype.addRecommendedLesson = function(url) {
+			this.$http.get(url).then($.proxy(function (response) {
+				if (response['data']) {
+					this.recommendedLessons = this.recommendedLessons.concat(response['data']);
+				}
+				this.initialized = true;
+
+			}, this));
+		};
+
+		LessonPostRollController['$inject'] = ["$http", "$scope"];
+
+		return LessonPostRollController;
+	}
+
+	define(['jquery'], init);
+})();

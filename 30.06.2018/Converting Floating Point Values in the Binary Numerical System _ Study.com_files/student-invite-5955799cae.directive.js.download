@@ -1,0 +1,334 @@
+define([
+	 'angularDependency',
+	 'lib/toastr',
+	 'classroom/classroom.service',
+	 'classroom/classroom-roster.service',
+	 'classroom/student-invite.service',
+	 'compatibility/polyfills',
+	 'util/text-input.directive'],
+
+ function(angular, toastr) {
+	"use strict";
+	var STUDENT_EMAIL_QUERY_PARAM = "studentEmail";
+	 
+	 var NAME_ALREADY_IN_USE_MESSAGE = "You already have a classroom with that name";
+	 var TOO_MANY_CLASSROOMS_ERROR = "You've already reached the max number of classrooms";
+	 var TOO_MANY_STUDENTS_ERROR = "You already have the max number of students";
+
+	StudentInviteController["$inject"] = ["$element", "$scope", "classroomService", "ClassroomRosterService", "studentInviteService",
+		"CLASSROOM_NAME_ERROR_MESSAGE", "CLASSROOM_NAME_INPUT_PATTERN"];
+	
+	 /**
+	  * @type {StudentInviteController}
+	  * @prop {boolean} canChangeClassroom
+	  * @prop {object} selectedClassroom
+	  * @prop {string} activeTab
+	  * @prop {string} emailAddresses
+	  *
+	  * @constructor
+	  * @param $element
+	  * @param $scope
+	  * @param classroomService
+	  * @param classroomRosterService
+	  * @param studentInviteService
+	  * @param CLASSROOM_NAME_ERROR_MESSAGE
+	  * @param CLASSROOM_NAME_INPUT_PATTERN
+	  */
+	 function StudentInviteController($element, $scope, classroomService, classroomRosterService, studentInviteService, CLASSROOM_NAME_ERROR_MESSAGE,
+	  CLASSROOM_NAME_INPUT_PATTERN) {
+		 this.$modal = $element.parents(".modal");
+		 this.$scope = $scope;
+		
+		 /**
+		  * @type {ClassroomService}
+		  */
+		 this.classroomService = classroomService;
+		
+		 /**
+		  * @type {ClassroomRosterService}
+		  */
+		 this.classroomRosterService = classroomRosterService;
+		
+		 /**
+		  * @type {StudentInviteService}
+		  */
+		 this.studentInviteService = studentInviteService;
+		
+		 /**
+		  * @type {ValueProxy}
+		  */
+		 this.teacherClassroomsProxy = classroomService.teacherClassroomsProxy;
+		
+		 /**
+		  * @type {string}
+		  */
+		 this.CLASSROOM_NAME_INPUT_PATTERN = CLASSROOM_NAME_INPUT_PATTERN;
+		 
+		 /**
+		  * @type {string}
+		  */
+		 this.CLASSROOM_NAME_ERROR_MESSAGE = CLASSROOM_NAME_ERROR_MESSAGE;
+		
+		 /**
+		  * @type {string}
+		  */
+		 this.baseUrl = location.protocol + "//" + location.host;
+		
+		 /**
+		  * @type {string}
+		  */
+		 this.activeTab = "existing";
+		
+		 /**
+		  * @type {string}
+		  */
+		 this.emailAddresses = "";
+		
+		 this.newClassroom = {
+			 displayName: ""
+		 };
+		 
+		 //From directive
+		 //this.canChangeClassroom
+		 //this.selectedClassroom
+		
+		 this._listenForModalClose();
+		 this._checkParamsAndTriggerOverlay();
+		 this._ensureTeacherClassroomsLoaded();
+		 this._watchForErrors();
+
+		 if (this.canChangeClassroom) {
+			 this._initializeActiveTabBasedOnClassroomCount();
+		 }
+	 }
+	
+	 StudentInviteController.prototype.isInputValid = function() {
+		 if (this.activeTab === 'existing') {
+			 return this.emailAddresses && !this.getExistingClassroomError();
+		 }
+		 else if (this.activeTab === 'new') {
+			 return this.emailAddresses && this.newClassroom.displayName.length > 0 && !this.newClassroomError;
+		 }
+		 else {
+			 console.log("unexpected tab=" + this.activeTab);
+			 return false;
+		 }
+	 };
+
+	 StudentInviteController.prototype.expand = function() {
+		 this.expanded = true;
+		 this.$modal.addClass("student-invite-modal-full-width");
+	 };
+
+	 StudentInviteController.prototype.collapse = function() {
+		 this.expanded = false;
+		 this.$modal.removeClass("student-invite-modal-full-width");
+	 };
+
+	 StudentInviteController.prototype._watchForErrors = function() {
+		 this.$scope.$watch(function() {
+			 return this.newClassroom.displayName;
+		 }.bind(this), function(newClassroomName) {
+			 this.newClassroomError = this.getNewClassroomNameError(newClassroomName);
+		 }.bind(this));
+	 };
+	
+	 StudentInviteController.prototype.getNewClassroomNameError = function(newClassroomName) {
+		 if (!this.classroomService.canCreateClassroom()) {
+			 return TOO_MANY_CLASSROOMS_ERROR;
+		 }
+		
+		 if (!newClassroomName || newClassroomName.length === 0) {
+			 return "";
+		 }
+		
+		 if (!this.classroomService.isClassroomNameInCorrectFormat(newClassroomName)) {
+			 return this.CLASSROOM_NAME_ERROR_MESSAGE;
+		 }
+		
+		 if (this.classroomService.isClassroomNameInUse(newClassroomName)) {
+			 return NAME_ALREADY_IN_USE_MESSAGE;
+		 }
+		
+		 return "";
+	 };
+
+	 StudentInviteController.prototype.getExistingClassroomError = function() {
+		 return this.getExistingClassroomNameError(this.selectedClassroom);
+	 };
+
+	 StudentInviteController.prototype.getExistingClassroomNameError = function(selectedClassroom) {
+		 if (!selectedClassroom) {
+			 return "";
+		 }
+		
+		 if (!this.classroomService.canAddStudentsToClassroom()) {
+			 return TOO_MANY_STUDENTS_ERROR;
+		 }
+		
+		 return "";
+	 };
+
+	 StudentInviteController.prototype._listenForModalClose = function() {
+		 this.$modal.on("hidden.bs.modal", function() {
+			 this.$scope.$apply(function() {
+				 this._resetToInitialState();
+			 }.bind(this));
+		 }.bind(this));
+	 };
+
+	 StudentInviteController.prototype._resetToInitialState = function() {
+		 this.newClassroom.displayName = "";
+		 this.newClassroomError = "";
+		 this.emailAddresses = "";
+
+		 this.collapse();
+
+		 if (this.canChangeClassroom) {
+			 this.selectedClassroom = null;
+			 this._initializeActiveTabBasedOnClassroomCount();
+		 }
+	 };
+
+	 StudentInviteController.prototype._checkParamsAndTriggerOverlay = function () {
+		 // Normally we'd use angular's $location, but because we are using html4 mode, we can't
+		 var queryParams = window.location.search.replace("?", "").split("&");
+		 var studentEmailParam = queryParams.find(function(queryParam) {
+			 return queryParam.startsWith(STUDENT_EMAIL_QUERY_PARAM);
+		 });
+
+		 if (this.canChangeClassroom && studentEmailParam) {
+			 this.emailAddresses = studentEmailParam.replace(STUDENT_EMAIL_QUERY_PARAM + "=", "");
+			 this.$modal.modal("show");
+		 }
+	 };
+
+	StudentInviteController.prototype._ensureTeacherClassroomsLoaded = function () {
+		this.classroomService.teacherClassroomsProxy.getValue()
+		 .catch(this._handleError);
+	};
+	
+	 StudentInviteController.prototype._initializeActiveTabBasedOnClassroomCount = function() {
+		 this.classroomService.teacherClassroomsProxy.getValue()
+		 .then(function(classrooms) {
+			
+			 if (classrooms.length > 0) {
+				 this.activeTab = "existing";
+			 }
+			 else {
+				 this.activeTab = "new";
+			 }
+		 }.bind(this))
+		 .catch(this._handleError);
+	 };
+	
+	 StudentInviteController.prototype.sendInvites = function() {
+		 if (this.isInputValid()) {
+			 if (this.activeTab === 'existing') {
+				 this._inviteStudentsToExistingClassroom();
+			 }
+			 else if (this.activeTab === 'new') {
+				 this._createClassroomAndInviteStudents();
+			 }
+			 else {
+				 throw "Unable to invite students. Unexpected tab=" + this.activeTab;
+			 }
+		 }
+	 };
+	 
+	/**
+	 * Send an invitation email to a list of email addresses
+	 */
+	StudentInviteController.prototype._inviteStudentsToExistingClassroom = function () {
+		this.studentInviteService.inviteStudents(this.emailAddresses, this.selectedClassroom.code)
+		 .then(this._handleInviteResponse.bind(this, this.selectedClassroom.code))
+		 .catch(this._handleError);
+	};
+	
+	 /**
+	  * Send an invitation email to a list of email addresses
+	  */
+	 StudentInviteController.prototype._createClassroomAndInviteStudents = function() {
+		 this.classroomService.createClassroom(this.newClassroom)
+		 .then(function(createdClassroom) {
+			 this.studentInviteService.inviteStudents(this.emailAddresses, createdClassroom.code)
+			 .then(this._handleInviteResponse.bind(this, createdClassroom.code))
+			 .catch(this._handleError);
+		 }.bind(this))
+		 .catch(function(classroomCreateErrorMessage) {
+			 this._handleError(classroomCreateErrorMessage);
+		 }.bind(this));
+	 };
+	 
+	 /**
+	  * Displays the response messages
+	  * @param {string} classroomCode
+	  * @param {Array.<InviteResponseMessage>} responseMessages
+	  * @private
+	  */
+	StudentInviteController.prototype._handleInviteResponse = function (classroomCode, responseMessages) {
+		var successMessages = [];
+
+		angular.forEach(responseMessages, function(responseMessage) {
+			if (this.studentInviteService.INVITE_MESSAGE_SUCCESS === responseMessage.type) {
+				successMessages.push(responseMessage.message);
+			}
+			else if (this.studentInviteService.INVITE_MESSAGE_WARNING === responseMessage.type) {
+				this._showWarningMessage(responseMessage.message);
+			}
+			else if (this.studentInviteService.INVITE_MESSAGE_ERROR === responseMessage.type) {
+				this._handleError(responseMessage.message);
+			}
+		}.bind(this));
+
+		this._showSuccessMessage(successMessages.join("<br/>"));
+
+		var classroomProxy = this.classroomService.getClassroomProxyByCode(classroomCode);
+		if (classroomProxy) {
+			classroomProxy.reloadValue();
+		}
+	};
+
+	StudentInviteController.prototype._showSuccessMessage = function (message) {
+		if (message) {
+			toastr.success(message, "Success", {
+				positionClass: 'toast-top-center'
+			});
+		}
+	};
+
+	 StudentInviteController.prototype._showWarningMessage = function (message) {
+		 if (message) {
+			 toastr.warning(message, "Warning", {
+				 positionClass: 'toast-top-center'
+			 });
+		 }
+	 };
+
+	StudentInviteController.prototype._handleError = function (errorMessage) {
+		if (errorMessage) {
+			toastr.error(errorMessage, "A problem occurred", {
+				positionClass: 'toast-top-center'
+			});
+		}
+	};
+
+	var module = angular.module("studentInviteDirective", ["classroom.service", "classroom-roster.service", "studentInviteService", "studyTextInput"]);
+
+	module.directive("addStudentModal", function() {
+		return {
+			restrict: "E",
+			scope: {
+				canChangeClassroom: "=",
+				selectedClassroom: "=",
+				close: "&"
+			},
+			templateUrl: '/templates/dashboard/classroom/_classroom_add_student_modal.tpl',
+			bindToController: true,
+			controllerAs: "studentInviteCtrl",
+			controller: StudentInviteController
+		};
+	});
+	
+	return module;
+});

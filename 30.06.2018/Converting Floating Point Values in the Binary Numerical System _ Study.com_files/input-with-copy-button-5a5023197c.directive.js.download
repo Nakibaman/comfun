@@ -1,0 +1,42 @@
+define(["require", "exports", "angularDependency", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("input-with-copy-button.directive", []);
+    var InputWithCopyButtonController = (function () {
+        function InputWithCopyButtonController() {
+        }
+        InputWithCopyButtonController.prototype.copyToClipboard = function () {
+            if (!this.element) {
+                throw "element not properly set on InputWithCopyButtonController";
+            }
+            var inputElement = this.element.find("input");
+            inputElement.select();
+            document.execCommand("copy");
+            inputElement.blur();
+            this.copyPerformed = true;
+        };
+        InputWithCopyButtonController.prototype.setElement = function (element) {
+            this.element = element;
+        };
+        InputWithCopyButtonController.$inject = [];
+        return InputWithCopyButtonController;
+    }());
+    module.directive("inputWithCopyButton", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/angular/inputs/input-with-copy-button.tpl",
+            scope: {
+                copyButtonText: "@",
+                inputValue: "="
+            },
+            bindToController: true,
+            controller: InputWithCopyButtonController,
+            controllerAs: "inputWithCopyButtonCtrl",
+            link: function (scope, instanceElement, instanceAttributes, inputWithCopyButtonCtrl) {
+                inputWithCopyButtonCtrl.setElement(instanceElement);
+            }
+        };
+    });
+});
+
+//# sourceMappingURL=input-with-copy-button.directive.js.map

@@ -1,0 +1,79 @@
+define(["require", "exports", "angularDependency", "angularDependency", "angular/util/http-post-params-as-form.provider"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("classroom-roster.service", ["study.http-post-params-as-form"]);
+    var ClassroomRosterService = (function () {
+        function ClassroomRosterService($http, $q, httpPostParamsAsFormConfig) {
+            this.$http = $http;
+            this.$q = $q;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+        }
+        ClassroomRosterService.prototype.removeStudent = function (classroom, student) {
+            var params = {
+                classroomId: classroom.id,
+                memberId: student.memberId
+            };
+            return this.$http.post("/member/classrooms/roster/remove-student.ajax", params, this.httpPostParamsAsFormConfig)
+                .then(function () {
+                var index = this._indexOf(classroom.students, student);
+                classroom.students.splice(index, 1);
+            }.bind(this))["catch"](this.transformError.bind(this));
+        };
+        ClassroomRosterService.prototype.changeStudentPassword = function (studentMemberId, newPassword) {
+            var params = {
+                studentMemberId: studentMemberId,
+                newPassword: newPassword
+            };
+            return this.$http.post("/member/change-student-password.ajax", params, this.httpPostParamsAsFormConfig);
+        };
+        ClassroomRosterService.prototype.canChangeStudentPassword = function (studentMemberId) {
+            var params = {
+                studentMemberId: studentMemberId
+            };
+            return this.$http.get("/member/can-change-student-password.ajax", { params: params })
+                .then(function (response) {
+                return response.data.canChangeStudentPassword;
+            })["catch"](function (response) {
+                return response.data.message;
+            });
+        };
+        ;
+        ClassroomRosterService.prototype.resendInvite = function (pendingInvite) {
+            return this.$http.post("/member/classrooms/invite/resend-invitation.ajax", pendingInvite, this.httpPostParamsAsFormConfig)["catch"](this.transformError.bind(this));
+        };
+        ;
+        ClassroomRosterService.prototype.removeInvite = function (classroom, pendingInvite) {
+            return this.$http.post("/member/classrooms/invite/remove-invitation.ajax", pendingInvite, this.httpPostParamsAsFormConfig)
+                .then(function () {
+                var index = this._indexOf(classroom.pendingInvites, pendingInvite);
+                classroom.pendingInvites.splice(index, 1);
+            }.bind(this))["catch"](this.transformError.bind(this));
+        };
+        ;
+        ClassroomRosterService.prototype.transformError = function (response) {
+            var responseCode = response.status;
+            var errorMessage = null;
+            if (responseCode === 400) {
+                errorMessage = "Missing required parameter";
+            }
+            else if (responseCode === 500) {
+                errorMessage = "Sorry, there seems to be a problem with our servers. Please try again later.";
+            }
+            return this.$q.reject(errorMessage);
+        };
+        ClassroomRosterService.prototype._indexOf = function (array, object) {
+            for (var i = 0; i < array.length; i++) {
+                if (angular.equals(array[i], object)) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+        ClassroomRosterService.$inject = ["$http", "$q", "httpPostParamsAsFormConfig"];
+        return ClassroomRosterService;
+    }());
+    exports.ClassroomRosterService = ClassroomRosterService;
+    module.service("ClassroomRosterService", ClassroomRosterService);
+});
+
+//# sourceMappingURL=classroom-roster.service.js.map

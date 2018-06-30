@@ -1,0 +1,131 @@
+(function () {
+	"use strict";
+
+	function init(angular, $) {
+		var IN_ANDROID_STORE = "on Google Play";
+		var IN_IOS_STORE = "in the App Store";
+		var APP_STORE_ID_TOKEN = "#";
+		var IOS_STORE_URL = "https://itunes.apple.com/us/app/study.com-video-lessons-learn/id" + APP_STORE_ID_TOKEN;
+		var ANDROID_STORE_URL = "https://play.google.com/store/apps/details?id=" + APP_STORE_ID_TOKEN;
+		var IOS_ID = "1128875336";
+		var ANDROID_ID = "com.study.app";
+		var HOURS_TILL_RESHOW = 1;
+		var BANNER_SHOWING_CLASS = "appSmartBannerShowing";
+		var CLOSED_COOKIE = "appDownloadBanner-isClosed";
+		var INSTALLED_COOKIE = "appDownloadBanner-isInstalled";
+		var MOBILE_DEVICE_TYPE = {
+			ANDROID: 'android',
+			IOS: 'ios',
+			WINDOWS: 'windows',
+			KINDLE: 'kindle',
+			OTHER: 'other'
+		};
+		var SUPPORTED_DEVICES = [MOBILE_DEVICE_TYPE.ANDROID, MOBILE_DEVICE_TYPE.IOS];
+
+		AppDownloadBanner['$inject'] = ['$element'];
+
+		function AppDownloadBanner($element) {
+			this.$element = $element;
+			this.deviceType = this.getDeviceType();
+			this.isVisible = false;
+			this.isAppInstalled = !!$.cookie(INSTALLED_COOKIE);
+
+			var alreadyClosed = $.cookie(CLOSED_COOKIE);
+
+			if (this.deviceType && !navigator['standalone'] && // Device doesn't have a type or is a standalone app
+			 !this.isAppInstalled &&
+			 !alreadyClosed && // The user has already closed the banner
+			 SUPPORTED_DEVICES.indexOf(this.deviceType) > -1) {
+				this.show();
+			}
+			
+			// CON-2952: hide app download banner upon opening reg overlay
+			$("#partialRegFormModal").on("show.bs.modal", function() {
+				$('.appSmartBanner').hide();
+				$('body').removeClass(BANNER_SHOWING_CLASS);
+				this.isVisible = false;
+			}.bind(this));
+		}
+
+		AppDownloadBanner.prototype.getDeviceType = function() {
+			var UA = navigator.userAgent;
+
+			if (UA.match(/Windows Phone/i) !== null && UA.match(/Edge|Touch/i) !== null) {
+				return MOBILE_DEVICE_TYPE.WINDOWS;
+			}
+			else if (UA.match(/iPhone|iPod/i) !== null || (UA.match(/iPad/))) {
+				if (UA.match(/Safari/i) !== null ||
+				 UA.match(/CriOS/i) !== null ||
+				 UA.match(/FxiOS/i) !== null ||
+				 window.Number(UA.substr(UA.indexOf('OS ') + 3, 3).replace('_', '.')) < 6) {
+					return MOBILE_DEVICE_TYPE.IOS;
+				}
+			}
+			else if (UA.match(/\bSilk\/(.*\bMobile Safari\b)?/) || UA.match(/\bKF\w/) || UA.match('Kindle Fire')) {
+				return MOBILE_DEVICE_TYPE.KINDLE;
+			}
+			else if (UA.match(/Android/i) !== null) {
+				return MOBILE_DEVICE_TYPE.ANDROID;
+			}
+
+			return MOBILE_DEVICE_TYPE.OTHER;
+		};
+
+		AppDownloadBanner.prototype.show = function () {
+			this.isVisible = true;
+
+			if (this.deviceType === MOBILE_DEVICE_TYPE.ANDROID) {
+				this.inStoreText = IN_ANDROID_STORE;
+				this.link = ANDROID_STORE_URL.replace(APP_STORE_ID_TOKEN, ANDROID_ID);
+			}
+			else if (this.deviceType === MOBILE_DEVICE_TYPE.IOS) {
+				this.inStoreText = IN_IOS_STORE;
+				this.link = IOS_STORE_URL.replace(APP_STORE_ID_TOKEN, IOS_ID);
+			}
+
+			var $body = $('body');
+			if (!$body.hasClass(BANNER_SHOWING_CLASS)) {
+				$body.addClass(BANNER_SHOWING_CLASS);
+			}
+		};
+
+		AppDownloadBanner.prototype.dismiss = function() {
+			
+			var cookieOptions = {
+				expires: HOURS_TILL_RESHOW / 24,
+				path: '/'
+			};
+			
+			$.cookie(CLOSED_COOKIE, true, cookieOptions);
+			$('body').removeClass(BANNER_SHOWING_CLASS);
+			this.isVisible = false;
+		};
+
+		AppDownloadBanner.prototype.markAsInstalled = function() {
+			
+			var cookieOptions = {
+				path: '/'
+			};
+			
+			$.cookie(INSTALLED_COOKIE, true, cookieOptions);
+			this.isAppInstalled = true;
+		};
+
+		var module = angular.module("study.mobile-promotion.download-banner", []);
+		module.controller("AppDownloadBanner", AppDownloadBanner);
+		module.directive("studyAppDownloadBanner", function() {
+			return {
+				restrict: "E",
+				controller: "AppDownloadBanner",
+				controllerAs: "banner",
+				templateUrl: "/templates/mobile-promotion/app-download-banner.tpl"
+			};
+		});
+
+		return module;
+	}
+	
+
+
+	define(['angularDependency', 'jquery', 'lib/jquery/cookie'], init);
+})();

@@ -1,0 +1,66 @@
+define(["require", "exports", "angularDependency", "feedback/feedback.service", "util/remspect", "angularDependency", "feedback/feedback.service", "member/info/member-info.service", "util/remspect"], function (require, exports, angular, feedback_service_1, remspect) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("testimonial-list.controller", ["feedback.service", "member-info.service"]);
+    var TestimonialListController = (function () {
+        function TestimonialListController(feedbackService, memberInfoService) {
+            this.isLoading = true;
+            this.testimonialList = [];
+            this.feedbackService = feedbackService;
+            this.memberInfoService = memberInfoService;
+            this.loadTestimonialList();
+        }
+        TestimonialListController.prototype.loadTestimonialList = function () {
+            var _this = this;
+            var targetUserType = feedback_service_1.TargetUserType.ANY;
+            this.memberInfoService.memberInfoProxy.getValue()
+                .then(function (memberInfo) {
+                if (!remspect.isControl("segmentedTestimonials")) {
+                    if (!memberInfo.isLoggedIn && memberInfo.persona === "INSTRUCTOR") {
+                        targetUserType = feedback_service_1.TargetUserType.INSTRUCTOR;
+                    }
+                }
+            })
+                .then(function () { return _this.feedbackService.getTestimonialsCached(); })
+                .then(function (testimonialList) {
+                for (var _i = 0, testimonialList_1 = testimonialList; _i < testimonialList_1.length; _i++) {
+                    var testimonial = testimonialList_1[_i];
+                    if (testimonial.targetUserType === targetUserType) {
+                        _this.testimonialList.push(testimonial);
+                    }
+                }
+                _this.shuffle(_this.testimonialList);
+            })["finally"](function () {
+                _this.isLoading = false;
+                _this.startCarousel();
+            });
+        };
+        TestimonialListController.prototype.truncateFeedbackString = function (str, truncateLength) {
+            var truncatedString = str;
+            if (str.length > truncateLength) {
+                truncatedString = str.slice(0, (truncateLength - 1)) + "...";
+            }
+            return truncatedString;
+        };
+        TestimonialListController.prototype.shuffle = function (array) {
+            var currentIndex = array.length;
+            var temporaryValue;
+            var randomIndex;
+            while (0 !== currentIndex) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex -= 1;
+                temporaryValue = array[currentIndex];
+                array[currentIndex] = array[randomIndex];
+                array[randomIndex] = temporaryValue;
+            }
+        };
+        TestimonialListController.prototype.startCarousel = function () {
+            $("#feedbackCarousel").carousel("cycle");
+        };
+        TestimonialListController.$inject = ["FeedbackService", "MemberInfoService"];
+        return TestimonialListController;
+    }());
+    module.controller("TestimonialListController", TestimonialListController);
+});
+
+//# sourceMappingURL=testimonial-list.controller.js.map

@@ -1,0 +1,697 @@
+(function() {
+	'use strict';
+
+	var angularModules = [
+	   'ngCookies',
+		'preselect-reg-form-answers.service',
+		'registrationForm.constants',
+		'registrationForm.directives',
+		'registration-form-settings.provider',
+		'registration-form-util.service',
+	   'ui.bootstrap'
+	];
+	
+	var injectedRequiredDeps = ['jquery',
+		'angularDependency',
+	   'util/remspect',
+	 // injected above this line, alphabetized below
+		'lib/angular/cookie',
+		'lib/angular/ui-bootstrap',
+		'registration/angularFormConstants',
+		'registration/angularFormDirectives',
+		'registration/partial-reg-form/preselect-reg-form-answers.service',
+		'registration/registration-form-settings.provider',
+		'registration/registration-form-util.service'
+	];
+	
+	function init($, angular, remspect) {
+		
+		var modalId = '#partialRegFormModal';
+		
+		PartialRegFormController['$inject'] = ['$cookies', '$element', '$http', '$scope', '$timeout', 'registrationForm.errorStrings', 'registrationFormSettings', "registrationFormUtilService", 'PreselectRegFormAnswersService'];
+		
+		function PartialRegFormController($cookies, $element, $http, $scope, $timeout, errorStrings, registrationFormSettings, registrationFormUtilService, preselectService) {
+			$scope.forms = {};
+			$scope.carousel = angular.element('#partialRegFormCarousel');
+			$scope.modal = angular.element(modalId);
+			$scope.billingData = {};
+			$scope.registrationData = {};
+			$scope.registrationData.subjectsTaught = [];
+			
+			$scope.preselectService = preselectService;
+			$scope.preselectionsMerged = false;
+			$scope.subjectsPrechosen = false;
+			$scope.gradeLevelPrechosen = false;
+			
+			$scope.helperTextIndex = 1;
+			$scope.focused = false;
+			$scope.showTeacherEditionUX = false;
+			$scope.freeTrialMessaging = true;
+			$scope.ctaButtonText = "Start Free Trial";
+			
+			$scope.showReactivate = 1;
+			$scope.showTwoStepForm = false;
+			$scope.validCoupon = null;
+			
+			if (!$scope.recommendedProduct) {
+				$scope.showMostPopularOnPremium = true;
+			}
+			
+			/*usertypes*/
+			$scope.INSTRUCTOR = 'INSTRUCTOR';
+			$scope.PARENT = 'PARENT';
+			$scope.STUDENT = 'STUDENT';
+			$scope.TUTOR = 'TUTOR';
+			
+			/*self id from paywall*/
+			$scope.SELF_ID_STUDENT = 'STUDENT';
+			$scope.SELF_ID_TEACHER = 'TEACH';
+			$scope.SELF_ID_TEST_PREP = 'TEST_PREP';
+			$scope.SELF_ID_SPECIFIC_TEST_PREP = 'SPECIFIC_TEST_PREP';
+			
+			/*goals*/
+			$scope.EARN_CREDIT = 'EARN_CREDIT';
+			$scope.STUDY = 'STUDY';
+			$scope.EXAM_PREP = 'EXAM_PREP';
+			$scope.IMPROVE_GRADES = 'IMPROVE_GRADES';
+			$scope.RESEARCH = 'RESEARCH';
+			$scope.OTHER = 'OTHER';
+			$scope.CHILD_CREDIT_EXAM = 'CHILD_CREDIT_EXAM';
+			$scope.TEACHER_CERTIFICATION = 'TEACHER_CERTIFICATION';
+			$scope.PROFESSIONAL_DEVELOPMENT = 'PROFESSIONAL_DEVELOPMENT';
+			$scope.STANDARD_EXAM_PREP = 'STANDARD_EXAM_PREP';
+			$scope.HELPING_CHILD = 'HELPING_CHILD';
+			$scope.IMPROVE_CHILD_GRADES = 'IMPROVE_CHILD_GRADES';
+			
+			/*products*/
+			$scope.BASIC = 'BASIC';
+			$scope.PREMIUM = 'PREMIUM';
+			$scope.COLLEGE_ACCELERATOR = 'COLLEGE_ACCELERATOR';
+			$scope.TEACHER = 'TEACHER';
+			$scope.TEACHER_SIX_MONTHS = 'TEACHER_SIX_MONTHS';
+			$scope.TEACHER_ANNUAL = 'TEACHER_ANNUAL';
+			$scope.TEST_PREP_AND_CERTIFICATES = 'TEST_PREP_AND_CERTIFICATES';
+			
+			$scope.GRADE_LEVEL_OPTION_DATA = preselectService.constructor.GRADE_LEVEL_OPTION_DATA;
+			$scope.SUBJECT_OPTION_DATA = preselectService.constructor.SUBJECT_OPTION_DATA;
+			
+			$scope.SUBMIT_FORM_SPINNER_TIMEOUT = 500;
+			
+			$scope.init = function(lessonPageViewCount) {
+				/*on 2nd lesson page view, auto pop up this beezy*/
+				if (remspect.isVariation('regOverlayV3', 'autoOpen')) {
+					if (lessonPageViewCount == 2) {
+						$timeout(function() {
+							$scope.modal.modal('show')
+						}, 2000);
+					}
+				}
+				
+				$scope.getProductMap()
+			};
+			
+			$scope.initCarousel = function() {
+				$scope.carousel.carousel({
+					wrap: false,
+					interval: false,
+					keyboard: false
+				});
+				
+				// stop user from using left/right key
+				$scope.carousel.off("keydown.bs.carousel");
+				$scope.carousel.on('keydown', function(e) {
+					if (e.keyCode >= 37 && e.keyCode <= 40) {
+						e.stopPropagation();
+						e.stopImmediatePropagation();
+					}
+				});
+				$scope.carousel.on('slide.bs.carousel', function(e) {
+					$scope.isPageSliding = true;
+					$scope.helperTextIndex = $(e.relatedTarget).data("helper-text");
+					setTimeout(function() {
+						$scope.$apply(function() {
+							$scope.showReactivate = $(e.relatedTarget).data("show-reactivate");
+						});
+					}, 500);
+					
+				});
+				
+				$scope.carousel.on('slid.bs.carousel', function(e) {
+					$scope.isPageSliding = false;
+					if (!e.relatedTarget.dataset.noFocus) {
+						$(e.relatedTarget[0]).focus();
+					}
+				});
+			};
+			
+			$scope.modal.on('hidden.bs.modal', function(e) {
+				if (!$scope.showTwoStepForm) {
+					$scope.$apply(function() {
+						$scope.helperTextIndex = 1;
+					});
+				}
+			});
+			
+			function stripQuotes(s) {
+				if (!s) {
+					return s;
+				}
+				var result = s.replace(/^"(.*)"$/g, '$1');
+				if (result.length === 0) {
+					return undefined;
+				}
+				return result;
+			}
+			
+			$scope.modal.on('show.bs.modal', function(e) {
+				if (e.relatedTarget) {
+					// Only do this once, we don't want to keep overwriting stuff if it changes.
+					if (!$scope.preselectionsMerged) {
+						$scope.registrationData = $scope.preselectService.getPreselectedRegistrationData();
+						$scope.subjectsPrechosen = $scope.registrationData.subjectsTaught.length > 0;
+						$scope.gradeLevelPrechosen = $scope.registrationData.gradeLevelTaught != null;
+						$scope.preselectionsMerged = true;
+						
+						if (!remspect.isControl("regCookies")) {
+							$scope.registrationData.userType = stripQuotes($cookies["regForm.userType"]);
+							$scope.showTwoStepForm = !!$scope.registrationData.userType;
+							if ($scope.showTwoStepForm) {
+								$scope.carousel = angular.element('.reg-modal');
+							}
+							$scope.registrationData.goals = stripQuotes($cookies["regForm.goals"]);
+							$scope.registrationData.email = stripQuotes($cookies["regForm.email"]);
+							$scope.registrationData.product = stripQuotes($cookies["regForm.product"]);
+							if ($scope.showTwoStepForm) {
+								$scope.initCart();
+								$scope.hideProductForm = true;
+							}
+							$scope.registrationData.billingAddressCountry = stripQuotes($cookies["regForm.billingAddressCountry"]);
+							$scope.registrationData.billingFirstName = stripQuotes($cookies["regForm.billingFirstName"]);
+							$scope.registrationData.billingLastName = stripQuotes($cookies["regForm.billingLastName"]);
+							$scope.registrationData.phoneNumber = stripQuotes($cookies["regForm.phoneNumber"]);
+						}
+					}
+					$scope.showReactivate = 1;
+					
+					$scope.showTeacherEditionUX = e.relatedTarget.getAttribute('data-is-teacher-edition-ux') != null;
+					$scope.selfID = e.relatedTarget.getAttribute('data-user-goal');
+					if (!$scope.selfID) {
+						var defaultUserGoalElement = document.querySelector("[default-user-goal]");
+						if (defaultUserGoalElement) {
+							$scope.selfID = defaultUserGoalElement.getAttribute("default-user-goal");
+							$scope.testName = defaultUserGoalElement.getAttribute("data-product");
+						}
+					}
+					if ($scope.showTwoStepForm) {
+						if ($scope._isSpecificTest()) {
+							$scope.registrationData.product = $scope.selfID.toUpperCase();
+							$scope.initCart();
+						}
+					}
+					
+					$scope.initCarousel();
+					
+					$scope.$apply(function() {
+						if ($scope.showTeacherEditionUX) {
+							$scope.registrationData.userType = $scope.INSTRUCTOR;
+							$scope.setGoal($scope.OTHER);
+							$scope._preselectTeacherProductHelper();
+						}
+						else if ($scope.selfID === $scope.SELF_ID_TEACHER) {
+							$scope.registrationData.userType = $scope.INSTRUCTOR;
+							$scope._preselectTeacherProductHelper();
+							$scope.pixelImagePath = "//googleads.g.doubleclick.net/pagead/viewthroughconversion/954796532/?guid=ON&script=0";
+						}
+						else if ($scope.selfID === $scope.SELF_ID_STUDENT) {
+							$scope.registrationData.userType = $scope.STUDENT;
+						}
+						else if ($scope.selfID === $scope.SELF_ID_TEST_PREP || $scope._isSpecificTest()) {
+							$scope.registrationData.userType = $scope.STUDENT;
+							$scope.setGoal($scope.EXAM_PREP);
+						}
+						else if (!$scope.registrationData.userType) {
+							$scope.registrationData.userType = "";
+						}
+					});
+					
+					var helperTextIndex = null;
+					//init first visible carousel item
+					$("#partialRegFormCarousel .item").removeClass("active");
+					if ($scope.showTeacherEditionUX) {
+						var firstCarouselItem = $("#partialRegFormCarousel [data-first-teacher-ux-item]");
+						firstCarouselItem.addClass("active");
+						helperTextIndex = firstCarouselItem.data("helper-text");
+					}
+					else if ($scope.selfID === $scope.SELF_ID_TEST_PREP || $scope.selfID === $scope.SELF_ID_SPECIFIC_TEST_PREP) {
+						var userTypeForm = $("[name='forms.userTypeForm']");
+						userTypeForm.removeClass("active");
+						var mainGoalForm = $("[name='forms.mainGoalForm']");
+						mainGoalForm.removeClass("active");
+						var productsForm = $("[name='forms.products']");
+						productsForm.removeClass("active");
+						var emailForm = $("[name='forms.emailForm']");
+						emailForm.addClass("active");
+					}
+					else {
+						$("#partialRegFormCarousel [data-first-non-teacher-ux-item]").addClass("active");
+					}
+					
+					if (helperTextIndex !== null) {
+						$scope.$apply(function() {
+							$scope.helperTextIndex = helperTextIndex;
+						});
+					}
+					
+					$scope.saveRegFormData();
+				}
+			});
+			
+			$scope.saveRegFormData = function() {
+				var config = {
+					headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+					transformRequest: function(data) {return $.param(data);}
+				};
+				return $http.post("/academy/register/save.ajax", $scope.registrationData, config);
+			};
+			
+			$scope.initCart = function() {
+				if ($scope.registrationData.product && $scope.products) {
+					if (!$scope.cart) {
+						$scope.cart = {};
+					}
+					$scope.productKey = $scope.registrationData.product;
+					if ($scope._isSpecificTest() && $scope.testName) {
+						$scope.productKey = $scope.testName;
+					}
+					$scope.cart.product = $scope.products[$scope.productKey];
+				}
+			};
+			
+			$scope.setGoal = function(goal) {
+				setTimeout(function() {
+					$scope.registrationData.goals = goal;
+					$scope.$apply();
+				}, 1);
+			};
+			
+			$scope.getProductMap = function() {
+				$http.get('/academy/register/get-product-map.ajax')
+				.then(function(response) {
+					$scope.products = response.data;
+					if ($scope.showTwoStepForm) {
+						$scope.initCart();
+					}
+				})
+			};
+			
+			$scope.showTeacherEditionLink = function() {
+				return $scope.registrationData.goals != $scope.STANDARD_EXAM_PREP && $scope.registrationData.goals != $scope.TEACHER_CERTIFICATION;
+			};
+			
+			$scope.showTestPrepLink = function() {
+				return $scope.registrationData.goals === $scope.STANDARD_EXAM_PREP || $scope.registrationData.goals === $scope.TEACHER_CERTIFICATION || $scope.registrationData.goals === $scope.PROFESSIONAL_DEVELOPMENT
+			};
+			
+			$scope.togglePane = function(pane) {
+				$scope.planPaneToShow = pane;
+				$scope.showAllProducts = true;
+			};
+			
+			$scope.notifyGoalChanged = function(formToValidate) {
+				if ($scope.showTwoStepForm && formToValidate && formToValidate.goals && formToValidate.goals.$dirty && $scope.hideProductForm) {
+					$scope.hideProductForm = false;
+					formToValidate.goals.$setPristine();
+				}
+			};
+			
+			/*
+				!streamlineReg-control
+				change usertype / goals back to pageforward if test lose
+			* */
+			$scope.validateDropdownForm = function(formToValidate, field){
+				if(remspect.isControl("streamlineReg")){
+					$scope.pageForward(formToValidate)
+				} else {
+					field.$setDirty();
+					$scope.focusOut();
+					$scope.pageForward(formToValidate)
+				}
+			};
+			
+			$scope.pageForward = function(formToValidate) {
+				//the ng-if isnt firing off fast enough (???) and 2 selects are showing instead of just 1
+				//HALP THIS IS THE WORST
+				$timeout(function() {
+					if (formToValidate && formToValidate.$valid && !$scope.isPageSliding) {
+						$scope.carousel.carousel('next');
+						$scope.focused = true;
+						
+						$scope.saveRegFormData();
+					}
+				}, 0)
+			};
+			
+			$scope.pageBack = function() {
+				if (!$scope.isPageSliding) {
+					$scope.carousel.carousel('prev');
+				}
+			};
+			
+			$scope.closeModals = function() {
+				$('.modal').modal('hide');
+			};
+			
+			$scope.focusIn = function(field) {
+				if (field.$pristine || $scope.showTwoStepForm) {
+					$scope.focused = true;
+				}
+			};
+			
+			$scope.focusOut = function() {
+				$scope.focused = false;
+			};
+			
+			
+			registrationFormUtilService.addErrorHandlerMethodsToScope($scope);
+			registrationFormUtilService.addBillingFormMethodsToScope($scope, $element);
+
+			
+			$scope.toggleSubjectTaught = function(subject) {
+				var indexOfSubject = $scope.registrationData.subjectsTaught.indexOf(subject);
+				if (indexOfSubject > -1) {
+					$scope.registrationData.subjectsTaught.splice(indexOfSubject, 1);
+				}
+				else {
+					$scope.registrationData.subjectsTaught.push(subject);
+				}
+			};
+			
+			$scope.hasSubjectTaughtError = function() {
+				return $scope.showTeacherEditionUX && $scope.registrationData.subjectsTaught.length === 0;
+			};
+			
+			$scope.subjectsTaughtPageForward = function(formToValidate) {
+				if (!$scope.hasSubjectTaughtError()) {
+					$scope.pageForward(formToValidate);
+				}
+			};
+			
+			$scope.preselectProduct = function() {
+				if ($scope.selfID === $scope.SELF_ID_TEST_PREP) {
+					$scope._preselectTestPrepProductHelper();
+				}
+				else if ($scope._isSpecificTest()) {
+					$scope._preselectSpecificTestProductHelper();
+				}
+				
+				else if ($scope.registrationData.userType === $scope.STUDENT) {
+					switch ($scope.registrationData.goals) {
+					case $scope.STUDY:
+						$scope._preselectStudentProductHelper($scope.BASIC);
+						break;
+					
+					case $scope.EXAM_PREP:
+						$scope._preselectStudentProductHelper($scope.PREMIUM);
+						break;
+					
+					case $scope.EARN_CREDIT:
+						$scope._preselectStudentProductHelper($scope.COLLEGE_ACCELERATOR);
+						break;
+					
+					case $scope.STANDARD_EXAM_PREP:
+						$scope._preselectTestPrepProductHelper();
+						break;
+					
+					case $scope.OTHER:
+						$scope._preselectStudentProductHelper($scope.BASIC);
+						break;
+					
+					case $scope.IMPROVE_GRADES:
+						$scope.togglePane('STUDENT');
+						break;
+					
+					default:
+						$scope.togglePane('STUDENT');
+						break;
+					}
+					
+				}
+				else if ($scope.registrationData.userType === $scope.PARENT) {
+					switch ($scope.registrationData.goals) {
+					case $scope.HELPING_CHILD:
+						$scope.togglePane('STUDENT');
+						break;
+					
+					case $scope.CHILD_CREDIT_EXAM:
+						$scope._preselectStudentProductHelper($scope.COLLEGE_ACCELERATOR);
+						break;
+					
+					case $scope.OTHER:
+						$scope.togglePane('STUDENT');
+						break;
+					
+					case $scope.IMPROVE_CHILD_GRADES:
+						$scope.togglePane('STUDENT');
+						break;
+					
+					default:
+						$scope.togglePane('STUDENT');
+						break;
+					}
+				}
+				else if ($scope.registrationData.userType === $scope.INSTRUCTOR) {
+					switch ($scope.registrationData.goals) {
+					case $scope.TEACHER_CERTIFICATION:
+						$scope._preselectTestPrepProductHelper();
+						break;
+					
+					default:
+						$scope._preselectTeacherProductHelper();
+						break;
+					}
+				}
+				else if ($scope.registrationData.userType === $scope.TUTOR) {
+					switch ($scope.registrationData.goals) {
+					case $scope.TEACHER_CERTIFICATION:
+						$scope._preselectTeacherProductHelper();
+						break;
+					default:
+						$scope._preselectTeacherProductHelper();
+						break;
+					}
+				}
+				else {
+					$scope.togglePane('STUDENT');
+				}
+			};
+			
+			$scope._preselectStudentProductHelper = function(product) {
+				$scope.registrationData.product = product;
+				$scope.recommendedProduct = product;
+				$scope.planPaneToShow = 'STUDENT';
+				$scope.showAllProducts = false;
+				$scope.showMostPopularOnPremium = false;
+			};
+			
+			$scope._preselectTeacherProductHelper = function() {
+				$scope.registrationData.product = $scope.TEACHER;
+				$scope.recommendedProduct = $scope.TEACHER;
+				$scope.planPaneToShow = 'TEACHER';
+				$scope.showAllProducts = false;
+				$scope.showMostPopularOnPremium = false;
+			};
+			
+			$scope._preselectTestPrepProductHelper = function() {
+				$scope.registrationData.product = $scope.TEST_PREP_AND_CERTIFICATES;
+				$scope.recommendedProduct = $scope.TEST_PREP_AND_CERTIFICATES;
+				$scope.planPaneToShow = 'TEST_PREP';
+				$scope.showAllProducts = false;
+				$scope.showMostPopularOnPremium = false;
+			};
+			
+			$scope._isSpecificTest = function() {
+				return $scope.selfID === $scope.SELF_ID_SPECIFIC_TEST_PREP;
+			};
+			
+			$scope._preselectSpecificTestProductHelper = function() {
+				var upperCaseID = $scope.selfID.toUpperCase();
+				$scope.recommendedProduct = upperCaseID;
+				$scope.planPaneToShow = upperCaseID;
+				$scope.showAllProducts = false;
+				$scope.showMostPopularOnPremium = false;
+			};
+			
+			$scope.hideEverythingInPlanText = function(){
+				if($scope.recommendedProduct && !$scope.showBasicPlanAndPremium && !$scope.showAllProducts){
+					return true
+				}
+			};
+			
+			$scope.submitAndGoToRegForm = function(product) {
+				
+				if (product) {
+					$scope.registrationData.product = product;
+				}
+				
+				if (!remspect.isControl("streamlineReg")){
+					$scope.showSubmitSpinner = true;
+					$timeout(function(){
+						$scope.saveRegFormData().then(function() {
+							if ($scope.showTwoStepForm) {
+								$scope.initCart();
+								$scope.carousel.carousel('next');
+							}
+							else {
+								window.location.href = '/academy/get-started.html?product=' + $scope.registrationData.product
+							}
+						});
+					}, $scope.SUBMIT_FORM_SPINNER_TIMEOUT)
+					
+				} else {
+					$scope.saveRegFormData().then(function() {
+						if ($scope.showTwoStepForm) {
+							$scope.initCart();
+							$scope.carousel.carousel('next');
+						}
+						else {
+							window.location.href = '/academy/get-started.html?product=' + $scope.registrationData.product
+						}
+					});
+				}
+			};
+			
+			$scope.preselectProductAndPageForward = function(formToValidate) {
+				if ($scope.showTwoStepForm && $scope.hideProductForm) {
+					// CP-7148 try to clean up "Attempting to get Remspect Test Price for an undefined product" errors
+					if (!$scope.cart || !scope.cart.product) {
+						$scope.initCart();
+						if (!$scope.cart || !scope.cart.product) {
+							$scope.getProductMap();
+						}
+					}
+					$scope.pageForward(formToValidate)
+				}
+				else {
+					$scope.preselectProduct();
+					if($scope.recommendedProduct && !remspect.isControl("skipPlan")) {
+						$scope.submitAndGoToRegForm($scope.recommendedProduct)
+					}
+					else if (!$scope.recommendedProduct && remspect.isVariation("skipPlan", "v2")){
+						$scope.submitAndGoToRegForm("PREMIUM")
+					}
+					else {
+						$scope.pageForward(formToValidate)
+					}
+				}
+			};
+			
+			$scope.selectProductAndGoToRegForm = function(formToValidate) {
+				$scope.preselectProduct();
+				if (formToValidate && formToValidate.$valid && $scope.registrationData.product) {
+					$scope.submitAndGoToRegForm();
+				}
+				else {
+					$scope.pageForward(formToValidate);
+				}
+			};
+			
+			$scope.showRecommendedProductCard = function(product) {
+				//only show the recommended product to start, allow them to see all plans if they click 'see all plans'
+				if ($scope.recommendedProduct === product) {
+					return true
+				}
+			};
+			
+			$scope.showAllProd = function() {
+				$scope.showAllProducts = true;
+			};
+			
+			$scope.hideFreeTrialMessaging = function() {
+				$scope.freeTrialMessaging = false;
+				$scope.ctaButtonText = 'Create An Account';
+			};
+			
+			$scope.calculateAnnualSavingsPercentage = function(annualPrice, monthToMonthPrice) {
+				return Math.floor(( (monthToMonthPrice - (annualPrice / 12) ) / monthToMonthPrice ) * 100);
+			};
+			
+			/*typeahead stuff: !moreRegQuestions-control */
+			$scope.searchForSchoolName = function(searchText) {
+				return $http.get("/academy/school-search.ajax?searchText=" + searchText).then(function(response) {
+					return response.data
+				});
+			};
+			
+			$scope.classroomNamePlaceholder = function(){
+				switch ($scope.registrationData.userType){
+					case $scope.STUDENT:
+						return 'AP World History';
+					case $scope.PARENT:
+						return 'Algebra I';
+					
+				}
+			};
+			
+			//streamlineReg-v1
+			$scope.togglePasswordVisibility = function() {
+				var attr = $("#password").attr("type");
+				
+				if (attr === "password") {
+					$("#password").attr("type", "text");
+					$("#passwordConfirm").attr("type", "text");
+				}
+				else {
+					$("#password").attr("type", "password");
+					$("#passwordConfirm").attr("type", "password");
+				}
+			};
+		}
+		
+		var app = angular.module("partialRegForm", angularModules);
+		app.controller("partialRegFormController", PartialRegFormController);
+		app.directive('submitOnEnter', function() {
+			return function(scope, element, attrs) {
+				element.bind("keydown keypress", function(event) {
+					if (event.which === 13) {
+						scope.$apply(function() {
+							scope.$eval(attrs.submitOnEnter);
+						});
+						
+						event.preventDefault();
+					}
+				});
+			};
+		});
+		
+		app.directive('scrollToOnExpand', function () {
+			return function(scope, element, attrs) {
+				element.on("shown.bs.collapse", function () {
+					var id = "#" + attrs.id;
+					
+					$(modalId).animate({
+						scrollTop: $(id).offset().top
+					}, 500);
+				});
+			}
+		});
+		
+		app.config(['registrationFormSettingsProvider',
+			/**
+			 * @param {RegistrationFormSettingsProvider} settings
+			 */
+			function(settings) {
+				settings.postUrl('/academy/register/subscriber/submit-subscriber.ajax');
+				settings.productRedirectUrl('/academy/plans.html#pricing');
+				settings.submitButtonText('Create Account');
+				settings.beforeRedirect(function () {
+					if (window.localStorage) {
+						window.localStorage.setItem('ob', 'reg');
+					}
+				});
+			}
+		]);
+		
+	}
+	
+	define(injectedRequiredDeps, init);
+})();

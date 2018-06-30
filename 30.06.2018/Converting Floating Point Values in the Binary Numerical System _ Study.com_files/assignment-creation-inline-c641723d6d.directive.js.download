@@ -1,0 +1,59 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = Object.setPrototypeOf ||
+        ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+        function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+define(["require", "exports", "angularDependency", "classroom/teacher/assignments/create/teacher-assign.controller", "angularDependency", "angular/inputs/input-with-copy-button.directive", "classroom/teacher/assignments/create/teacher-assign.controller", "util/pluralize.directive", "util/support-article-link.directive"], function (require, exports, angular, teacher_assign_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var inlineModule = angular.module("assignment-creation-inline.directive", ["account-type.directive", "arrowKeyInput",
+        "assignment.service", "classroom.service", "classroom-modal.service", "google-no-classrooms-cta.directive",
+        "input-with-copy-button.directive", "member-info.service", "persona.directive", "pluralize.directive", "studentInviteDirective", "studentNameDirective", "study.modal",
+        "study.remspect-directives", "support-article-link.directive", "ui.utils"]);
+    var AssignmentCreationInlineController = (function (_super) {
+        __extends(AssignmentCreationInlineController, _super);
+        function AssignmentCreationInlineController($filter, $scope, assignmentService, classroomService, classroomModalService, memberInfoService, studyModalService, classroomNameInputPattern, classroomNameMinLength, classroomNameMaxLength) {
+            var _this = _super.call(this, $filter, $scope, assignmentService, classroomService, classroomModalService, memberInfoService, studyModalService, classroomNameInputPattern, classroomNameMinLength, classroomNameMaxLength) || this;
+            _this.cssClass = $scope.cssClass;
+            _this.contentType = $scope.contentType;
+            _this.resourceType = $scope.resourceType;
+            _this.resourceTypeDisplay = _this.convertAssetTypeToDisplayType($scope.resourceType, $scope.contentType);
+            _this.academyAssetId = $scope.academyAssetId;
+            _this.courseAssetId = $scope.courseAssetId;
+            _this.allowEmptyCourseId = false;
+            _this.assetIcon = _this.convertAssetTypeToIconType($scope.resourceType, $scope.contentType);
+            return _this;
+        }
+        AssignmentCreationInlineController.prototype.getDatePickerSelector = function () {
+            return "#teacher-assign-inline-body [data-date-picker]";
+        };
+        AssignmentCreationInlineController.prototype.closeIfModal = function () {
+        };
+        AssignmentCreationInlineController.$inject = ['$filter', '$scope', 'AssignmentService', 'classroomService', 'classroomModalService', 'MemberInfoService', 'studyModalService',
+            "CLASSROOM_NAME_INPUT_PATTERN", "CLASSROOM_NAME_MIN_LENGTH", "CLASSROOM_NAME_MAX_LENGTH"];
+        return AssignmentCreationInlineController;
+    }(teacher_assign_controller_1.TeacherAssignController));
+    exports.AssignmentCreationInlineController = AssignmentCreationInlineController;
+    inlineModule.directive("assignmentCreationInline", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/teacher/assignments/create/assignment-creation-inline.tpl",
+            scope: {
+                cssClass: '@',
+                resourceType: '@',
+                academyAssetId: '@',
+                contentType: '@',
+                courseAssetId: '@'
+            },
+            controller: AssignmentCreationInlineController,
+            controllerAs: "teacherAssignCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=assignment-creation-inline.directive.js.map

@@ -1,0 +1,38 @@
+define(["require", "exports", "angularDependency", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("study.modal-directive", []);
+    module.directive('studyModalHeader', [
+        function () {
+            return {
+                replace: true,
+                restrict: 'E',
+                scope: {
+                    cnamePrefix: "@",
+                    dismiss: "&",
+                    title: "@"
+                },
+                templateUrl: "/templates/modal/modal-header.tpl"
+            };
+        }
+    ]);
+    module.directive('studyModalActionButtons', [
+        function () {
+            return {
+                replace: true,
+                restrict: 'E',
+                scope: {
+                    close: "&",
+                    confirmButtonClass: "@",
+                    confirmButtonDisabled: "=",
+                    confirmButtonText: "@",
+                    cnamePrefix: "@",
+                    dismiss: "&"
+                },
+                templateUrl: "/templates/modal/modal-action-buttons.tpl"
+            };
+        }
+    ]);
+});
+
+//# sourceMappingURL=study-modal.directive.js.map

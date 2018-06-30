@@ -1,0 +1,96 @@
+define(['angularDependency', 'angular/util/http-post-params-as-form.provider'], function (angular) {
+	"use strict";
+
+	StudentInviteService["$inject"] = ["$http", "$q", "httpPostParamsAsFormConfig"];
+
+	StudentInviteService.prototype.INVITE_MESSAGE_SUCCESS = 'success';
+	StudentInviteService.prototype.INVITE_MESSAGE_WARNING = 'warning';
+	StudentInviteService.prototype.INVITE_MESSAGE_ERROR = 'error';
+
+	function StudentInviteService($http, $q, httpPostParamsAsFormConfig) {
+		this.$http = $http;
+		this.$q = $q;
+		this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+	}
+
+	/**
+	 * A message with a type
+	 * @class
+	 */
+	function InviteResponseMessage(type, message) {
+		this.type = type;
+		this.message = message;
+	}
+
+	/**
+	 * @param {string} emailAddresses
+	 * @param {string} classroomCode
+	 */
+	StudentInviteService.prototype.inviteStudents = function (emailAddresses, classroomCode) {
+
+		var params = {
+			emailAddresses: emailAddresses,
+			classroomCode: classroomCode
+		};
+
+		return this.$http.post("/member/classrooms/invite/send-invitations.ajax", params, this.httpPostParamsAsFormConfig)
+		 .then(this._createInviteResponseMessages.bind(this))
+		 .catch(this.transformError.bind(this));
+	};
+
+	StudentInviteService.prototype._createInviteResponseMessages = function(response) {
+		var addedEmailAddresses = response.data.addedEmailAddresses;
+		var invitedEmailAddresses = response.data.invitedEmailAddresses;
+		var failedEmailAddresses = response.data.failedEmailAddresses;
+		var rejectedEmailAddressMap = response.data.rejectedEmailAddresses;
+
+		/**
+		 *
+		 * @type {Array.<InviteResponseMessage>}
+		 */
+		var messages = [];
+
+		// Success Messages
+		if (addedEmailAddresses.length > 0) {
+			messages.push(new InviteResponseMessage(this.INVITE_MESSAGE_SUCCESS, "Members added: " + addedEmailAddresses.join(", ")));
+		}
+		if (invitedEmailAddresses.length > 0) {
+			messages.push(new InviteResponseMessage(this.INVITE_MESSAGE_SUCCESS, "Invitations sent to: " + invitedEmailAddresses.join(", ")));
+		}
+
+		// Fail message
+		if (failedEmailAddresses.length > 0) {
+			messages.push(new InviteResponseMessage(this.INVITE_MESSAGE_ERROR, "Invitations failed to: " + failedEmailAddresses.join(", ")));
+		}
+
+		// Rejected Email Addresses Message
+		var rejectedEmailAddresses = Object.keys(rejectedEmailAddressMap);
+		if (rejectedEmailAddresses.length > 0) {
+			var warningMessage = "Invitations rejected for:<br/>" + rejectedEmailAddresses.map(function(emailAddress) {
+				 return emailAddress + ": " + rejectedEmailAddressMap[emailAddress];
+			 }).join("<br/>");
+			messages.push(new InviteResponseMessage(this.INVITE_MESSAGE_WARNING, warningMessage));
+		}
+
+		return messages;
+	};
+
+	StudentInviteService.prototype.transformError = function (response) {
+		var responseCode = response.status;
+		var errorMessage = "Sorry, there seems to be a problem with our servers. Please try again later.";
+
+		if (responseCode === 400) {
+			errorMessage = "Missing required parameter";
+		}
+		else if (responseCode === 500) {
+			errorMessage = "Sorry, there seems to be a problem with our servers. Please try again later.";
+		}
+
+		return this.$q.reject(errorMessage);
+	};
+
+	var module = angular.module("studentInviteService", ["study.http-post-params-as-form"]);
+	module.service("studentInviteService", StudentInviteService);
+
+	return module;
+});

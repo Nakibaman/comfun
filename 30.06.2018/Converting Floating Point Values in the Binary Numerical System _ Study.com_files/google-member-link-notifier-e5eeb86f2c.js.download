@@ -1,0 +1,27 @@
+define(["require", "exports", "jquery", "lib/toastr", "jquery", "lib/toastr"], function (require, exports, $, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var GoogleMemberLinkNotifier = (function () {
+        function GoogleMemberLinkNotifier() {
+        }
+        GoogleMemberLinkNotifier.showNotificationIfAccountWasLinked = function () {
+            if (!GoogleMemberLinkNotifier.shouldNotificationBeDisplayed()) {
+                return;
+            }
+            var title = "Account linked";
+            var message = "Your Google account was successfully linked to your existing Study.com account.";
+            var options = {
+                positionClass: "toast-top-center"
+            };
+            toastr.success(message, title, options);
+        };
+        GoogleMemberLinkNotifier.shouldNotificationBeDisplayed = function () {
+            var triggerElement = $('*[data-google-member-account-was-linked]');
+            return triggerElement.length > 0;
+        };
+        return GoogleMemberLinkNotifier;
+    }());
+    exports.GoogleMemberLinkNotifier = GoogleMemberLinkNotifier;
+});
+
+//# sourceMappingURL=google-member-link-notifier.js.map

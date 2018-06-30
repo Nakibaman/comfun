@@ -1,0 +1,73 @@
+(function () {
+	'use strict';
+
+	function init($, angular, remspect) {
+		var CollectReviewController = function($scope, $http, $element, $timeout) {
+
+			if ($.cookie('collectReview') == undefined) {
+				//set to collect review if no cookie
+				$.cookie('collectReview', true, {path: '/'});
+			}
+
+			if (remspect.isVariation("userReviews", "survey")) {
+				/*v1*/
+				$element.on('shown.bs.collapse', function () {
+					//user has seen survey, don't show anymore
+					$.cookie('collectReview', false, {path: '/'})
+				});
+
+				//show after x seconds
+				var form = $element.find('form');
+				$timeout(function () {
+					if (!form.hasClass('in')) {
+						form.collapse('show');
+					}
+				}, 10000);
+			}
+
+			$scope._submit = function() {
+				var pathComponents = window.location.pathname.split('/');
+				var trigger = pathComponents.length > 3 && pathComponents[1] == 'academy' ? 'LIKED_' + pathComponents[2].toUpperCase() : 'UNKNOWN';
+				var isMember = $.cookie("member") == 1;
+				var data = {
+					review: $scope.review,
+					thumbsUp: $scope.thumbsUp,
+					name: $scope.name,
+					trigger: trigger,
+					isMember: isMember,
+					siteResourceId: $scope.siteResourceId
+				};
+				var config = {
+					headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+					transformRequest: function (data) {return $.param(data);}
+				};
+
+				$http.post("/user-rating/set-resource-rating.ajax", data, config);
+			};
+
+			$scope.submit = function(fadeOut) {
+				if (fadeOut === undefined){
+					fadeOut = true;
+				}
+
+				if (fadeOut) {
+					$timeout(function() {
+						$element.fadeOut(250)
+					}, 5000);
+				}
+
+				$scope._submit();
+			};
+		};
+
+		var app = angular.module("collectReview", []);
+		app.controller("collectReviewController", CollectReviewController);
+	}
+
+	if (typeof define !== 'undefined' && define.amd) {
+		define(['jquery', "angularDependency", 'util/remspect'], init);
+	}
+	else {
+		init(window.$, window.angular, window.remspect);
+	}
+})();

@@ -1,0 +1,34 @@
+define(["require", "exports", "angularDependency", "tutorial/tutorial-item", "angularDependency", "lib/angular/cookie", "tutorial/tutorial.service", "tutorial/tutorial-item"], function (require, exports, angular, tutorial_item_1) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("tutorial", ["angular-storage", 'ngCookies', "ui.router", "tutorial.service"]);
+    var DISABLE_POPUPS_COOKIE_NAME = "disablePopups";
+    module.directive("tutorialItem", ["$cookies", "$q", "$state", "TutorialService", function ($cookies, $q, $state, tutorialService) {
+            return {
+                scope: {
+                    key: '@',
+                    setKey: '@',
+                    direction: '@',
+                    readyToShowPromise: '=?',
+                    doNotRecordView: '@?',
+                    selector: '@',
+                    header: '@?',
+                    showDismissActions: '@?'
+                },
+                transclude: true,
+                restrict: 'E',
+                replace: true,
+                templateUrl: '/templates/global/tutorial.tpl',
+                link: function (scope, elem, attr) {
+                    var disablePopupsCookieValue = $cookies[DISABLE_POPUPS_COOKIE_NAME];
+                    var disablePopups = (disablePopupsCookieValue == 'true');
+                    if (disablePopups) {
+                        return;
+                    }
+                    new tutorial_item_1.TutorialItem($q, scope, $state, tutorialService);
+                }
+            };
+        }]);
+});
+
+//# sourceMappingURL=tutorial.directive.js.map

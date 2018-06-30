@@ -1,0 +1,743 @@
+(function() {
+	"use strict";
+	
+	define(["jquery",
+		'angularDependency',
+		"util/remspect",
+		'lib/moment',
+		'eventLogging',
+		'lib/stripe',
+		'lib/accept',
+		'util/window-location.service',
+		'registration/angularFormConstants',
+		'registration/registration-form-settings.provider',
+	   /*alpha below*/
+		'lib/jquery/cookie'
+	], init);
+	
+	 
+	 function init($, angular, remspect, moment, eventLogging, Stripe, Accept, WindowLocationService) {
+
+		RegistrationFormUtilService["$inject"] = ["$http", "registrationForm.errorStrings", "registrationFormSettings"];
+		
+		function RegistrationFormUtilService($http, errorStrings, registrationFormSettings) {
+			this.REGISTRATION_MODEL_NAME = "registrationData";
+			this.BILLING_MODEL_NAME = "billingData";
+			
+			this.$http = $http;
+			this.errorStrings = errorStrings;
+			this.registrationFormSettings = registrationFormSettings;
+		}
+		
+		RegistrationFormUtilService.prototype.addErrorHandlerMethodsToScope = function($scope) {
+			var REGISTRATION_MODEL_NAME = this.REGISTRATION_MODEL_NAME;
+			var errorStrings = this.errorStrings;
+			
+			// true if the field has an error to show
+			$scope.hasError = function (field) {
+				return !!field && field.$invalid && field.$dirty && !$scope.focused;
+			};
+			
+			$scope.hasEmailError = function (field) {
+				return !$scope.focused && (field.$error.pattern || field.$error.email || field.$error[errorStrings.ERROR_EMAIL_AVAILABLE]);
+			};
+			
+			$scope.hasCouponError = function () {
+				var unprocessedCoupon = $scope.validCoupon === null && !!$scope[REGISTRATION_MODEL_NAME].couponCode;
+				var invalidCoupon = $scope.validCoupon !== null && !$scope.validCoupon;
+				return !$scope.focused && (unprocessedCoupon || invalidCoupon);
+			};
+			
+			// If there was a "required" error then return true
+			$scope.showRequiredError = function (field) {
+				return $scope.hasError(field) && field.$error.required;
+			};
+			
+			// If there aren't any errors of higher precedence and there was an "email" error then return true
+			$scope.showInvalidEmailError = function (field) {
+				return $scope.hasError(field) && !field.$error.required && field.$error.email;
+			};
+			
+			// If there aren't any errors of higher precedence and there was an "emailAvailable" error then return true
+			$scope.showEmailNotAvailableError = function (field) {
+				return $scope.hasError(field) && !field.$error.email && field.$error[errorStrings.ERROR_EMAIL_AVAILABLE];
+			};
+			
+			// If there aren't any errors of higher precedence and there was an "email" error then return true
+			$scope.showNgInvalidEmailError = function (field) {
+				return !field.$error.required && !$scope.focused && field.$error.pattern;
+			};
+			
+			// If there aren't any errors of higher precedence and there was an "emailAvailable" error then return true
+			$scope.showEmailUnavailableError = function (field) {
+				return !$scope.focused && field.$error && field.$error[errorStrings.ERROR_EMAIL_AVAILABLE];
+			};
+			
+			$scope.showMinLengthError = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required && field.$error.minlength;
+			};
+			
+			$scope.showMaxLengthError = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required && field.$error.maxlength;
+			};
+			
+			$scope.showInvalidMatchFieldError = function (field) {
+				return $scope.hasError(field) && !field.$error.required && !field.$error.minlength && !field.$error.maxlength &&
+				 field.$error[errorStrings.ERROR_MATCH_FIELD];
+			};
+			
+			$scope.showInvalidPhoneNumberError = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required &&
+				 field.$error[errorStrings.ERROR_INVALID_PHONE_NUMBER];
+			};
+			
+			$scope.showInvalidErrorZipCode = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required && field.$error[errorStrings.ERROR_INVALID_ZIPCODE];
+			};
+			
+			// billing
+			$scope.showInvalidCreditCardNumberError = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required &&
+				 field.$error[errorStrings.ERROR_INVALID_CREDIT_CARD_NUMBER];
+			};
+			
+			$scope.showDeclinedCreditCardNumberError = function (field) {
+				return $scope.hasError(field) && !field.$error.required && !field.$error[errorStrings.ERROR_INVALID_CREDIT_CARD_NUMBER] &&
+				 field.$error[errorStrings.ERROR_CREDIT_CARD_DECLINED];
+			};
+			
+			$scope.showPrepaidCardError = function (field) {
+				return $scope.hasError(field) && !field.$error.required && !field.$error[errorStrings.ERROR_INVALID_CREDIT_CARD_NUMBER] &&
+				 !field.$error[errorStrings.ERROR_CREDIT_CARD_DECLINED] && field.$error[errorStrings.ERROR_PRE_PAID_CARD];
+			};
+			
+			$scope.showInvalidCvcNumberError = function (field) {
+				return $scope.hasError(field) && !$scope.focused && !field.$error.required &&
+				 field.$error[errorStrings.ERROR_INVALID_CVC_NUMBER];
+			};
+			
+			$scope.showInvalidExpirationDateError = function (field) {
+				return $scope.hasError(field) && !field.$error.required && field.$error[errorStrings.ERROR_INVALID_EXPIRATION_DATE];
+			};
+		};
+		
+		RegistrationFormUtilService.prototype.addBillingFormMethodsToScope = function($scope, $element) {
+			var REGISTRATION_MODEL_NAME = this.REGISTRATION_MODEL_NAME;
+			var BILLING_MODEL_NAME = this.BILLING_MODEL_NAME;
+			var $http = this.$http;
+			var registrationFormSettings = this.registrationFormSettings;
+			
+			/**
+			 * Submit registration form if valid. The form may or may not include billing information.
+			 *
+			 * @param formToValidate
+			 */
+			$scope.submit = function (formToValidate) {
+				
+				// only submit if form is valid
+				if (formToValidate && formToValidate.$valid) {
+					
+					$scope.submittingState = true;
+					
+					// If we have a billingInfo model then we need to get a token from stripe
+					if (!$.isEmptyObject($scope[BILLING_MODEL_NAME])) {
+						_submitWithPayment();
+					}
+					// If there isn't any billing info then we don't need to wait for one
+					else {
+						_submitWithoutPayment();
+					}
+				}
+			};
+			
+			/**
+			 * Submit a form with payment information. The billing information will be used to request a one time use token from Stripe which will be added
+			 * to the model and submitted.
+			 *
+			 * @private
+			 */
+			function _submitWithPayment() {
+				if (remspect.isVariation("authorizeNet", "authorizeOnly")) {
+					_submitWithPaymentAuthorizeNet();
+				}
+				else {
+					_submitWithPaymentStripe();
+				}
+			}
+			
+			function _getCardDataForAuthorize() {
+				
+				var cardData = {};
+				
+				_setValueIfDefined(cardData, 'fullName', $scope[REGISTRATION_MODEL_NAME].billingName);
+				_setValueIfDefined(cardData, 'cardNumber', $scope[BILLING_MODEL_NAME].creditCardNumber);
+				_setValueIfDefined(cardData, 'month', $scope[BILLING_MODEL_NAME].expirationMonth);
+				_setValueIfDefined(cardData, 'year', $scope[BILLING_MODEL_NAME].expirationYear);
+				_setValueIfDefined(cardData, 'cardCode', $scope[BILLING_MODEL_NAME].creditCardCvc);
+				_setValueIfDefined(cardData, 'zip', $scope[REGISTRATION_MODEL_NAME].billingAddressZipCode);
+				
+				return cardData;
+			}
+			
+			function _submitWithPaymentAuthorizeNet() {
+				
+				var authorizeBillingInfo = {
+					authData: Accept.authData,
+					cardData: _getCardDataForAuthorize()
+				};
+				
+				var authorizeTokenRequestEventDetail = new eventLogging.LoggableEvent("authorizeTokenRequest", false);
+				authorizeTokenRequestEventDetail.verification = false;
+				eventLogging.queueEvent(authorizeTokenRequestEventDetail);
+				Accept.dispatchData(authorizeBillingInfo, function(response) {
+					var authorizeTokenResponseEventDetail = new eventLogging.LoggableEvent("authorizeTokenResponse", false);
+					authorizeTokenResponseEventDetail.response = response;
+					authorizeTokenResponseEventDetail.requestUUID = authorizeTokenRequestEventDetail.javascriptUUID;
+					authorizeTokenResponseEventDetail.verification = false;
+					eventLogging.queueEvent(authorizeTokenResponseEventDetail);
+					var isErrorResponse = response.messages.resultCode === "Error";
+					
+					// authorize error
+					if (isErrorResponse) {
+						//trigger to log authorize error
+						_handleAuthorizeError(response);
+					}
+					// authorize call succeeded
+					else {
+						// token contains id, last4, and card type
+						var token = response.opaqueData.dataValue;
+						
+						$scope[REGISTRATION_MODEL_NAME].token = token;
+						$scope[REGISTRATION_MODEL_NAME].paymentMethod = "AUTHORIZE_NET";
+						
+						if (!registrationFormSettings.newSubscriber) {
+							var authorizeVerificationTokenRequestEventDetail = new eventLogging.LoggableEvent("authorizeTokenRequest", false);
+							authorizeVerificationTokenRequestEventDetail.verification = true;
+							eventLogging.queueEvent(authorizeVerificationTokenRequestEventDetail);
+							Accept.dispatchData(authorizeBillingInfo, function(response) {
+								var authorizeVerificationTokenResponseEventDetail = new eventLogging.LoggableEvent("authorizeTokenResponse", false);
+								authorizeVerificationTokenResponseEventDetail.response = authorizeBillingInfo.response;
+								authorizeVerificationTokenResponseEventDetail.requestUUID = authorizeVerificationTokenRequestEventDetail.javascriptUUID;
+								authorizeVerificationTokenResponseEventDetail.verification = true;
+								eventLogging.queueEvent(authorizeVerificationTokenResponseEventDetail);
+								var isErrorResponse = response.messages.resultCode === "Error";
+								
+								// authorize error
+								if (isErrorResponse) {
+									//trigger to log authorize error
+									
+									_handleAuthorizeError(response);
+								}
+								// authorize call succeeded
+								else {
+									// token contains id, last4, and card type
+									_postRegistration();
+								}
+							});
+						}
+						else {
+							_postRegistration();
+						}
+					}
+				});
+			}
+			
+			function _handleAuthorizeError(responseError) {
+				$scope.submittingState = false;
+				
+				// TODO handle all the error codes!
+				console.log(responseError);
+			}
+			
+			
+			function _submitWithPaymentStripe() {
+				
+				var stripeBillingInfo = _getBillingInfoForStripe();
+				var stripeTokenRequestEventDetail = new eventLogging.LoggableEvent("stripeTokenRequest", false);
+				stripeTokenRequestEventDetail.verification = false;
+				eventLogging.queueEvent(stripeTokenRequestEventDetail);
+				Stripe.createToken(stripeBillingInfo, function (status, response) {
+					var stripeTokenResponseEventDetail = new eventLogging.LoggableEvent("stripeTokenResponse", false);
+					stripeTokenResponseEventDetail.response = response;
+					stripeTokenResponseEventDetail.requestUUID = stripeTokenRequestEventDetail.javascriptUUID;
+					stripeTokenResponseEventDetail.verification = false;
+					eventLogging.queueEvent(stripeTokenResponseEventDetail);
+					var responseError = response['error'];
+					
+					// stripe error
+					if (responseError) {
+						//trigger to log stripe error
+						_handleStripeError(responseError);
+					}
+					// stripe call succeeded
+					else {
+						// token contains id, last4, and card type
+						var token = response['id'];
+						
+						$scope[REGISTRATION_MODEL_NAME].token = token;
+						$scope[REGISTRATION_MODEL_NAME].paymentMethod = "STRIPE";
+						
+						if (remspect.isVariation("authorizeNet", "both")){
+							$scope[REGISTRATION_MODEL_NAME].verificationToken = token;
+						}
+						
+						if (!registrationFormSettings.newSubscriber) {
+							var stripeVerificationTokenRequestEventDetail = new eventLogging.LoggableEvent("stripeTokenRequest", false);
+							stripeVerificationTokenRequestEventDetail.verification = true;
+							eventLogging.queueEvent(stripeVerificationTokenRequestEventDetail);
+							Stripe.createToken(stripeBillingInfo, function (status, response) {
+								var stripeVerificationTokenResponseEventDetail = new eventLogging.LoggableEvent("stripeTokenResponse", false);
+								stripeVerificationTokenResponseEventDetail.response = stripeBillingInfo.response;
+								stripeVerificationTokenResponseEventDetail.requestUUID = stripeVerificationTokenRequestEventDetail.javascriptUUID;
+								stripeVerificationTokenResponseEventDetail.verification = true;
+								eventLogging.queueEvent(stripeVerificationTokenResponseEventDetail);
+								var responseError = response['error'];
+								
+								// stripe error
+								if (responseError) {
+									//trigger to log stripe error
+									
+									_handleStripeError(responseError);
+								}
+								// stripe call succeeded
+								else {
+									// token contains id, last4, and card type
+									var verificationToken = response['id'];
+									
+									$scope[REGISTRATION_MODEL_NAME].verificationToken = verificationToken;
+									
+									if(remspect.isControl("authorizeNet")){
+										_postRegistration();
+									}
+								}
+							});
+						}
+						else {
+							if(remspect.isControl("authorizeNet")){
+								_postRegistration();
+							}
+						}
+					}
+					
+					// call authroize if variation something
+					if(remspect.isVariation("authorizeNet", "both")){
+						_submitWithPaymentAuthorizeNet();
+					}
+				});
+			}
+			
+			/**
+			 * Handle stripe error
+			 * @param responseError stripe error to log and handle
+			 * @private
+			 */
+			function _handleStripeError(responseError) {
+				var event = /** @type {CustomEvent} */ document.createEvent("CustomEvent");
+				event.initCustomEvent("stripeError", true, true, {
+					stripeType: responseError.type,
+					stripeMessage: responseError.message,
+					srtipeCode: responseError.code,
+					stripeParam: responseError.param
+				});
+				document.dispatchEvent(event);
+				
+				var code = responseError.code;
+				
+				$scope.submittingState = false;
+				
+				// card number
+				if (code === 'incorrect_number' || code === 'invalid_number' || code === 'expired_card' || code === 'card_declined') {
+					_setErrorAndGoToPage('creditCardNumber', errorStrings.ERROR_INVALID_CREDIT_CARD_NUMBER);
+				}
+				// expiration
+				else if (code === 'invalid_expiry_month' || code === 'invalid_expiry_year') {
+					_setErrorAndGoToPage('expMonth', errorStrings.ERROR_INVALID_EXPIRATION_DATE);
+					_setErrorAndGoToPage('expYear', errorStrings.ERROR_INVALID_EXPIRATION_DATE);
+				}
+				// cvc security code
+				else if (code === 'invalid_cvc' || code === 'incorrect_cvc') {
+					_setErrorAndGoToPage('cardCvc', errorStrings.ERROR_INVALID_CVC_NUMBER);
+				}
+				// zip code for card failed validation
+				else if (code === 'incorrect_zip') {
+					// shows the credit card number error which mentions zip code
+					_setErrorAndGoToPage('creditCardNumber', errorStrings.ERROR_INVALID_CREDIT_CARD_NUMBER);
+				}
+				// no card provided
+				else if (code === 'missing') {
+					_setErrorAndGoToPage('creditCardNumber', 'required');
+				}
+				// unknown or unsupported error (processing_error, rate_limit)
+				else {
+					registrationFormSettings.onError();
+				}
+			}
+			
+			/**
+			 * Submit a form without any payment information.
+			 *
+			 * @private
+			 */
+			function _submitWithoutPayment() {
+				_postRegistration();
+			}
+			
+			function _getBillingInfoForStripe() {
+				
+				var billingInfo = {};
+				
+				_setValueIfDefined(billingInfo, 'name', $scope[REGISTRATION_MODEL_NAME].billingFirstName + " " + $scope[REGISTRATION_MODEL_NAME].billingLastName);
+				_setValueIfDefined(billingInfo, 'number', $scope[BILLING_MODEL_NAME].creditCardNumber);
+				_setValueIfDefined(billingInfo, 'exp_month', $scope[BILLING_MODEL_NAME].expirationMonth);
+				_setValueIfDefined(billingInfo, 'exp_year', $scope[BILLING_MODEL_NAME].expirationYear);
+				_setValueIfDefined(billingInfo, 'cvc', $scope[BILLING_MODEL_NAME].creditCardCvc);
+				_setValueIfDefined(billingInfo, 'address_line1', $scope[REGISTRATION_MODEL_NAME].billingAddressLineOne);
+				_setValueIfDefined(billingInfo, 'address_line2', $scope[REGISTRATION_MODEL_NAME].billingAddressLineTwo);
+				_setValueIfDefined(billingInfo, 'address_city', $scope[REGISTRATION_MODEL_NAME].billingAddressCity);
+				_setValueIfDefined(billingInfo, 'address_state', $scope[REGISTRATION_MODEL_NAME].billingAddressStateCode);
+				_setValueIfDefined(billingInfo, 'address_zip', $scope[REGISTRATION_MODEL_NAME].billingAddressZipCode);
+				_setValueIfDefined(billingInfo, 'address_country', $scope[REGISTRATION_MODEL_NAME].billingAddressCountry);
+				
+				return billingInfo;
+			}
+			
+			function _setValueIfDefined(obj, key, value) {
+				obj[key] = value ? value : '';
+			}
+			
+			function _postRegistration() {
+				$http({
+					method: 'POST',
+					url: registrationFormSettings.postUrl,
+					data: $.param($scope[REGISTRATION_MODEL_NAME]),
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+					timeout: 1000*60*4
+				}).
+				success(function (response) {
+					$scope.submittingState = false;
+					_handleFormSubmitResponse(response);
+				}).
+				// submission error
+				error(function (response) {
+					if(response === null){
+						window.location.href = '/academy/login.html?message=timeout';
+					}
+					else if (response.redirectUrl != null){
+						window.location.href = response.redirectUrl
+					}
+					else {
+						$scope.submittingState = false;
+						_handleFormSubmitError(response);
+					}
+				});
+			}
+			
+			$scope.submitPayPalRegistration = function (formToValidate) {
+				var submitButton = $('[data-paypal-submit-button]');
+				if (submitButton.hasClass('disabled')) {
+					return;
+				}
+				$scope.submittingState = true;
+				submitButton.addClass('disabled');
+				$http({
+					method: 'POST',
+					url: '/academy/register/beginPayPalRegistration.ajax',
+					data: $.param($scope[REGISTRATION_MODEL_NAME]),
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+				}).
+				success(function (response) {
+					if (!response.success) {
+						$scope.submittingState = false;
+						submitButton.removeClass('disabled');
+						_handleFormSubmitResponse(response);
+					}
+					else {
+						if (window.localStorage) {
+							window.localStorage.setItem('ob', 'reg');
+						}
+						window.location.href = response['redirectUrl'];
+					}
+				}).
+				// submission error
+				error(function (response) {
+					$scope.submittingState = false;
+					submitButton.removeClass('disabled');
+					_handleFormSubmitError(response);
+				});
+			};
+			
+			$scope.submitPayPalUpdate = function () {
+				_payPalSubmit('/member/billing/beginPayPalUpdate.ajax');
+			};
+			
+			$scope.submitPayPalActivation = function (product) {
+				_payPalSubmit('/member/reactivate/beginPayPalReactivation.ajax?product=' + product);
+			};
+			
+			function _payPalSubmit(url) {
+				$scope.submittingState = true;
+				$('[data-paypal-submit-button]').addClass('disabled');
+				$http({
+					method: 'POST',
+					url: url,
+					headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+				})
+				.success(function (response) {
+					window.location.href = response;
+				})
+				// submission error
+				.error(function (response) {
+					$scope.submittingState = false;
+					$('[data-paypal-submit-button]').removeClass('disabled');
+					_handleFormSubmitError(response);
+				});
+			}
+			
+			/**
+			 *
+			 * @param response
+			 */
+			function _handleFormSubmitResponse(response) {
+				
+				// successful
+				if (response['success']) {
+					registrationFormSettings.onSuccess(response['redirectUrl']);
+				}
+				// failure
+				else {
+					
+					var knownError = false;
+					
+					// known error
+					if (response.errorField && response.errorValue) {
+						//trigger to log registration error
+						//Billing errors are not paired to an errorField and are not logged in this line!
+						logRegError(response.errorField, response.errorValue);
+						knownError = _setErrorAndGoToPage(response.errorField, response.errorValue);
+					}
+					
+					var errorMessage = null;
+					
+					// set generic error
+					
+					
+					if (!knownError) {
+						errorMessage = registrationFormSettings.onError();
+						//trigger to log unknown registration error
+						//only occurs during billing errors?
+						logRegError("regError", errorMessage);
+					}
+					
+					
+					
+					
+				}
+			}
+			
+			/**
+			 *
+			 * @param errorField
+			 * @param errorValue
+			 * @returns {boolean} true if the field was found and the error was set
+			 * @private
+			 */
+			function _setErrorAndGoToPage(errorField, errorValue) {
+				
+				// Since the pages are removed from the DOM depending on the answers in the form,
+				// we need to re-index the fields every time there is an error.
+				$scope.fields = _indexFields();
+				var errorFound = false;
+				var fieldInfo = $scope.fields[errorField];
+				if (fieldInfo) {
+					
+					var form = _getNestedFieldFromScope(fieldInfo.formName);
+					if (form) {
+						
+						var field = form[fieldInfo.name];
+						if (field) {
+							
+							// set error for field and navigate to page
+							field.$setValidity(errorValue, false);
+							field.$dirty = true;
+							$scope.enableAutofocus = false;
+							$scope.goToPageAndUpdateHash(fieldInfo.page);
+							
+							errorFound = true;
+						}
+					}
+					else {
+						
+						$scope.goToPageAndUpdateHash(fieldInfo.page);
+					}
+				}
+				return errorFound;
+			}
+			
+			/**
+			 * index field metadata (form name, page number)
+			 * @private
+			 */
+			function _indexFields() {
+				// iterate forms
+				var formElements = $element.find('form');
+				var formMetadata = {};
+				var pageNum = 0;
+				
+				angular.forEach(formElements, function (form) {
+					
+					pageNum++;
+					
+					// iterate inputs
+					var inputElements = $(form).find('input, select');
+					angular.forEach(inputElements, function (input) {
+						
+						// save input field information
+						formMetadata[input.name] = {
+							name: input.name,
+							formName: form.name,
+							page: pageNum
+						};
+					});
+				});
+				
+				return formMetadata;
+			}
+			
+			/**
+			 * Gets the value from the $scope for a property that has '.'s in it. Returns the value
+			 * if there are no '.'s in the name parameters
+			 * @param name Property name stirng (with or without '.')
+			 * @returns {*} The value from scope
+			 * @private
+			 */
+			function _getNestedFieldFromScope(name) {
+				var fields = name.split('.');
+				var val = $scope[fields[0]];
+				
+				for (var index = 1; index < fields.length; index++) {
+					val = val[fields[index]];
+				}
+				
+				return val;
+			}
+			
+			/**
+			 *
+			 * @param response
+			 */
+			function _handleFormSubmitError(response) {
+				registrationFormSettings.onError();
+			}
+			
+			$scope.countryIsUSA = function () {
+				return $scope[REGISTRATION_MODEL_NAME].billingAddressCountry === 'USA' || $scope[REGISTRATION_MODEL_NAME].billingAddressCountry === 'US';
+			};
+			
+			function logRegError(field, value){
+				var event = /** @type {CustomEvent} */ document.createEvent("CustomEvent");
+				event.initCustomEvent("regError", true, true, {
+					errorField: field,
+					errorValue: value
+				});
+				document.dispatchEvent(event);
+			}
+			
+			/**
+			 * handler for change in user's coupon input
+			 */
+			$scope.processCouponChange = function () {
+				$scope.validCoupon = null;
+				$scope.couponValidationError = '';
+				$scope.cart.coupon = null;
+			};
+			
+			/**
+			 * Coupon Check
+			 */
+			$scope.applyCoupon = function () {
+				var couponCode = $scope[REGISTRATION_MODEL_NAME].couponCode;
+				if (couponCode) {
+					
+					$scope.applyingCouponState = true;
+					
+					$http({
+						method: 'GET',
+						url: registrationFormSettings.couponCheckUrl,
+						params: {
+							couponCode: couponCode,
+							product: $scope.productKey,
+							isNewSubscriber: true
+						},
+						dataType: 'json'
+					}).
+					success(function (response) {
+						$scope.cart.coupon = response;
+						$scope.validCoupon = true;
+						$scope.endTrialDate = moment().add($scope.cart.coupon.trialDays, 'days');
+						$scope.applyingCouponState = false;
+						$scope.couponValidationError = "";
+					}).
+					error(function (response) {
+						$scope.cart.coupon = null;
+						$scope.applyingCouponState = false;
+						$scope[REGISTRATION_MODEL_NAME].couponCode = "";
+						$scope.validCoupon = null;
+						if (response !== null && response.length > 0) {
+							$scope.couponValidationError = response;
+						}
+						else {
+							$scope.couponValidationError = 'Invalid Coupon';
+						}
+					});
+				}
+			};
+			
+			$scope.goToPageAndUpdateHash = function(pageNumber) {
+				$scope.goToPage(pageNumber);
+				WindowLocationService.setHash(pageNumber);
+			};
+			
+			$scope.goToPage = function(number) {
+				if (!isNaN(number) && number > 0) {
+					$scope.page = number;
+				}
+				else {
+					$scope.page = 1;
+				}
+				
+				if ($scope.carousel && $scope.carousel.carousel) {
+					$scope.carousel.carousel($scope.page - 1); // 0-indexed
+				}
+			}
+			
+		};
+		
+		var module = angular.module("registration-form-util.service", ["registrationForm.constants", "ngCookies"]);
+		module.service('registrationFormUtilService', RegistrationFormUtilService);
+	   module.directive("updateBrowserCauseNoSupport",function() {
+			return {
+				restrict: "E",
+				scope: {isHomepage: "="},
+				controller:function updateBrowserBannerController() {
+					/*dis pretty much a hack for now. the only thing im finding for how to check for TLS support is a subscription based site so..
+					* check for Stripe / Accept. if they fail to download, we're just assuming they dont support TLS1.2*/
+					if ($.cookie("hideUpdateBrowserBanner") == 'true'){
+						this.showBanner = false;
+					} else if (Stripe == null || (!remspect.isControl("authorizeNet") && Accept == null)) {
+						this.showBanner = true
+					} else {
+						this.showBanner = false;
+					}
+					
+					this.closeBanner = function() {
+						$.cookie("hideUpdateBrowserBanner", true, {path: "/"});
+						this.showBanner = false;
+					}
+				},
+				controllerAs: "updateBrowser",
+				bindToController: true,
+				templateUrl: "/templates/update-browser/update-browser.tpl"
+			};
+		});
+	}
+})();

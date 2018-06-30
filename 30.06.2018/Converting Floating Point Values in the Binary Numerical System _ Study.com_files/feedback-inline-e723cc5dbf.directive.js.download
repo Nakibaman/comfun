@@ -1,0 +1,149 @@
+define(["require", "exports", "angularDependency", "lib/moment", "lib/toastr", "jquery", "angularDependency", "feedback/feedback.service", "lib/moment", "lib/toastr", "jquery", "logging/visible/track-visible.directive"], function (require, exports, angular, moment, toastr, $) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("feedback-inline.directive", ["feedback.service", "track-visible.directive"]);
+    var State;
+    (function (State) {
+        State["LOADING"] = "LOADING";
+        State["ACCEPTING_FEEDBACK"] = "ACCEPTING_FEEDBACK";
+        State["CANNOT_ACCEPT_FEEDBACK_NOW"] = "CANNOT_ACCEPT_FEEDBACK_NOW";
+    })(State || (State = {}));
+    var FeedbackInlineController = (function () {
+        function FeedbackInlineController(feedbackService, $scope) {
+            this.minimumScoreForConfirmation = 0;
+            this.state = State.LOADING;
+            this.lastFeedbackDate = null;
+            this.nextFeedbackDate = null;
+            this.toastrOptions = {
+                closeButton: false,
+                debug: false,
+                newestOnTop: false,
+                progressBar: false,
+                positionClass: "toast-top-center",
+                preventDuplicates: false,
+                onclick: null,
+                showDuration: 300,
+                hideDuration: 1000,
+                timeOut: 5000,
+                extendedTimeOut: 1000,
+                showEasing: "swing",
+                hideEasing: "linear",
+                showMethod: "fadeIn",
+                hideMethod: "fadeOut"
+            };
+            this.feedbackService = feedbackService;
+            this.isPostroll = $scope.postroll === "true";
+            var parsedMinScoreForConfirmation = parseInt($scope.minimumScoreForConfirmation);
+            if (!isNaN(parsedMinScoreForConfirmation)) {
+                this.minimumScoreForConfirmation = parsedMinScoreForConfirmation;
+            }
+            var dataElement = document.querySelector("#feedbackData");
+            if (dataElement) {
+                var lastFeedbackDateStr = dataElement.getAttribute("data-lastFeedbackDate");
+                if (lastFeedbackDateStr) {
+                    this.lastFeedbackDate = moment(parseInt(lastFeedbackDateStr));
+                }
+                var canProvideFeedbackStr = dataElement.getAttribute("data-canProvideFeedback");
+                var nextFeedbackDateStr = dataElement.getAttribute("data-nextFeedbackDate");
+                if (nextFeedbackDateStr) {
+                    this.nextFeedbackDate = moment(parseInt(nextFeedbackDateStr));
+                }
+                if (canProvideFeedbackStr.toLowerCase() === 'true') {
+                    this.state = State.ACCEPTING_FEEDBACK;
+                }
+                else if (this.isPostroll) {
+                    FeedbackInlineController.transitionToNextPostroll();
+                    this.state = State.CANNOT_ACCEPT_FEEDBACK_NOW;
+                }
+                else {
+                    this.state = State.CANNOT_ACCEPT_FEEDBACK_NOW;
+                }
+            }
+            if (this.isPostroll) {
+                var autoplayIsOn = localStorage.getItem("autoplay") === "true";
+                var feedbackElement = document.querySelector(".post-roll--feedback");
+                if (autoplayIsOn) {
+                    FeedbackInlineController.transitionToNextPostroll();
+                }
+                $(feedbackElement).on("autoplay", function () {
+                    FeedbackInlineController.transitionToNextPostroll();
+                });
+            }
+        }
+        FeedbackInlineController.prototype.submitFeedback = function () {
+            var _this = this;
+            var feedback = this.createFeedbackEvent();
+            if (typeof this.npsScore === 'undefined') {
+                toastr.error("Please select a rating value before submitting", "Rating value missing: ", this.toastrOptions);
+            }
+            else {
+                this.feedbackService.submitFeedback(feedback)
+                    .then(function () {
+                    if (_this.npsScore && _this.npsScore >= _this.minimumScoreForConfirmation) {
+                        _this.state = State.CANNOT_ACCEPT_FEEDBACK_NOW;
+                    }
+                    else if (_this.isPostroll) {
+                        _this.transitionToNextPostroll();
+                    }
+                    _this.lastFeedbackDate = moment();
+                    _this.nextFeedbackDate = moment();
+                    return;
+                })["catch"](function () {
+                    if (_this.isPostroll) {
+                        FeedbackInlineController.transitionToNextPostroll();
+                    }
+                    toastr.error("We had a problem processing your feedback, please try again later.", "We're sorry!", _this.toastrOptions);
+                    return;
+                });
+            }
+        };
+        FeedbackInlineController.prototype.dismissFeedback = function () {
+            this.feedbackService.dismissFeedback().then(function () {
+                FeedbackInlineController.transitionToNextPostroll();
+            });
+        };
+        FeedbackInlineController.prototype.setScore = function (score) {
+            this.npsScore = score;
+        };
+        FeedbackInlineController.prototype.transitionToNextPostroll = function () {
+            FeedbackInlineController.transitionToNextPostroll();
+        };
+        FeedbackInlineController.transitionToNextPostroll = function () {
+            var afterFeedbackClass = "post-roll--after-feedback";
+            var feedbackElement = document.querySelector(".post-roll--feedback");
+            var normalElement = document.querySelector("." + afterFeedbackClass);
+            feedbackElement.remove();
+            normalElement.classList.remove(afterFeedbackClass);
+        };
+        ;
+        FeedbackInlineController.prototype.createFeedbackEvent = function () {
+            var previousRequestGuid = this.lookupMetaTagContent("previousRequestGuid");
+            var requestGuid = this.lookupMetaTagContent("requestGuid");
+            if (previousRequestGuid) {
+                requestGuid = previousRequestGuid;
+            }
+            return { npsScore: this.npsScore, userFeedback: this.userFeedback, requestGuid: requestGuid };
+        };
+        FeedbackInlineController.prototype.lookupMetaTagContent = function (metaTagName) {
+            var metaTagElement = document.querySelector("meta[name='" + metaTagName + "']");
+            var content = metaTagElement ? metaTagElement.getAttribute("content") : null;
+            return content;
+        };
+        FeedbackInlineController.$inject = ['FeedbackService', '$scope'];
+        return FeedbackInlineController;
+    }());
+    module.directive("feedbackInline", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/feedback/feedback.tpl",
+            scope: {
+                postroll: "@?",
+                minimumScoreForConfirmation: "@?"
+            },
+            controller: FeedbackInlineController,
+            controllerAs: "feedbackCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=feedback-inline.directive.js.map

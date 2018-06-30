@@ -1,0 +1,440 @@
+define(["require", "exports", "angularDependency", "util/remspect", "lib/toastr", "redesign/instantanswers/instant-answers-activate-or-buy-credits-modal.controller", "angularDependency", "util/remspect", "lib/toastr", "redesign/instantanswers/instant-answers-activate-or-buy-credits-modal.controller", "lib/tinymceui", "remspect/remspect.directive", "dashboard/askexpert/ask-expert.service", "angular/modal/study-modal.service"], function (require, exports, angular, remspect, toastr, instant_answers_activate_or_buy_credits_modal_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var AttachmentStatus;
+    (function (AttachmentStatus) {
+        AttachmentStatus["NO_ATTACHMENT"] = "NO_ATTACHMENT";
+        AttachmentStatus["HAS_ATTACHMENT"] = "HAS_ATTACHMENT";
+        AttachmentStatus["ATTACHMENT_PROMPT"] = "ATTACHMENT_PROMPT";
+    })(AttachmentStatus = exports.AttachmentStatus || (exports.AttachmentStatus = {}));
+    var InstantAnswersEditorController = (function () {
+        function InstantAnswersEditorController($scope, $http, $element, askExpertService, studyModalService) {
+            var _this = this;
+            this.ESSAY_FILE_TYPES = [".docx", ".txt", ".doc"];
+            this.IS_ESSAY_WORD_LIMIT = 500;
+            this.MIN_CREDITS_FOR_ESSAY = 5;
+            this.DAILY_LIMIT = 100;
+            this.placeholder = 'Type your question here...';
+            this.attachmentStatus = AttachmentStatus.NO_ATTACHMENT;
+            this.subjects = ["Business", "Math", "Social Science", "Science", "History", "English", "Computer Science", "Psychology", "Humanities", "Customer Support"];
+            this.attachment = null;
+            this.isSubmitting = false;
+            this.textboxAndAttachmentError = false;
+            this.$scope = $scope;
+            this.$http = $http;
+            this.$element = $element;
+            this.askExpertService = askExpertService;
+            this.studyModalService = studyModalService;
+            this.memberStatus = document.getElementById('memberData').getAttribute('data-member-status');
+            this.isTrialing = this.memberStatus === "TRIALING";
+            this.product = document.getElementById('memberData').getAttribute('data-member-product-key');
+            this.loggedIn = this.memberStatus !== "";
+            this.tinyMceOptions = {
+                menu: {},
+                toolbar1: 'mybutton bold italic bullist numlist',
+                entity_encoding: "named+numeric",
+                browser_spellcheck: true,
+                statusbar: false,
+                drag_drop_upload: false,
+                height: 150,
+                plugins: "paste",
+                paste_as_text: true,
+                setup: function (ed) {
+                    this.tinyMceSetup(ed);
+                }.bind(this)
+            };
+            if (!remspect.isControl("essayReview") && $(window).width() > 768) {
+                this.tinyMceOptions.height = 120;
+            }
+            this._initWatchers();
+            this.askExpertService.getEssayDailyCountSubmitted()
+                .then(function (response) {
+                _this.isOverDailyLimit = response.data.count > _this.DAILY_LIMIT;
+                if (_this.isOverDailyLimit && !_this.loggedIn) {
+                    var event_1 = document.createEvent("CustomEvent");
+                    event_1.initCustomEvent("essayDailyLimitHit", true, true, {});
+                    document.body.dispatchEvent(event_1);
+                }
+            });
+        }
+        InstantAnswersEditorController.prototype.tinyMceSetup = function (ed) {
+            this._tinyMceInit(ed);
+            this._tinyMceFocusEventHandler(ed);
+            this._tinyMceAddButton(ed);
+            this._tinyMceDragDropHandler(ed);
+        };
+        ;
+        InstantAnswersEditorController.prototype.tinymceGetCredits = function (forceReloadCounts) {
+            if (forceReloadCounts === void 0) { forceReloadCounts = false; }
+            if (this.loggedIn) {
+                var text = void 0;
+                var colorClass = void 0;
+                var answersOrCredit = 'answers';
+                if (!remspect.isControl("essayReview")) {
+                    answersOrCredit = "credits";
+                }
+                if (this.askAllowCount === undefined || forceReloadCounts) {
+                    this.$http.get("/member/ask/get-allowed-question-count.ajax").then(function (data) {
+                        this.askAllowCount = data.data['ask_expert_allowed_count'];
+                    }.bind(this));
+                }
+                if (this.creditsPerMonth === undefined || forceReloadCounts) {
+                    this.$http.get("/member/ask/get-credits-per-month.ajax").then(function (data) {
+                        this.creditsPerMonth = data.data['creditsPerMonth'];
+                    }.bind(this));
+                }
+                if (this.askAllowCount === 1) {
+                    answersOrCredit = 'answer';
+                    if (!remspect.isControl("essayReview")) {
+                        answersOrCredit = "credit";
+                    }
+                }
+                if (this.askAllowCount === 0 && this.isTrialing) {
+                    colorClass = 'red';
+                    text =
+                        '<span data-cname="instant_answers_questions_remaining" test-id="instant_answers_questions_remaining"><b class="' + colorClass + '"> '
+                            + this.askAllowCount
+                            + '</b> free trial ' + answersOrCredit + ' remaining</span>';
+                }
+                else if (this.askAllowCount === 0) {
+                    colorClass = 'red';
+                    text =
+                        '<span data-cname="instant_answers_questions_remaining" test-id="instant_answers_questions_remaining"><b class="' + colorClass + '"> '
+                            + this.askAllowCount
+                            + '</b> ' + answersOrCredit
+                            + ' remaining</span> <b class="addMore" data-cname="instant_answers_add_more" test-id="instant_answers_add_more">Add more</b>';
+                }
+                else if (this.isTrialing) {
+                    colorClass = 'green';
+                    text =
+                        '<span data-cname="instant_answers_questions_remaining" test-id="instant_answers_questions_remaining"><b class="' + colorClass + '"> '
+                            + this.askAllowCount
+                            + '</b> free trial ' + answersOrCredit + ' remaining</span>'
+                            + '<b class="addMore" data-cname="instant_answers_add_more" test-id="instant_answers_add_more">Add more</b>';
+                }
+                else {
+                    colorClass = 'green';
+                    text =
+                        '<span data-cname="instant_answers_questions_remaining" test-id="instant_answers_questions_remaining"><b class="' + colorClass + '"> '
+                            + this.askAllowCount
+                            + '</b> ' + answersOrCredit + ' remaining</span>'
+                            + '<b class="addMore" data-cname="instant_answers_add_more" test-id="instant_answers_add_more">Add more</b>';
+                }
+                $('.mce-answersRemaining .mce-txt').html(text);
+            }
+        };
+        ;
+        InstantAnswersEditorController.prototype.addAttachment = function (el) {
+            var files = el.files;
+            if (files.length <= 0) {
+                this.attachment = undefined;
+            }
+            else {
+                this.attachment = files[0];
+                this.$scope.$apply();
+                var fileReader = new FileReader();
+                fileReader.readAsDataURL(files[0]);
+                this.verifyAttachment();
+            }
+        };
+        InstantAnswersEditorController.prototype.verifyAttachment = function () {
+            var _this = this;
+            if (!remspect.isControl("essayReview")) {
+                var lastIndex = this.attachment.name.lastIndexOf('.');
+                var fileExt = this.attachment.name.substring(lastIndex);
+                if (this.attachment.size > 50 * 1024 * 1024) {
+                    toastr.error("File is too large.", "Error", {
+                        positionClass: 'toast-top-center'
+                    });
+                }
+                else if ([".odt", ".rtf"].indexOf(fileExt) >= 0) {
+                    toastr.error("Sorry, we don't support this file type for essays. Please convert to a .doc, .docx, or .txt.", "Unsupported file type", {
+                        positionClass: 'toast-top-center'
+                    });
+                    var event_2 = document.createEvent("CustomEvent");
+                    event_2.initCustomEvent("fileTypeUnsupported", true, true, this.attachment);
+                    document.body.dispatchEvent(event_2);
+                }
+                else if (this.ESSAY_FILE_TYPES.indexOf(fileExt) >= 0 && this.isOverDailyLimit) {
+                    toastr.error("Sorry, we are not accepting essays right now. Please try again later", "Error", {
+                        positionClass: 'toast-top-center'
+                    });
+                }
+                else if (this.ESSAY_FILE_TYPES.indexOf(fileExt) >= 0) {
+                    this.isVerifyingFile = true;
+                    this.askExpertService.getWordCountOfFile(this.attachment).then(function (response) {
+                        if (response.data > this.IS_ESSAY_WORD_LIMIT && !this.loggedIn) {
+                            this.userAgreesFileIsEssay();
+                        }
+                        else if (response.data > this.IS_ESSAY_WORD_LIMIT && this.loggedIn) {
+                            this.attachmentStatus = AttachmentStatus.ATTACHMENT_PROMPT;
+                        }
+                        else {
+                            this.attachmentStatus = AttachmentStatus.HAS_ATTACHMENT;
+                            this.isVerifyingFile = false;
+                            this.addDefaultTextboxTest();
+                        }
+                    }.bind(this))["catch"](function (e) {
+                        toastr.error("We've failed to verify your file. Please refresh and try again.", "Error", {
+                            positionClass: 'toast-top-center'
+                        });
+                        this.isVerifyingFile = false;
+                    }.bind(this));
+                }
+                else {
+                    this.$scope.$apply(function () {
+                        _this.attachmentStatus = AttachmentStatus.HAS_ATTACHMENT;
+                        _this.addDefaultTextboxTest();
+                    });
+                }
+            }
+            else {
+                this.$scope.$apply(function () {
+                    _this.attachmentStatus = AttachmentStatus.HAS_ATTACHMENT;
+                });
+            }
+        };
+        ;
+        InstantAnswersEditorController.prototype.addDefaultTextboxTest = function () {
+            if (!this.textbox) {
+                this.textbox = "Please see my attached file: " + this.attachment.name;
+            }
+        };
+        InstantAnswersEditorController.prototype.removeAttachment = function () {
+            this.attachment = null;
+            this.attachmentStatus = AttachmentStatus.NO_ATTACHMENT;
+            this.isVerifyingFile = false;
+            this.questionType = "";
+            $("[data-hidden-instant-answer-file]").val("");
+        };
+        ;
+        InstantAnswersEditorController.prototype.userAgreesFileIsEssay = function () {
+            this.questionType = "ESSAY";
+            this.attachmentStatus = AttachmentStatus.HAS_ATTACHMENT;
+            this.isVerifyingFile = false;
+            this.addDefaultTextboxTest();
+            if (this.askAllowCount < this.MIN_CREDITS_FOR_ESSAY) {
+                this.openAddMoreCreditsModal(true);
+            }
+        };
+        ;
+        InstantAnswersEditorController.prototype._initWatchers = function () {
+            var _this = this;
+            this.$scope.$watch(function () {
+                return this.askAllowCount;
+            }.bind(this), function () {
+                this.tinymceGetCredits();
+            }.bind(this));
+            this.$scope.$on("instant-answers-question-submitted", function () {
+                _this.tinymceGetCredits(true);
+            });
+            this.$scope.$on("credits-bought", function () {
+                _this.$http.get("/member/ask/get-allowed-question-count.ajax").then(function (data) {
+                    _this.askAllowCount = data.data['ask_expert_allowed_count'];
+                });
+            });
+        };
+        ;
+        InstantAnswersEditorController.prototype._tinyMceInit = function (ed) {
+            var self = this;
+            ed.on('init', function () {
+                this.getDoc().body.style.fontSize = '16px';
+                this.getDoc().body.style.lineHeight = '1.5';
+                if (remspect.isVariation('iaRevamp', 'v2')) {
+                    this.tinymce_placeholder = $('#' + ed.id);
+                    this.attr = this.tinymce_placeholder.attr('placeholder');
+                    if (typeof this.attr !== 'undefined' && this.attr !== false) {
+                        if (ed.getContent().length == 0) {
+                            this.getDoc().body.style.color = '#999';
+                            ed.setContent(this.attr);
+                        }
+                    }
+                }
+                self.tinymceGetCredits();
+            });
+        };
+        ;
+        InstantAnswersEditorController.prototype._tinyMceFocusEventHandler = function (ed) {
+            ed.on('focus', function () {
+                if (this.cnameprefix == 'modal') {
+                    window.scrollTo(0, 0);
+                }
+            }.bind(this));
+        };
+        ;
+        InstantAnswersEditorController.prototype._tinyMceAddButton = function (ed) {
+            if (this.loggedIn) {
+                var self_1 = this;
+                ed.addButton('mybutton', {
+                    classes: 'answersRemaining',
+                    text: ' ',
+                    icon: false,
+                    onclick: function () {
+                        if (self_1.isTrialing) {
+                            if (!remspect.isControl("essayReview")) {
+                                self_1.openAddMoreCreditsModal();
+                            }
+                            else {
+                                location.href = "/member/ask/activate-membership.html";
+                            }
+                        }
+                        else {
+                            if (!remspect.isControl("essayReview")) {
+                                self_1.openAddMoreCreditsModal();
+                            }
+                            else {
+                                location.href = "/member/ask/buy-additional-question.html";
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        ;
+        InstantAnswersEditorController.prototype._tinyMceDragDropHandler = function (ed) {
+            if (!remspect.isControl("essayReview")) {
+                var $el = this.$element.parents(".instantAnswerPopUp");
+                $el.on("drag dragstart dragend dragover dragenter dragleave drop", function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }).on("dragover dragenter", function () {
+                    this.$element.find(".text-and-upload").addClass("dragover");
+                }.bind(this)).on("dragleave dragend drop", function () {
+                    this.$element.find(".text-and-upload").removeClass("dragover");
+                }.bind(this)).on("drop", function (e) {
+                    if (e.originalEvent.dataTransfer.files.length === 1) {
+                        this.$scope.$apply(function () {
+                            this.attachment = e.originalEvent.dataTransfer.files[0];
+                            this.verifyAttachment();
+                        }.bind(this));
+                    }
+                }.bind(this));
+            }
+            ed.on("drag dragstart dragend dragover dragenter dragleave drop", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }).on('dragover dragenter', function (e) {
+                $(ed.editorContainer).parent().addClass('dragover');
+            }).on("dragleave dragend drop", function () {
+                $(ed.editorContainer).parent().removeClass('dragover');
+            }).on('drop', function (e) {
+                var _this = this;
+                $(ed.editorContainer).parent().removeClass('dragover');
+                if (e.dataTransfer.files.length === 1) {
+                    this.$scope.$apply(function () {
+                        _this.attachment = e.dataTransfer.files[0];
+                        _this.verifyAttachment();
+                    });
+                }
+            }.bind(this));
+            this.$element.find('.text-and-upload').on('dragleave dragend', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $(this).removeClass('dragover');
+            });
+        };
+        ;
+        InstantAnswersEditorController.prototype.isSubmitAllowed = function () {
+            if (this.askAllowCount === 0 || this.isSubmitting) {
+                return false;
+            }
+            if (this.questionType === "ESSAY" && this.askAllowCount < this.MIN_CREDITS_FOR_ESSAY) {
+                return false;
+            }
+            return true;
+        };
+        ;
+        InstantAnswersEditorController.prototype.openAddMoreCreditsModal = function (showEssayInfo) {
+            var _this = this;
+            if (showEssayInfo === void 0) { showEssayInfo = false; }
+            var modalSettings = {
+                controller: instant_answers_activate_or_buy_credits_modal_controller_1.InstantAnswersActivateOrBuyCreditsModalController,
+                controllerAs: "modalCtrl",
+                templateUrl: "/templates/essay-review/add-more-credits-modal.tpl",
+                size: this.studyModalService.SIZE_MEDIUM,
+                windowClass: "instant-answers-buy",
+                resolve: {
+                    isTrialing: this.isTrialing,
+                    product: function () { return _this.product; },
+                    minRequiredPurchase: this.MIN_CREDITS_FOR_ESSAY - this.askAllowCount,
+                    showEssayInfo: showEssayInfo
+                }
+            };
+            this.studyModalService.openModalByConfig(modalSettings)
+                .result
+                .then(function (result) {
+                if (result === "ACTIVATION_SUCCESSFUL") {
+                    _this.isTrialing = false;
+                    _this.tinymceGetCredits(true);
+                }
+            })["catch"](function () {
+                _this.removeAttachment();
+            });
+        };
+        ;
+        InstantAnswersEditorController.prototype.submitEditor = function () {
+            var _this = this;
+            var textString = "";
+            if (this.topic && this.topic != "") {
+                textString = "Topic: " + this.topic + "\n";
+            }
+            if (this.textbox && this.textbox != "") {
+                textString = textString + this.textbox;
+            }
+            if (!this.textbox && !this.attachment) {
+                this.textboxAndAttachmentError = true;
+                return;
+            }
+            this.isSubmitting = true;
+            this.askExpertService.askQuestion(textString, this.subject, this.attachment, this.questionType).then(function (response) {
+                if (_this.subject === 'Customer Support') {
+                    _this.isCustomerSupport = true;
+                }
+                _this.textboxAndAttachmentError = false;
+                _this.resetForm();
+                _this.parentCallbackAfterSubmit();
+            })["catch"](function (err) {
+                toastr.error("Something went wrong went submitting. Please try again or contact customer support if it continues to happen.", "Error", {
+                    positionClass: 'toast-top-center'
+                });
+            })["finally"](function () {
+                _this.isSubmitting = false;
+            });
+        };
+        InstantAnswersEditorController.prototype.resetForm = function () {
+            this.topic = "";
+            this.textbox = "";
+            this.subject = "";
+            this.removeAttachment();
+        };
+        InstantAnswersEditorController.prototype.preventFilePicker = function (e) {
+            if (this.attachmentStatus === AttachmentStatus.ATTACHMENT_PROMPT) {
+                e.preventDefault();
+            }
+        };
+        InstantAnswersEditorController.$inject = ["$scope", "$http", "$element", "AskExpertService", "studyModalService"];
+        return InstantAnswersEditorController;
+    }());
+    exports.InstantAnswersEditorController = InstantAnswersEditorController;
+    var module = angular.module("instant-answers-editor.directive", ['ui.tinymce', 'study.remspect-directives', 'ask-expert.service', "study.modal",
+        "instant-answers-activate-or-buy-credits-modal.controller"]);
+    module.controller("InstantAnswersEditorController", InstantAnswersEditorController);
+    module.directive("instantAnswersEditor", function () {
+        return {
+            restrict: "E",
+            scope: {
+                hide: "=",
+                cnameprefix: "@",
+                parentCallbackAfterSubmit: "&",
+                isCustomerSupport: "=?",
+                questionType: "="
+            },
+            controllerAs: 'iaEditorCtrl',
+            bindToController: true,
+            templateUrl: "/templates/instant-answers/editor.tpl",
+            controller: InstantAnswersEditorController
+        };
+    });
+});
+
+//# sourceMappingURL=instant-answers-editor.directive.js.map

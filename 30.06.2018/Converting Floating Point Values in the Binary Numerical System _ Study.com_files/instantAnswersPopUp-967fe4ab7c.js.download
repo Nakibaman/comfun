@@ -1,0 +1,217 @@
+(function () {
+	"use strict";
+	
+	define(['jquery', 'angularDependency', 'lib/toastr', 'util/remspect',
+		 'dashboard/askexpert/ask-expert.service',
+		 'redesign/dashboard/modules/instant-answers-editor.directive',
+		 'registration/angularFormDirectives',
+		 'registration/angularFormConstants',
+		 'util/remspect',
+	    'angular/modal/study-modal.service'
+	], init);
+	
+	function init($, angular, toastr, remspect) {
+
+		var module = angular.module("instantAnswersPopUp", [
+		   'instant-answers-editor.directive',
+			'registrationForm.directives',
+			'registrationForm.constants',
+			'ask-expert.service',
+			'study.remspect-directives',
+			'study.modal'
+		]);
+	 
+		InstantAnswersPopUpController.$inject = ["$element", "$http", "$timeout", "$scope", "AskExpertService", "registrationForm.errorStrings", 'studyModalService'];
+
+		function InstantAnswersPopUpController($element, $http, $timeout, $scope, askExpertService, errorStrings, studyModalService) {
+			var controller = this;
+			controller.ESSAY_SUBMITTED_URL = '/academy/get-started.html?product=PREMIUM&userType=STUDENT&goals=STUDY&questionType=ESSAY';
+			controller.ASSIGNMENT_SUBMITTED_URL = '/academy/get-started.html?product=PREMIUM&userType=STUDENT&goals=STUDY&questionType=ASSIGNMENT';
+			
+			controller.$scope = $scope;
+			controller.$http = $http;
+			controller.$timeout = $timeout;
+			controller.service = askExpertService;
+			controller.errorStrings = errorStrings;
+			controller.studyModalService = studyModalService;
+			controller.open = false;
+			controller.state = "ASK_QUESTION";
+			controller.previousState = "ASK_QUESTION";
+			controller.smsState = "DEFAULT";
+			controller.inEditMode = false;
+			controller.element = $element[0];
+			controller.isAnswersPlan = document.getElementById('memberData').getAttribute('data-member-product-key') == 'ANSWERS';
+			
+			controller._initListeners();
+			
+			var memberStatus = document.getElementById('memberData').getAttribute('data-member-status');
+			
+			if (memberStatus === "TRIALING") {
+				controller.isTrialing = true;
+				controller.loggedIn = true;
+				this.getSmsSettings();
+				
+			}
+			else if (memberStatus === "ACTIVE" || memberStatus === "PENDING_CANCELLATION") {
+				controller.loggedIn = true;
+				this.getSmsSettings();
+			}
+			
+			if ($.cookie('hideIAtray')){
+				controller.hide = true;
+			}
+		}
+		
+		InstantAnswersPopUpController.prototype._initListeners = function(){
+			angular.element(document).on('click', function(e) {
+				if (this.open) {
+					var elHasClass = $(e.target).parents('[data-instant-answers-tab-trigger]').length > 0 || $(e.target).data('instantAnswersTabTrigger');
+					if (!elHasClass) {
+						this.$scope.$apply(function() {
+							this.open = false;
+						}.bind(this))
+					}
+				}
+			}.bind(this));
+			
+			this.$scope.$on('open-instant-answer-tab', function() {
+				this.open = true;
+			}.bind(this));
+		};
+		
+		InstantAnswersPopUpController.prototype.nextScreen = function () {
+			if(this.subject === "Customer Support"){
+				this.state = "CUSTOMER_SUPPORT";
+			}
+			else{
+				this.state = "SUBMITTED";
+			}
+		};
+
+		InstantAnswersPopUpController.prototype.resetState = function () {
+			this.state = "ASK_QUESTION";
+		};
+		
+		InstantAnswersPopUpController.prototype.getRelatedLessons = function(){
+			this.service.getRelatedLessons(this.textbox, this.subject).then(function(data){
+				this.relatedLessons = data;
+			}.bind(this))
+		};
+		
+		InstantAnswersPopUpController.prototype.optIntoSms = function (){
+			var controller = this;
+			
+			controller.service.optIntoSms(this.phoneNumber)
+			.then(function(){
+				this.smsState = 'THANKS';
+			}.bind(this))
+			.catch(function(){
+				toastr.error('Please try again later.', "A problem occurred", {
+					positionClass: 'toast-top-center'
+				});
+			})
+		};
+	
+		InstantAnswersPopUpController.prototype.getSmsSettings = function(){
+			this.$http.get('/member/profile/get-sms-notification-setting.ajax').then(function(response){
+				this.allowSms = response.data.allowSms;
+				this.validSmsCountry = response.data.validSmsCountry;
+			}.bind(this))
+		};
+		
+		InstantAnswersPopUpController.prototype.actionsAfterSubmitSuccess = function() {
+			var controller = this;
+			
+			if (!controller.loggedIn) {
+				if (!remspect.isControl("essayReview")) {
+					if (controller.questionType === 'ESSAY'){
+						/*progress bar "progress" is fake. we just know it started and it finished so do some animation magic*/
+						controller.isUploadComplete = true;
+						controller.state = 'UPLOADING';
+					}
+					else {
+						window.location.href = controller.ASSIGNMENT_SUBMITTED_URL;
+					}
+				}
+				else {
+					window.location.href = '/academy/get-started.html?product=ANSWERS&userType=STUDENT&goals=STUDY&questionAsked=true';
+				}
+			}
+			else {
+				controller.nextScreen();
+			}
+		};
+		
+		InstantAnswersPopUpController.prototype.canGoToRegForm = function() {
+			if (this.isUploadComplete) {
+				window.location.href = this.ESSAY_SUBMITTED_URL;
+				
+			}
+		};
+
+		InstantAnswersPopUpController.prototype.toggleEditMode = function () {
+			if (this.inEditMode) {
+				this.inEditMode = false;
+			}
+			else {
+				var controller = this;
+				this.selectEditors();
+				var bounds = this.questionDisplay.getBoundingClientRect();
+				this.questionEditor.style.height = "" + bounds.height + "px";
+				this.inEditMode = true;
+				this.$timeout(function () {
+					controller.questionEditor.focus();
+				}, 0);
+			}
+		};
+
+		InstantAnswersPopUpController.prototype.selectEditors = function () {
+			this.questionDisplay = this.element.querySelector(".instantAnswerPopUp .instantAnswerPopUpContent .page.confirm .question");
+			this.questionEditor = this.element.querySelector(".instantAnswerPopUp .instantAnswerPopUpContent .page.confirm textarea");
+			if (!this.questionDisplay) {
+				this.questionDisplay = this.element.querySelector(".modal-dialog .modal-content .modal-body .instantAnswerOverlayContent .page.confirm .question");
+				this.questionEditor = this.element.querySelector(".modal-dialog .modal-content .modal-body .instantAnswerOverlayContent .page.confirm textarea");
+			}
+		};
+
+		InstantAnswersPopUpController.prototype.hideForSession = function () {
+			$.cookie('hideIAtray', true, {path:'/'})
+		};
+		
+		InstantAnswersPopUpController.prototype.changeFormStateAndStopPropagation = function(event, state){
+			event.stopPropagation();
+			this.previousState = this.state;
+			this.state = state;
+		};
+		
+		InstantAnswersPopUpController.prototype.shiftTabToLeft = function () {
+			return !remspect.isControl("navFlip");
+		};
+		
+		module.controller("InstantAnswersPopUpController", InstantAnswersPopUpController);
+
+		module.directive("instantAnswersPopUp", function() {
+			 return {
+				 restrict: "E",
+				 templateUrl: "/templates/instant-answers/popUp.tpl",
+				 controller: InstantAnswersPopUpController,
+				 controllerAs: "controller",
+				 scope: {
+					 cnameprefix: '@'
+				 }
+			 };
+		});
+		module.directive("instantAnswersModule", function() {
+			 return {
+				 restrict: "E",
+				 templateUrl: "/templates/instant-answers/instant-answers-module.tpl",
+				 controller: InstantAnswersPopUpController,
+				 controllerAs: "controller",
+				 scope: {
+					 cnameprefix: '@'
+				 }
+			 };
+		});
+
+	}
+})();

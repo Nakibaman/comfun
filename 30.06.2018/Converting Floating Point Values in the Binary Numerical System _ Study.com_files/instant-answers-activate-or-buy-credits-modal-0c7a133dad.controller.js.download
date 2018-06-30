@@ -1,0 +1,60 @@
+define(["require", "exports", "angularDependency", "lib/toastr", "angularDependency", "angular/util/http-post-params-as-form.provider", "dashboard/askexpert/ask-expert.service", "lib/toastr"], function (require, exports, angular, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("instant-answers-activate-or-buy-credits-modal.controller", ["ask-expert.service", "study.http-post-params-as-form"]);
+    var InstantAnswersActivateOrBuyCreditsModalController = (function () {
+        function InstantAnswersActivateOrBuyCreditsModalController($http, $scope, $rootScope, askExpertService, httpPostParamsAsFormConfig, isTrialing, product, minRequiredPurchase, showEssayInfo) {
+            this.minRequiredPurchase = 0;
+            this.isSubmitting = false;
+            this.showEssayInfo = false;
+            this.buyMoreCredits = function () {
+                var _this = this;
+                this.isSubmitting = true;
+                this.$http.post("/member/ask/buy-additional-question.ajax", { count: this.creditCount }, this.httpPostParamsAsFormConfig).then(function (response) {
+                    _this.$rootScope.$broadcast("credits-bought");
+                    _this.$scope.$close();
+                })["catch"](function (error) {
+                    toastr.error("A problem occurred when attempting to purchase additional credits. Please contact customer support.", "Error", {
+                        positionClass: 'toast-top-center'
+                    });
+                })["finally"](function () {
+                    _this.isSubmitting = false;
+                });
+            };
+            this.$http = $http;
+            this.$scope = $scope;
+            this.$rootScope = $rootScope;
+            this.askExpertService = askExpertService;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            this.isTrialing = isTrialing;
+            this.product = product;
+            this.minRequiredPurchase = minRequiredPurchase;
+            this.showEssayInfo = showEssayInfo;
+        }
+        InstantAnswersActivateOrBuyCreditsModalController.prototype.activateAccount = function () {
+            var _this = this;
+            this.isSubmitting = true;
+            this.$http.post("/member/activate-membership.ajax", this.httpPostParamsAsFormConfig).then(function () {
+                _this.$scope.$close("ACTIVATION_SUCCESSFUL");
+                toastr.success("Your membership has been activated.", "Success", {
+                    positionClass: 'toast-top-center'
+                });
+            })["catch"](function (error) {
+                toastr.error(error.data.error || "An unknown error occurred", "Error", {
+                    positionClass: 'toast-top-center'
+                });
+            })["finally"](function () {
+                _this.isSubmitting = false;
+            });
+        };
+        InstantAnswersActivateOrBuyCreditsModalController.prototype.canSubmit = function () {
+            return !this.isSubmitting && this.creditCount;
+        };
+        InstantAnswersActivateOrBuyCreditsModalController.$inject = ["$http", "$scope", "$rootScope", "AskExpertService", "httpPostParamsAsFormConfig", "isTrialing", "product", "minRequiredPurchase", "showEssayInfo"];
+        return InstantAnswersActivateOrBuyCreditsModalController;
+    }());
+    exports.InstantAnswersActivateOrBuyCreditsModalController = InstantAnswersActivateOrBuyCreditsModalController;
+    module.controller("InstantAnswersActivateOrBuyCreditsModalController", InstantAnswersActivateOrBuyCreditsModalController);
+});
+
+//# sourceMappingURL=instant-answers-activate-or-buy-credits-modal.controller.js.map

@@ -1,0 +1,33 @@
+define(["require", "exports", "angularDependency", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("studentNameDirective", []);
+    module.directive("studentName", function () {
+        return {
+            restrict: "E",
+            scope: {
+                student: "=",
+                fullName: "="
+            },
+            template: "<span>{{displayName}}</span>",
+            link: function (scope) {
+                var student = scope.student;
+                var fullName = scope.fullName;
+                if (!student && !fullName) {
+                    scope.displayName = "";
+                }
+                else if (fullName) {
+                    scope.displayName = fullName;
+                }
+                else if (student.profile.firstName && student.profile.lastName) {
+                    scope.displayName = student.profile.firstName + " " + student.profile.lastName;
+                }
+                else {
+                    scope.displayName = student.emailAddress;
+                }
+            }
+        };
+    });
+});
+
+//# sourceMappingURL=student-name.directive.js.map

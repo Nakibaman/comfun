@@ -1,0 +1,77 @@
+define(["require", "exports", "angularDependency", "util/remspect", "angularDependency"], function (require, exports, angular, Remspect) {
+    "use strict";
+    exports.__esModule = true;
+    var SupportArticleType;
+    (function (SupportArticleType) {
+        SupportArticleType["CREATE_CLASSROOM"] = "create-classroom";
+        SupportArticleType["INVITE_STUDENTS"] = "invite-students";
+        SupportArticleType["SEND_ASSIGNMENT_CLASSROOM"] = "send-assignment-classroom";
+        SupportArticleType["SEND_ASSIGNMENT_STUDENT"] = "send-assignment-student";
+        SupportArticleType["STUDENT_SCORES"] = "see-student-scores";
+        SupportArticleType["CLASSROOMS_QUICK_START"] = "classrooms-quick-start";
+        SupportArticleType["GET_SHARE_LINK"] = "get-share-link";
+        SupportArticleType["CUSTOM_COURSE_HELP"] = "custom-course-help";
+    })(SupportArticleType = exports.SupportArticleType || (exports.SupportArticleType = {}));
+    var module = angular.module("support-article-link.directive", []);
+    var SupportArticleLinkDirectiveController = (function () {
+        function SupportArticleLinkDirectiveController(supportArticleLinkService) {
+            this.supportArticleLinkService = supportArticleLinkService;
+            this.articleHref = this.supportArticleLinkService.getLink(this.articleType);
+            this.testId = "support-article-link--" + this.articleType.toLowerCase();
+        }
+        SupportArticleLinkDirectiveController.$inject = ["supportArticleLinkService"];
+        return SupportArticleLinkDirectiveController;
+    }());
+    exports.SupportArticleLinkDirectiveController = SupportArticleLinkDirectiveController;
+    var SupportArticleLinkService = (function () {
+        function SupportArticleLinkService() {
+            this.idToLinkMap = {};
+            this.supportPrefix = "http://support.study.com/support/solutions/articles/";
+            this.supportHome = "https://support.study.com/support/home";
+            this.idToLinkMap[SupportArticleType.SEND_ASSIGNMENT_CLASSROOM] = "11000023370-how-do-i-send-an-assignment-to-an-entire-classroom-";
+            this.idToLinkMap[SupportArticleType.SEND_ASSIGNMENT_STUDENT] = "11000023371-how-do-i-send-an-assignment-to-an-individual-student-";
+            this.idToLinkMap[SupportArticleType.STUDENT_SCORES] = "11000023373-how-do-i-see-my-student-s-scores-";
+            this.idToLinkMap[SupportArticleType.CLASSROOMS_QUICK_START] = "11000023375-a-quick-start-guide-to-virtual-classrooms-for-teachers";
+            this.idToLinkMap[SupportArticleType.CREATE_CLASSROOM] = "11000023369-how-do-i-create-a-virtual-classroom-";
+            this.idToLinkMap[SupportArticleType.INVITE_STUDENTS] = "11000023372-how-do-i-invite-students-to-join-my-virtual-classroom-";
+            this.idToLinkMap[SupportArticleType.GET_SHARE_LINK] = "11000052730-how-do-i-get-the-share-link-for-an-assignment-";
+            this.idToLinkMap[SupportArticleType.CUSTOM_COURSE_HELP] = "11000054899-what-are-custom-courses-";
+            if (!Remspect.isControl("teacherClassroomReorg")) {
+                this.idToLinkMap[SupportArticleType.STUDENT_SCORES] = "11000052488-how-do-i-see-my-student-s-scores-beta-";
+                this.idToLinkMap[SupportArticleType.CREATE_CLASSROOM] = "11000052490-how-do-i-create-a-virtual-classroom-beta-";
+                this.idToLinkMap[SupportArticleType.INVITE_STUDENTS] = "11000052491-how-do-i-invite-students-to-join-my-virtual-classroom-beta-";
+                this.idToLinkMap[SupportArticleType.CLASSROOMS_QUICK_START] = "11000052516-a-quick-start-guide-to-study-com-classrooms-for-teachers-beta-";
+                this.idToLinkMap[SupportArticleType.GET_SHARE_LINK] = "11000052729-how-do-i-get-a-share-link-for-an-assignment-beta-";
+            }
+            if (!Remspect.isControl("playlist")) {
+                this.idToLinkMap[SupportArticleType.CUSTOM_COURSE_HELP] = "11000054916-what-are-playlists-";
+            }
+        }
+        SupportArticleLinkService.prototype.getLink = function (type) {
+            var articleHref = this.idToLinkMap[type];
+            if (!articleHref) {
+                console.warn("No article link found for type: " + type);
+                return this.supportHome;
+            }
+            return this.supportPrefix + articleHref;
+        };
+        SupportArticleLinkService.$inject = [];
+        return SupportArticleLinkService;
+    }());
+    module.service("supportArticleLinkService", SupportArticleLinkService);
+    module.directive("supportArticleLink", function () {
+        return {
+            restrict: "E",
+            transclude: true,
+            template: "<a target='_blank' test-id='{{::supportArticleCtrl.testId}}' href='{{::supportArticleCtrl.articleHref}}' ng-transclude></a>",
+            scope: {
+                articleType: "@"
+            },
+            bindToController: true,
+            controller: SupportArticleLinkDirectiveController,
+            controllerAs: "supportArticleCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=support-article-link.directive.js.map

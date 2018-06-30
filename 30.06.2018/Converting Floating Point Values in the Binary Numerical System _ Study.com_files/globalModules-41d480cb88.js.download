@@ -1,0 +1,41 @@
+(function () {
+	"use strict";
+	
+	var teacherLicenseExpirationElement = document.querySelector("#teacherLicenseExpirationInfo");
+	
+	function init(angular, remspect, $) {
+		var deps = ["recent-activity.service"];
+		if(remspect.isControl("regFormSSL")){
+			deps.push("partialRegForm")
+		}
+
+		var noAnnouncements = $('#noAnnouncements');
+
+		if (!noAnnouncements || noAnnouncements.length === 0) {
+			deps.push("announcements.directive");
+		}
+		
+		if (teacherLicenseExpirationElement) {
+			deps.push("teacher-license-expiration-popup.controller")
+		}
+
+		angular.module("globalModules", deps);
+	}
+	
+	var requireDependencies = ['angularDependency',
+		"util/remspect",
+		"jquery",
+		"dashboard/recentActivity/recent-activity.service",
+		"global/announcements.directive",
+		"redesign/referFriend",
+		'lib/jquery/bootstrap',
+		"redesign/partial-reg-form-modal.controller"
+	];
+	
+	if (teacherLicenseExpirationElement) {
+		requireDependencies.push("member/billing/teacher-license-expiration-popup.controller")
+	}
+	
+	define(requireDependencies, init);
+	
+})();

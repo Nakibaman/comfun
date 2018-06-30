@@ -1,0 +1,238 @@
+(function() {
+    'use strict';
+
+    /**
+     * @param {function(...) : jQuery} $
+     */
+    function init($, remspect) {
+        /**
+         * @param {jQuery|Element} courseNavigatorElement
+         * @constructor
+         */
+        function CourseNavigator(courseNavigatorElement) {
+            this.counter = 0;
+            this.$container = $(courseNavigatorElement);
+            this.$chapters = $(courseNavigatorElement).find('[data-name="chapter"]');
+            this.$scrollToContainer = this.$container.find('.ios-scrollable');
+            this.$headerContainer = this.$container.find('.courseNavHeader');
+
+            this.$lessonContainer = $(courseNavigatorElement).find('[data-name="lessonList"]');
+
+            /*get links from this$chapter.. they're wrapped in remilon:academyAssetAnchors so cant just drop a data attr on it*/
+            this.$lessons = this.$chapters.find('a');
+            this.$lessons.on('click', function (e) {e.preventDefault();});
+
+            this.isViewing = this.$container.find('.is-viewing');
+
+            this.bindLessons();
+
+            this.placeholder = $("<div data-coursenavigatorplaceholder>").insertBefore(this.$container);
+            this.flyoutMql = window.matchMedia("(min-width: 768px)");
+
+            this.flyout();
+
+            this.flyoutMql.addListener($.proxy(this.flyout, this));
+
+            this.$container.on('shown.bs.offcanvas', $.proxy(function () {this.scrollToCurrentLesson();}, this));
+			  this.$container.offcanvas({
+				  toggle: false,
+				  autohide: false
+			  });
+			  this.$scrollToContainer.on("scroll", this.pinChapterHeader.bind(this));
+        }
+
+        CourseNavigator.prototype.bindLessons = function () {
+            var self = this;
+            var uri = '';
+
+            function clickHandler(i) {
+                var $el = $(this);
+
+                $el.off("click", clickHandler);
+
+                uri = $(this).find("a").eq(0).attr('href');
+                var aa = $el.data("aa");
+
+                $.ajax({
+                    type: "GET",
+                    url: '/academy/getLessonsInTopic.ajax',
+                    data: {
+                        topicURI: uri,
+                        courseAcademyAssetId: aa
+                    },
+                    dataType: 'json',
+                    success: function (data) {
+                        self.createHTML(data, i);
+                    },
+                    error: function (data) {
+                        $el.on("click", clickHandler);
+                    }
+                });
+            }
+
+            this.$chapters.each(function (index, el) {
+                if ($(el).is('[data-starting-chapter]')) {
+                    clickHandler.apply(el, [index]);
+                }
+                else if (!$(el).is('[data-loaded]')) {
+                    $(el).on("click", $.proxy(clickHandler, el, [index]));
+                }
+            });
+        };
+
+        CourseNavigator.prototype.createHTML = function (data, index) {
+            var self = this;
+            var htmlToAppend = '';
+            var nextLessonIndex = $(this.$lessonContainer[index]).attr('data-next-lesson-index');
+            if (nextLessonIndex !== undefined) {
+                nextLessonIndex = parseInt(nextLessonIndex);
+            }
+
+            /*pretty sure video duration hasnt been updated since they updated the videos to not have the intro/outro
+             * so these will be off by a few seconds */
+            for (var i = 0; i < data.length; i++) {
+
+                if (nextLessonIndex === i) {
+                    htmlToAppend +=
+                      '<li class="next-lesson" data-cname="course_navigator_next_lesson" test-id="course_navigator_next_lesson">'
+                      + '<a href="' + data[i]['uri'] + '" '
+                      + self._createVirtualCookie(data[i]['courseAcademyAssetId'], data[i]['uri']) + '>';
+                    if (data[i]['type'] === 'LESSON') {
+                        htmlToAppend += '<span class="lessonTime">' + self.convertSecondsToTime(data[i]['videoDuration']) + '</span>';
+                        htmlToAppend += '<p>Next Lesson</p>'
+                         + '<div class="imgWithPlayIcon" title="' + data[i]['title'] + '" data-cname="course_nav_next_lesson_thumbnail" test-id="course_nav_next_lesson_thumbnail">'
+                         + '<img class="videoPreview" src="/cimages/videopreview/videopreview-small/' + data[i]['videoPreviewImageUri'] + '"/>'
+                         + '<span class="playIcon">'
+                         + '<span class="triangle"></span>'
+                         + '</span>'
+                         + '</div>'
+                         + '<span class="title" data-cname="course_nav_next_lesson_title" test-id="course_nav_next_lesson_title">' + data[i]['title'] + '</span>'
+                         + '</a>'
+                         + '</li>';
+                    }
+                    else if (data[i]['type'] === 'FLASHCARD_SET') {
+                        htmlToAppend += '<p>Next Set</p>'
+                         + '<div class="imgWithPlayIcon" title="' + data[i]['title'] + '" data-cname="course_nav_next_lesson_thumbnail" test-id="course_nav_next_lesson_thumbnail">'
+                         + '<img src="/images/reDesign/flashcardsPreview.png" alt="' + data[i]['title'] + '"/>'
+                         + '</div>'
+                         + '<span class="title" data-cname="course_nav_next_lesson_title" test-id="course_nav_next_lesson_title">' + data[i]['title'] + '</span>'
+                         + '</a>'
+                         + '</li>';
+                    }
+                    else {
+                        htmlToAppend += '<p>Next Lesson</p>'
+                          + '<div class="imgWithPlayIcon" title="' + data[i]['title'] + '" data-cname="course_nav_next_lesson_thumbnail" test-id="course_nav_next_lesson_thumbnail">'
+                          + '<img src="/images/reDesign/defaultArticlePreview.png" alt="' + data[i]['title'] + '"/>'
+                          + '</div>'
+                          + '<span class="title" data-cname="course_nav_next_lesson_title" test-id="course_nav_next_lesson_title">' + data[i]['title'] + '</span>'
+                          + '</a>'
+                          + '</li>';
+                    }
+                }
+                else if (data[i]['type'] === 'FLASHCARD_SET') {
+                    htmlToAppend +=
+                     '<li><span class="icon icon-flash-cards"></span><a href="' + data[i]['uri'] + '"' + self._createVirtualCookie(data[i]['courseAcademyAssetId'], data[i]['uri']) + '>'
+                     + data[i]['title'] + '</a>';
+                    htmlToAppend += '</li>';
+                }
+                else {
+                    htmlToAppend +=
+                     '<li><a href="' + data[i]['uri'] + '"' + self._createVirtualCookie(data[i]['courseAcademyAssetId'], data[i]['uri']) + '>'
+                     + data[i]['title'] + '</a>';
+                    if (data[i]['type'] === 'LESSON') {
+                        htmlToAppend += '<span class="lessonTime">' + self.convertSecondsToTime(data[i]['videoDuration']) + '</span>';
+                    }
+                    htmlToAppend += '</li>';
+                }
+            }
+
+            /*re-jquery-fy cause without it, it doesnt work! WOO*/
+            $(this.$lessonContainer[index]).prepend(htmlToAppend);
+
+            if (self.counter === 0) {
+                self.scrollToCurrentLesson();
+                self.counter++;
+            }
+        };
+
+        CourseNavigator.prototype._createVirtualCookie = function (ancestryId, uri) {
+            return "onclick=\"$.cookie('virtualAA','" + ancestryId + "', {path: '" + uri + "', expires: 730})\" "; // US-6178
+        };
+
+        CourseNavigator.prototype.convertSecondsToTime = function (seconds) {
+            var m = Math.floor(seconds / 60);
+            var s = this._twoDigitSeconds(seconds % 60);
+            return m + ':' + s;
+        };
+
+        CourseNavigator.prototype._twoDigitSeconds = function (seconds) {
+            if (seconds > 9) {
+                return seconds;
+            }
+            else {
+                return '0' + seconds;
+            }
+        };
+
+        CourseNavigator.prototype.scrollToCurrentLesson = function () {
+			  var chapterHeader = $("[data-toggle=collapse][data-target=#" + this.isViewing.attr("id") + "]");
+			  var jQueryAnimationQueueName = "courseNavScrollQueue";
+			  
+            try {
+					var newScrollTop = this.isViewing.position().top
+					 - this.$scrollToContainer.scrollTop()
+					 - chapterHeader.outerHeight();
+					
+                this.$scrollToContainer
+					 .stop(jQueryAnimationQueueName, true)
+					 .animate({scrollTop: newScrollTop}, {
+						 queue: jQueryAnimationQueueName
+					 })
+					 .dequeue(jQueryAnimationQueueName);
+            }
+            catch (e) {
+                //do something?
+            }
+        };
+        
+        CourseNavigator.prototype.pinChapterHeader = function() {
+			  var chapterHeaderToSticky;
+			  var scrolledOffTopHeaders = this.$chapters.closest(".stickable").filter(function(index, el) {
+				  return $(el).position().top <= 0;
+			  }).find(this.$chapters);
+	
+			  if (!scrolledOffTopHeaders.last().hasClass("collapsed")) {
+				  chapterHeaderToSticky = scrolledOffTopHeaders.last();
+			  }
+	
+			  var chapterHeadersToReset = this.$chapters.not(chapterHeaderToSticky);
+			  chapterHeadersToReset.css("position", "");
+			  chapterHeadersToReset.css("top", "");
+			  chapterHeadersToReset.closest(".stickable").css("height", "");
+	
+			  if (chapterHeaderToSticky) {
+				  chapterHeaderToSticky.closest(".stickable").css("height", chapterHeaderToSticky.outerHeight());
+				  chapterHeaderToSticky.css("position", "absolute");
+				  chapterHeaderToSticky.css("top", this.$scrollToContainer.scrollTop());
+			  }
+		  };
+
+        CourseNavigator.prototype.flyout = function () {
+            if (!this.flyoutMql.matches) {
+                this.$container.addClass('navmenu navmenu-default navmenu-fixed-left offcanvas');
+
+                /*has to be moved out of .sidebar, otherwise it gets hidden when you arent on the lesson tab*/
+                this.$container.appendTo('[data-coursenavigatorbottom]');
+            }
+            else {
+                this.$container.removeClass('navmenu navmenu-default navmenu-fixed-left offcanvas');
+                this.$container.insertAfter(this.placeholder);
+                this.scrollToCurrentLesson();
+            }
+        };
+
+        return CourseNavigator;
+    }
+
+    define(['jquery', "util/remspect"], init);
+})();

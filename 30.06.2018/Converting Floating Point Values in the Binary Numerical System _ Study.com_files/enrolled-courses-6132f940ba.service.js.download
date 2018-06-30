@@ -1,0 +1,112 @@
+define(["require", "exports", "angularDependency", "util/value-pro", "angular/util/http-post-params-as-form.provider"], function (require, exports, angular, ValueProxy) {
+    "use strict";
+    exports.__esModule = true;
+    var EnrolledCoursesService = (function () {
+        function EnrolledCoursesService($http, $q, $timeout, httpPostParamsAsFormConfig) {
+            this.enrolledCourseListSorted = [];
+            this.$http = $http;
+            this.$q = $q;
+            this.$timeout = $timeout;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            var memberDataElement = document.querySelectorAll("[data-member-id]");
+            if (memberDataElement.length > 0) {
+                this.memberId = memberDataElement[0].getAttribute("data-member-id");
+            }
+        }
+        EnrolledCoursesService.prototype.getEnrolledCourseDataValueProxy = function () {
+            if (!this.enrolledCourseValueProxy) {
+                this.enrolledCourseValueProxy = new ValueProxy([], function () {
+                    var deferred = this.$q.defer();
+                    this.retry(5, deferred);
+                    return deferred.promise;
+                }.bind(this));
+                this.enrolledCourseValueProxy.addValueListener(function (enrolledCourseData) {
+                    var newEnrolledCourseList = this.getSortedEnrolledCourses();
+                    this.enrolledCourseListSorted.length = 0;
+                    angular.extend(this.enrolledCourseListSorted, newEnrolledCourseList);
+                }.bind(this));
+            }
+            return this.enrolledCourseValueProxy;
+        };
+        EnrolledCoursesService.prototype.getSortedEnrolledCourses = function () {
+            var filteredCourseList = this.enrolledCourseValueProxy.value.filter(function (courseData) {
+                return !courseData.courseProgress.percentComplete || courseData.courseProgress.percentComplete < 100;
+            });
+            return filteredCourseList.sort(function (courseData1, courseData2) {
+                if (courseData1.coursePlan && courseData2.coursePlan) {
+                    if (courseData1.coursePlan.sequence === courseData2.coursePlan.sequence) {
+                        if (courseData1.coursePlan.id === courseData2.coursePlan.id) {
+                            return 0;
+                        }
+                        else {
+                            return courseData1.coursePlan.id - courseData2.coursePlan.id;
+                        }
+                    }
+                    else {
+                        return courseData1.coursePlan.sequence - courseData2.coursePlan.sequence;
+                    }
+                }
+                else if (courseData1.coursePlan) {
+                    return -1;
+                }
+                else if (courseData2.coursePlan) {
+                    return 1;
+                }
+                else {
+                    return 0;
+                }
+            });
+        };
+        EnrolledCoursesService.prototype.getCompletedCourses = function () {
+            return this.enrolledCourseValueProxy.value.filter(function (courseData) {
+                return courseData.courseProgress.percentComplete && courseData.courseProgress.percentComplete === 100;
+            });
+        };
+        EnrolledCoursesService.prototype.enrollInCourse = function (courseAssetId, $event, lesson) {
+            var data = {
+                courseId: courseAssetId,
+                enroll: true
+            };
+            if (lesson) {
+                data["lessonUriToUpdate"] = lesson.uri;
+            }
+            return this.$http.post("/member/enrollment/enroll.ajax", data, this.httpPostParamsAsFormConfig)
+                .then(function () {
+                return this.getEnrolledCourseDataValueProxy().reloadValue();
+            }.bind(this));
+        };
+        EnrolledCoursesService.prototype.unenrollFromCourse = function (courseAssetId, $event) {
+            return this.performUnenroll(courseAssetId);
+        };
+        EnrolledCoursesService.prototype.declineToEnrollInCourse = function (courseAssetId, $event) {
+            return this.performUnenroll(courseAssetId);
+        };
+        EnrolledCoursesService.prototype.performUnenroll = function (courseAssetId) {
+            return this.$http.post("/member/enrollment/unenroll.ajax", {
+                courseId: courseAssetId
+            }, this.httpPostParamsAsFormConfig)
+                .then(function () {
+                return this.getEnrolledCourseDataValueProxy().reloadValue();
+            }.bind(this));
+        };
+        EnrolledCoursesService.prototype.retry = function (retries, deferred) {
+            this.$http.get("/member/enrollment/enrolled-courses.ajax")
+                .then(function (response) {
+                deferred.resolve(response.data);
+            }.bind(this))["catch"](function () {
+                if (retries > 0) {
+                    this.$timeout(this.retry.bind(this, retries - 1, deferred), 4000);
+                }
+                else {
+                    deferred.reject();
+                }
+            }.bind(this));
+        };
+        EnrolledCoursesService.$inject = ["$http", "$q", "$timeout", "httpPostParamsAsFormConfig"];
+        return EnrolledCoursesService;
+    }());
+    exports.EnrolledCoursesService = EnrolledCoursesService;
+    angular.module("enrolled-courses.service", ["study.http-post-params-as-form"]).service("EnrolledCoursesService", EnrolledCoursesService);
+});
+
+//# sourceMappingURL=enrolled-courses.service.js.map

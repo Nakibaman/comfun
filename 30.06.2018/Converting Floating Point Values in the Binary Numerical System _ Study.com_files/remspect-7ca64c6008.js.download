@@ -1,0 +1,58 @@
+define(["require", "exports"], function (require, exports) {
+    "use strict";
+    var Remspect = (function () {
+        function Remspect() {
+            this.factorsToVariations = {};
+            var cookieValue = document.cookie.replace(/(?:(?:^|.*;\s*)ssoe_debug\s*=\s*([^;]*).*$)|^.*$/, "$1");
+            var ssoeRegex = /([^-]+)-([^\.]+)\.?/g;
+            var match = ssoeRegex.exec(cookieValue);
+            while (match !== null) {
+                var factor = match[1];
+                var variation = match[2];
+                this.factorsToVariations[factor] = variation;
+                match = ssoeRegex.exec(cookieValue);
+            }
+        }
+        Remspect.prototype.isVariation = function (factor, variation) {
+            if (variation === 'control') {
+                return this.isControl(factor);
+            }
+            var orVariationRegex = /([^|]+)/g;
+            var notVariationRegex = /^!(.*)/g;
+            var match = orVariationRegex.exec(variation);
+            while (match !== null) {
+                var v = match[1];
+                var notMatch = v.match(notVariationRegex);
+                var variationDesired = (notMatch === null);
+                if (!variationDesired) {
+                    v = v.slice(1);
+                }
+                var foundVariation = (this.factorsToVariations[factor] === v);
+                if (foundVariation && variationDesired) {
+                    return true;
+                }
+                else if (!foundVariation && !variationDesired) {
+                    return true;
+                }
+                match = orVariationRegex.exec(variation);
+            }
+            return false;
+        };
+        ;
+        Remspect.prototype.isControl = function (factor) {
+            return !this.factorsToVariations[factor] || this.factorsToVariations[factor] === 'control';
+        };
+        ;
+        Remspect.prototype.isAssignedToFactor = function (factor) {
+            return this.factorsToVariations[factor] != null;
+        };
+        Remspect.prototype.printVariations = function () {
+            console.log(this.factorsToVariations);
+        };
+        ;
+        return Remspect;
+    }());
+    return new Remspect();
+});
+
+//# sourceMappingURL=remspect.js.map

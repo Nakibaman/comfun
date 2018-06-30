@@ -1,0 +1,5 @@
+if (typeof window['Promise'] === 'undefined') {
+	require(["lib/bluebird"], function(Bluebird) {
+		window['Promise'] = Bluebird;
+	});
+}

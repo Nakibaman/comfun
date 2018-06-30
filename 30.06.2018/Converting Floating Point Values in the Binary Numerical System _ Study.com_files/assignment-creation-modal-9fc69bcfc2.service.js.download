@@ -1,0 +1,31 @@
+define(["require", "exports", "angularDependency", "angular/modal/study-modal.service", "classroom/teacher/assignments/create/assignment-creation-modal.controller", "angularDependency", "angular/inputs/input-with-copy-button.directive", "angular/modal/study-modal.service", "classroom/teacher/assignments/create/assignment-creation-modal.controller", "util/support-article-link.directive"], function (require, exports, angular, study_modal_service_1, assignment_creation_modal_controller_1) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("assignment-creation-modal.service", [
+        "assignment-creation-modal.controller", "input-with-copy-button.directive", "study.modal", "support-article-link.directive"
+    ]);
+    var AssignmentCreationModalService = (function () {
+        function AssignmentCreationModalService(studyModalService) {
+            this.studyModalService = studyModalService;
+        }
+        AssignmentCreationModalService.prototype.openAssignmentModal = function (assignmentCreationInput) {
+            var modalSettings = {
+                controller: assignment_creation_modal_controller_1.AssignmentCreationModalController,
+                controllerAs: "teacherAssignCtrl",
+                templateUrl: "/templates/classrooms/teacher/assignments/create/assignment-creation-modal.tpl",
+                size: study_modal_service_1.StudyModalService.SIZE_MEDIUM,
+                windowClass: "teacher-assign-modal",
+                resolve: {
+                    assignmentCreationInput: assignmentCreationInput
+                }
+            };
+            return this.studyModalService.openModalByConfig(modalSettings);
+        };
+        AssignmentCreationModalService.$inject = ["studyModalService"];
+        return AssignmentCreationModalService;
+    }());
+    exports.AssignmentCreationModalService = AssignmentCreationModalService;
+    module.service("AssignmentCreationModalService", AssignmentCreationModalService);
+});
+
+//# sourceMappingURL=assignment-creation-modal.service.js.map

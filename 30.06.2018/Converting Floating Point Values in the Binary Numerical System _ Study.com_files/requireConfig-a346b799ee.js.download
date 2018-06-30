@@ -1,0 +1,851 @@
+(function () {
+	"use strict";
+	var externalLibs = [
+		"angularDependency",
+		"bootstrap",
+		"lib/angular-storage",
+		"lib/angular/animate",
+		"lib/angular/cookie",
+		"lib/angular/loading-bar",
+		"lib/angular/resource",
+		"lib/angular/ui-bootstrap",
+		"lib/angular/ui-router",
+		"lib/angular/ui-router",
+		"lib/angular/ui-utils",
+		"lib/code-prettify",
+		"lib/freshWidget",
+		"lib/jquery/bootstrap",
+		"lib/jquery/bootstrap/jasny",
+		"lib/jquery/cookie",
+		"lib/jquery/legacy/migrate",
+		"lib/jquery/purl",
+		"lib/tinymce",
+		"lib/wistia",
+		"mathjax",
+		"underscore"
+	];
+	
+	var acceptJSURL = "https://js.authorize.net/v1/Accept";
+	var element = document.querySelector("[data-remilon-env]");
+	var env = element ? element.getAttribute("data-remilon-env") : "prod";
+	//default to prod in case some browser decides to be really dumb
+	if (env.indexOf("prod") === -1) {
+		//noinspection JSUnresolvedFunction,JSUnresolvedVariable
+		acceptJSURL = "https://jstest.authorize.net/v1/Accept";
+	}
+	
+	requirejs.config({
+		onError: function (err) {
+			window.globalUtils.logRequireError(err);
+			throw err;
+		},
+		onNodeCreated: function (node, config, module, path) {
+			if (externalLibs.indexOf(module) > -1) {
+				node.setAttribute('crossorigin', 'anonymous');
+			}
+		},
+		baseUrl: "/js",
+		waitSeconds: 30,
+		//BUNDLE_GO_HERE
+		paths: {
+			"angularDependency": [
+				"//ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular.min"
+			],
+			"bootstrap": [
+				"//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min"
+			],
+			"jquery": [
+				"//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min"
+			],
+			"lib/Q": [
+				"lib/Q/q-2.0.2.min"
+			],
+			"lib/angular-storage": [
+				"lib/angular/angular-storage-0.0.13.min"
+			],
+			"lib/angular/animate": [
+				"//ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular-animate.min"
+			],
+			"lib/angular/cookie": [
+				"//ajax.googleapis.com/ajax/libs/angularjs/1.3.13/angular-cookies.min"
+			],
+			"lib/angular/drag-and-drop-lists": [
+				"lib/angular/angular-drag-and-drop-lists-1.3.0.min"
+			],
+			"lib/angular/draganddrop": [
+				"lib/angular/draganddrop.min"
+			],
+			"lib/angular/loading-bar": [
+				"//cdnjs.cloudflare.com/ajax/libs/angular-loading-bar/0.7.1/loading-bar.min",
+				"lib/angular/angular-loading-bar-0.7.1.min"
+			],
+			"lib/angular/resource": [
+				"//cdnjs.cloudflare.com/ajax/libs/angular.js/1.2.21/angular-resource.min"
+			],
+			"lib/angular/rzslider": [
+				"lib/angular/rzslider.min"
+			],
+			"lib/angular/touch": [
+				"lib/angular/angular-touch-1.3.13.min"
+			],
+			"lib/angular/ui-bootstrap": [
+				"lib/angular/ui-bootstrap-tpls-0.14.3"
+			],
+			"lib/angular/ui-router": [
+				"//cdnjs.cloudflare.com/ajax/libs/angular-ui-router/0.2.15/angular-ui-router.min"
+			],
+			"lib/angular/ui-utils": [
+				"//cdnjs.cloudflare.com/ajax/libs/angular-ui-utils/0.1.1/angular-ui-utils.min"
+			],
+			"lib/bluebird": [
+				"//cdn.jsdelivr.net/bluebird/3.5.0/bluebird.core.min",
+				"lib/bluebird/bluebird.core-3.5.0.min"
+			],
+			"lib/code-prettify": [
+				"//cdn.rawgit.com/google/code-prettify/master/loader/prettify",
+				"lib/code-prettify/prettify"
+			],
+			"lib/freshWidget": [
+				"//s3.amazonaws.com/assets.freshdesk.com/widget/freshwidget"
+			],
+			"lib/google/api": [
+				"https://apis.google.com/js/platform" // must be loaded from google over ssl
+			],
+			"lib/humane": [
+				"lib/humane/humane-3.2.0.min"
+			],
+			"lib/jquery/bootstrap": [
+				"//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min"
+			],
+			"lib/jquery/bootstrap/datetimepicker": [
+				"lib/jquery/bootstrap-datetimepicker.min"
+			],
+			"lib/jquery/bootstrap/jasny": [
+				"//cdnjs.cloudflare.com/ajax/libs/jasny-bootstrap/3.1.3/js/jasny-bootstrap.min"
+			],
+			"lib/jquery/cookie": [
+				"//cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min"
+			],
+			"lib/jquery/jqplot": [
+				"lib/jquery/graphing/jquery.jqplot.min"
+			],
+			"lib/jquery/jqplot/bars": [
+				"lib/jquery/graphing/jqplot.barRenderer.min"
+			],
+			"lib/jquery/lazyload": [
+				"lib/jquery/lazyload"
+			],
+			"lib/jquery/purl": [
+				"//cdnjs.cloudflare.com/ajax/libs/purl/2.3.1/purl.min"
+			],
+			"lib/jstz": [
+				"lib/jstz/jstz.min"
+			],
+			"lib/modernizr": [
+				"lib/modernizr/modernizr-3.3.1-custom"
+			],
+			"lib/ngMask": [
+				"lib/angular/ngMask.min"
+			],
+			"lib/raphael": [
+				"lib/raphael/raphael"
+			],
+			"lib/stripe": [
+				"https://js.stripe.com/v2?noext" //stripe's url doesn't end in .js, so we stick a query param on the end.
+			],
+			"lib/accept": [
+				acceptJSURL
+			],
+			"lib/tinymce": [
+				"//cdnjs.cloudflare.com/ajax/libs/tinymce/4.4.3/tinymce.min"
+			],
+			"lib/tinymceui": [
+				"lib/tinymce/tinymce-ui.min"
+			],
+			"lib/toastr": [
+				"lib/toastr/toastr-2.1.1.min"
+			],
+			"lib/usmap": [
+				"lib/usmap/jquery.usmap"
+			],
+			"lib/wistia": [
+				"//fast.wistia.com/assets/external/E-v1"
+			],
+			"lscache": [
+				"lib/lscache/lscache.min"
+			],
+			"mathjax": [
+				"//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML"
+			],
+			"moment": [
+				"lib/moment/moment.min"
+			],
+			"underscore": [
+				"//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min",
+				"lib/underscore/underscore-1.8.3.min"
+			],
+			
+			// legacy "jquery tools" used for the leadforms (almost all of this is bootstrap, and you shouldn't use these
+			"lib/jquery/legacy/hint": [
+				"lib/jquery/legacy/hint.jquery"
+			],
+			"lib/jquery/legacy/migrate": [
+				"//code.jquery.com/jquery-migrate-1.2.1.min"
+			],
+			"lib/jquery/legacy/tools": [
+				"lib/jquery/legacy/jquery.tools.min"
+			],
+			"lib/jquery/legacy/tools/tooltip": [
+				"lib/jquery/legacy/jquery.tools.tooltip.1.2.3"
+			],
+			"lib/jquery/ui": [
+				"lib/jquery/jquery-ui-1.12.1-custom.min"
+			],
+			"lib/jquery-mask": [
+				"lib/jquery-mask/jquery.mask.min"
+			],
+			
+			'404': '/js/404-8548b25c72',
+			'academy/collegeAccelerator/contact-support-coaching.controller': '/js/academy/collegeAccelerator/contact-support-coaching-d646a69d4b.controller',
+			'academy/collegeAccelerator/upgradeSurvey': '/js/academy/collegeAccelerator/upgradeSurvey-d23b630b4a',
+			'academy/course/NextLessonForCourseController': '/js/academy/course/NextLessonForCourseController-98c198f07c',
+			'academy/course/SuperCourseProgressController': '/js/academy/course/SuperCourseProgressController-f3286cf46e',
+			'academy/custom/CustomCourseService': '/js/academy/custom/CustomCourseService-8a41c47360',
+			'academy/custom/custom-course-dropdown-trigger.directive': '/js/academy/custom/custom-course-dropdown-trigger-c45a7b6381.directive',
+			'academy/custom/customCourse': '/js/academy/custom/customCourse-02afbc59fe',
+			'academy/directory/byType/directoryByType': '/js/academy/directory/byType/directoryByType-276e350c26',
+			'academy/flashcards/FlashcardsController': '/js/academy/flashcards/FlashcardsController-d9f6122772',
+			'academy/flashcards/flashcards': '/js/academy/flashcards/flashcards-bc2f0a321a',
+			'academy/fsaPopup/fsa-popup.controller': '/js/academy/fsaPopup/fsa-popup-2d6ae4bcef.controller',
+			'academy/knowledgeCheck/KnowledgeCheckExamController': '/js/academy/knowledgeCheck/KnowledgeCheckExamController-8911ee10d6',
+			'academy/knowledgeCheck/KnowledgeCheckService': '/js/academy/knowledgeCheck/KnowledgeCheckService-96719c8ddd',
+			'academy/knowledgeCheck/knowledgeCheckExam': '/js/academy/knowledgeCheck/knowledgeCheckExam-44839f4491',
+			'academy/knowledgeCheck/placementTest': '/js/academy/knowledgeCheck/placementTest-e26147d9a9',
+			'academy/knowledgeCheck/progressPieChart': '/js/academy/knowledgeCheck/progressPieChart-9d096d954d',
+			'academy/lesson/belowVideoTools': '/js/academy/lesson/belowVideoTools-43dd76f7a2',
+			'academy/marketing/ExampleKnowledgeGraph': '/js/academy/marketing/ExampleKnowledgeGraph-7e46eb06ff',
+			'academy/marketing/aboutKnowledgeChecks': '/js/academy/marketing/aboutKnowledgeChecks-fea807c451',
+			'academy/marketing/cxHub': '/js/academy/marketing/cxHub-b3cbded357',
+			'academy/marketing/enterpriseSolutionsMain': '/js/academy/marketing/enterpriseSolutionsMain-eb61b9a3a2',
+			'academy/marketing/exampleKnowledgeGraphData': '/js/academy/marketing/exampleKnowledgeGraphData-4648a09cca',
+			'academy/topic/topic.app': '/js/academy/topic/topic-9bcf3cc19d.app',
+			'academy/university-solutions/admissions-landing-page': '/js/academy/university-solutions/admissions-landing-page-53169a21b3',
+			'ajaxForm': '/js/ajaxForm-e3e3e26b6f',
+			'angular-utils.bundle': '/js/angular-utils-a90ef732db.bundle',
+			'angular/inputs/input-with-copy-button.directive': '/js/angular/inputs/input-with-copy-button-5a5023197c.directive',
+			'angular/modal/study-modal.directive': '/js/angular/modal/study-modal-1a1de17a46.directive',
+			'angular/modal/study-modal.service': '/js/angular/modal/study-modal-215583c9c9.service',
+			'angular/util/academy-asset.service': '/js/angular/util/academy-asset-8ed74b2c81.service',
+			'angular/util/angularExceptionLogger': '/js/angular/util/angularExceptionLogger-9fc5d5d404',
+			'angular/util/directives/displayUrlHref': '/js/angular/util/directives/displayUrlHref-e4a45edc94',
+			'angular/util/directives/stud-editable-field.directive': '/js/angular/util/directives/stud-editable-field-4a3d598273.directive',
+			'angular/util/http-post-params-as-form.provider': '/js/angular/util/http-post-params-as-form-a9bb3ba6f3.provider',
+			'angular/util/sdyApplyMatchMedia': '/js/angular/util/sdyApplyMatchMedia-239f336f23',
+			'angular/util/storage': '/js/angular/util/storage-2357a0b0c9',
+			'authentication/google-login.service': '/js/authentication/google-login-3ec3a484af.service',
+			'authentication/google-member-link-notifier': '/js/authentication/google-member-link-notifier-e5eeb86f2c',
+			'authentication/login.app': '/js/authentication/login-4a0e2655d0.app',
+			'bootstrapJs/bootstrap-tabcollapse': '/js/bootstrapJs/bootstrap-tabcollapse-fac88fdacb',
+			'bootstrapJs/bootstrap-tabpaths': '/js/bootstrapJs/bootstrap-tabpaths-2b50824354',
+			'classroom/assignment-display.directives': '/js/classroom/assignment-display-c2ea8532cb.directives',
+			'classroom/assignment.service': '/js/classroom/assignment-c78085f8a6.service',
+			'classroom/classroom-code-join.app': '/js/classroom/classroom-code-join-6e87e3f54d.app',
+			'classroom/classroom-code-join.controller': '/js/classroom/classroom-code-join-30a1007677.controller',
+			'classroom/classroom-roster.service': '/js/classroom/classroom-roster-e5f1be7540.service',
+			'classroom/classroom.service': '/js/classroom/classroom-0c2964d68e.service',
+			'classroom/manage/create-classroom-form.directive': '/js/classroom/manage/create-classroom-form-3b95222ccf.directive',
+			'classroom/share/assignment-preview.directive': '/js/classroom/share/assignment-preview-a62a2691e7.directive',
+			'classroom/share/classroom-share.controller': '/js/classroom/share/classroom-share-c7227f172f.controller',
+			'classroom/share/google/google-classroom-assignment.service': '/js/classroom/share/google/google-classroom-assignment-2acbdc35a1.service',
+			'classroom/share/google/google-classroom-share.directive': '/js/classroom/share/google/google-classroom-share-081a90bfd5.directive',
+			'classroom/share/google/google-classroom-share.service': '/js/classroom/share/google/google-classroom-share-0dc92c64ea.service',
+			'classroom/share/share-assignment-modal.controller': '/js/classroom/share/share-assignment-modal-1dec021e4b.controller',
+			'classroom/share/share-assignment.app': '/js/classroom/share/share-assignment-30491bb266.app',
+			'classroom/share/share-assignment.controller': '/js/classroom/share/share-assignment-b1d0d7d618.controller',
+			'classroom/share/study-classroom-share.directive': '/js/classroom/share/study-classroom-share-199d5d4bdb.directive',
+			'classroom/student-assignment-dashboard-home-module.controller': '/js/classroom/student-assignment-dashboard-home-module-193251939a.controller',
+			'classroom/student-assignment-list.controller': '/js/classroom/student-assignment-list-0ae0ea3ef1.controller',
+			'classroom/student-classroom-list.controller': '/js/classroom/student-classroom-list-733e3e31c1.controller',
+			'classroom/student-invite.directive': '/js/classroom/student-invite-5955799cae.directive',
+			'classroom/student-invite.service': '/js/classroom/student-invite-77560427c5.service',
+			'classroom/student-name.directive': '/js/classroom/student-name-a17e64f7f7.directive',
+			'classroom/student/student-assignment-list.controller': '/js/classroom/student/student-assignment-list-20752f3087.controller',
+			'classroom/student/student-classroom-list.controller': '/js/classroom/student/student-classroom-list-e1bad4c933.controller',
+			'classroom/teacher-assignment-dashboard-home-module.controller': '/js/classroom/teacher-assignment-dashboard-home-module-976fb78a8f.controller',
+			'classroom/teacher/assignments/create/assignment-creation-inline.directive': '/js/classroom/teacher/assignments/create/assignment-creation-inline-c641723d6d.directive',
+			'classroom/teacher/assignments/create/assignment-creation-link.directive': '/js/classroom/teacher/assignments/create/assignment-creation-link-e224941bdb.directive',
+			'classroom/teacher/assignments/create/assignment-creation-modal.controller': '/js/classroom/teacher/assignments/create/assignment-creation-modal-f878fcebc7.controller',
+			'classroom/teacher/assignments/create/assignment-creation-modal.service': '/js/classroom/teacher/assignments/create/assignment-creation-modal-9fc69bcfc2.service',
+			'classroom/teacher/assignments/create/teacher-assign.controller': '/js/classroom/teacher/assignments/create/teacher-assign-4c681a6a48.controller',
+			'classroom/teacher/classroom-invite-modal.controller': '/js/classroom/teacher/classroom-invite-modal-8b495bb946.controller',
+			'classroom/teacher/classroom-picker.directive': '/js/classroom/teacher/classroom-picker-6c4b13c27b.directive',
+			'classroom/teacher/classroom-roster.controller': '/js/classroom/teacher/classroom-roster-9e1e7ad108.controller',
+			'classroom/teacher/classroom/classroom-modal.controller': '/js/classroom/teacher/classroom/classroom-modal-6feede9f23.controller',
+			'classroom/teacher/classroom/classroom-modal.service': '/js/classroom/teacher/classroom/classroom-modal-5fc330aade.service',
+			'classroom/teacher/classroom/google-classroom-import-modal.controller': '/js/classroom/teacher/classroom/google-classroom-import-modal-2dcc4885e3.controller',
+			'classroom/teacher/classroom/google-classroom.service': '/js/classroom/teacher/classroom/google-classroom-21631ce39f.service',
+			'classroom/teacher/classroom/google-no-classrooms-cta.directive': '/js/classroom/teacher/classroom/google-no-classrooms-cta-cc35892686.directive',
+			'classroom/teacher/classroom/student-password-reset-modal.controller': '/js/classroom/teacher/classroom/student-password-reset-modal-5d613370b1.controller',
+			'classroom/teacher/customCourse/custom-course.controller': '/js/classroom/teacher/customCourse/custom-course-ebc393ad84.controller',
+			'classroom/teacher/customCourse/custom-course.service': '/js/classroom/teacher/customCourse/custom-course-dfceb5025f.service',
+			'classroom/teacher/customCourse/custom-courses-list.controller': '/js/classroom/teacher/customCourse/custom-courses-list-c38a8bc632.controller',
+			'classroom/teacher/customCourse/custom-courses-modal.service': '/js/classroom/teacher/customCourse/custom-courses-modal-34c3cf9798.service',
+			'classroom/teacher/customCourse/custom-topic.controller': '/js/classroom/teacher/customCourse/custom-topic-e77705c6e2.controller',
+			'classroom/teacher/gradebook/assignment-gradebook.controller': '/js/classroom/teacher/gradebook/assignment-gradebook-a1aeb95fac.controller',
+			'classroom/teacher/gradebook/student-gradebook.controller': '/js/classroom/teacher/gradebook/student-gradebook-381371ffcc.controller',
+			'classroom/teacher/teacher-assignment-list.controller': '/js/classroom/teacher/teacher-assignment-list-c13b47d12f.controller',
+			'classroom/teacher/teacher-classroom-list.controller': '/js/classroom/teacher/teacher-classroom-list-761cf1a217.controller',
+			'classroom/teacher/teacher-classroom-upgrade.controller': '/js/classroom/teacher/teacher-classroom-upgrade-761823fa29.controller',
+			'classroom/teacher/teacherEdition/teacher-edition-modal-button.directive': '/js/classroom/teacher/teacherEdition/teacher-edition-modal-button-10be9926c9.directive',
+			'classroom/teacher/teacherEdition/teacher-edition-sidebar.controller': '/js/classroom/teacher/teacherEdition/teacher-edition-sidebar-65e430f37d.controller',
+			'classroom/teacher/teacherEdition/teacher-edition-toggle.controller': '/js/classroom/teacher/teacherEdition/teacher-edition-toggle-80ffa3ad36.controller',
+			'classroom/teacher/teacherEdition/teacher-edition.service': '/js/classroom/teacher/teacherEdition/teacher-edition-7b8538c161.service',
+			'classrooms.bundle': '/js/classrooms-d94fcf1ae3.bundle',
+			'compatibility/html5shiv': '/js/compatibility/html5shiv-0ce8f35589',
+			'compatibility/objectKeysShiv': '/js/compatibility/objectKeysShiv-2677d1a16c',
+			'compatibility/polyfill-catalog/array.prototype.map/Array.prototype.map': '/js/compatibility/polyfill-catalog/array.prototype.map/Array-6528200c6b.prototype.map',
+			'compatibility/polyfill-catalog/array.prototype.map/index': '/js/compatibility/polyfill-catalog/array.prototype.map/index-748b5ae68c',
+			'compatibility/polyfill-catalog/array.prototype.map/polyfill': '/js/compatibility/polyfill-catalog/array.prototype.map/polyfill-6528200c6b',
+			'compatibility/polyfills': '/js/compatibility/polyfills-1b7f19bcfd',
+			'compatibility/promise-polyfill': '/js/compatibility/promise-polyfill-54349f7513',
+			'compatibility/respond.matchmedia.addListener-1.4.2.min': '/js/compatibility/respond-87c090d540.matchmedia.addListener-1.4.2.min',
+			'compatibility/respond.min': '/js/compatibility/respond-afc1984a3d.min',
+			'content/concept-directory-node.app': '/js/content/concept-directory-node-a0986d54c8.app',
+			'content/concept-directory-node.controller': '/js/content/concept-directory-node-544b1ab885.controller',
+			'content/concept-directory.app': '/js/content/concept-directory-896a82530b.app',
+			'contentMarketingEPA': '/js/contentMarketingEPA-7c73240780',
+			'contentflow': '/js/contentflow-2e46babf64',
+			'core-utils.bundle': '/js/core-utils-f28a9046f6.bundle',
+			'corporate/corporatePartners': '/js/corporate/corporatePartners-5e2231c861',
+			'corporate/corporateTab': '/js/corporate/corporateTab-382b901c69',
+			'corporate/template': '/js/corporate/template-0765b4b16d',
+			'corporate/templateV2': '/js/corporate/templateV2-b9e3dad799',
+			'corporate/zoho/zohoTabSync': '/js/corporate/zoho/zohoTabSync-faeb5a106d',
+			'course-grade-breakdown/course-grade-breakdown.directive': '/js/course-grade-breakdown/course-grade-breakdown-3400c48320.directive',
+			'course-progress-enrollment.bundle': '/js/course-progress-enrollment-cd8f493df6.bundle',
+			'courseProgress/courseCertificate': '/js/courseProgress/courseCertificate-1937f35ed1',
+			'courseProgress/coursePlanCertificate': '/js/courseProgress/coursePlanCertificate-69a8f51505',
+			'courseProgress/courseProgressModule': '/js/courseProgress/courseProgressModule-5d60828b97',
+			'courseProgress/courseProgressService': '/js/courseProgress/courseProgressService-8b57e05b16',
+			'courseProgress/cumulative/confetti-explosion.directive': '/js/courseProgress/cumulative/confetti-explosion-c04d815970.directive',
+			'courseProgress/excanvas': '/js/courseProgress/excanvas-c1bb7af6a3',
+			'courseProgress/generalCourseProgress': '/js/courseProgress/generalCourseProgress-f50420c073',
+			'courseProgress/generalCourseProgressController': '/js/courseProgress/generalCourseProgressController-dde17714ec',
+			'customAdInfoTooltip': '/js/customAdInfoTooltip-011f8ddaa4',
+			'dashboard/account/account-type.directive': '/js/dashboard/account/account-type-48b990e8e5.directive',
+			'dashboard/admin/group-report-dashboard.controller': '/js/dashboard/admin/group-report-dashboard-b2426dbb12.controller',
+			'dashboard/admin/license-report-dashboard.controller': '/js/dashboard/admin/license-report-dashboard-0017485879.controller',
+			'dashboard/askexpert/ask-expert-dashboard.module': '/js/dashboard/askexpert/ask-expert-dashboard-df719d7c45.module',
+			'dashboard/askexpert/ask-expert.service': '/js/dashboard/askexpert/ask-expert-6ab6d85af5.service',
+			'dashboard/askexpert/ask-the-expert-dashboard.directive': '/js/dashboard/askexpert/ask-the-expert-dashboard-899402a13e.directive',
+			'dashboard/askexpert/instant-answer-unviewed-count.controller': '/js/dashboard/askexpert/instant-answer-unviewed-count-e89a0f413f.controller',
+			'dashboard/classroom/gradebook-assignment.directive': '/js/dashboard/classroom/gradebook-assignment-4b1e735208.directive',
+			'dashboard/classroom/student-assignment-dashboard-widget.directive': '/js/dashboard/classroom/student-assignment-dashboard-widget-591ec53a8b.directive',
+			'dashboard/classroom/student-assignment-list.module': '/js/dashboard/classroom/student-assignment-list-23d0a8bfed.module',
+			'dashboard/classroom/student-assignment.directive': '/js/dashboard/classroom/student-assignment-fcaff0e6fa.directive',
+			'dashboard/classroom/teacher-assignment-dashboard-widget.directive': '/js/dashboard/classroom/teacher-assignment-dashboard-widget-4c9e48ba8f.directive',
+			'dashboard/classroom/teacher-assignment-list.module': '/js/dashboard/classroom/teacher-assignment-list-3b5d19fad2.module',
+			'dashboard/classroom/teacher-assignment.directive': '/js/dashboard/classroom/teacher-assignment-fafdcfec30.directive',
+			'dashboard/classroom/teacher-classroom.module': '/js/dashboard/classroom/teacher-classroom-0846aad0d1.module',
+			'dashboard/classroom/teacher/classroom-teacher.module': '/js/dashboard/classroom/teacher/classroom-teacher-4e0119a79c.module',
+			'dashboard/courses/course-progress-dashboard.module': '/js/dashboard/courses/course-progress-dashboard-efd33b8076.module',
+			'dashboard/courses/course-progress.controller': '/js/dashboard/courses/course-progress-88d01c6515.controller',
+			'dashboard/courses/course-progress.directive': '/js/dashboard/courses/course-progress-9add8048e0.directive',
+			'dashboard/courses/course-progress.service': '/js/dashboard/courses/course-progress-8489ff51c1.service',
+			'dashboard/dashboard.app': '/js/dashboard/dashboard-13f56d0ca2.app',
+			'dashboard/dashboard.module': '/js/dashboard/dashboard-3bd3cb3485.module',
+			'dashboard/enrollment/enrolled-courses-panel.directive': '/js/dashboard/enrollment/enrolled-courses-panel-13c11b1e37.directive',
+			'dashboard/enrollment/enrolled-courses.module': '/js/dashboard/enrollment/enrolled-courses-c47ccda264.module',
+			'dashboard/exam/exam-results-dashboard-main.directive': '/js/dashboard/exam/exam-results-dashboard-main-28ebdc8902.directive',
+			'dashboard/goals/GoalsOverviewController': '/js/dashboard/goals/GoalsOverviewController-a8869d1dca',
+			'dashboard/goals/goals-dashboard.module': '/js/dashboard/goals/goals-dashboard-e018f2dba7.module',
+			'dashboard/goals/goals-progress-list-item.directive': '/js/dashboard/goals/goals-progress-list-item-b26a48e153.directive',
+			'dashboard/institution/course-catalog.service': '/js/dashboard/institution/course-catalog-334d168e23.service',
+			'dashboard/institution/course-competencies-module.directive': '/js/dashboard/institution/course-competencies-module-70127c38a7.directive',
+			'dashboard/institution/start-a-course-from-catalog.directive': '/js/dashboard/institution/start-a-course-from-catalog-2d4bc2f80f.directive',
+			'dashboard/main/main-tab-dashboard.module': '/js/dashboard/main/main-tab-dashboard-adb5e1338d.module',
+			'dashboard/membership/membership-dashboard.controller': '/js/dashboard/membership/membership-dashboard-7ef71d9d3a.controller',
+			'dashboard/notes/highlight-notes.module': '/js/dashboard/notes/highlight-notes-4270e3684b.module',
+			'dashboard/profile/profile-dashboard.controller': '/js/dashboard/profile/profile-dashboard-1eddc8b2aa.controller',
+			'dashboard/promo/app-promo.controller': '/js/dashboard/promo/app-promo-2ea11b4f27.controller',
+			'dashboard/promo/app-promo.directive': '/js/dashboard/promo/app-promo-b7e63d20b7.directive',
+			'dashboard/promo/promo-carousel.directive': '/js/dashboard/promo/promo-carousel-f39a41874a.directive',
+			'dashboard/promo/user-onboard.directive': '/js/dashboard/promo/user-onboard-d695c7766a.directive',
+			'dashboard/recentActivity/recent-activity-dashboard-module.directive': '/js/dashboard/recentActivity/recent-activity-dashboard-module-843045b7b2.directive',
+			'dashboard/recentActivity/recent-activity-dashboard-tab.module': '/js/dashboard/recentActivity/recent-activity-dashboard-tab-a9c87c58ec.module',
+			'dashboard/recentActivity/recent-activity.controller': '/js/dashboard/recentActivity/recent-activity-349240de9e.controller',
+			'dashboard/recentActivity/recent-activity.service': '/js/dashboard/recentActivity/recent-activity-e8e04e9d52.service',
+			'dashboard/switchuser/switch-user-dashboard.controller': '/js/dashboard/switchuser/switch-user-dashboard-6b86ded016.controller',
+			'dashboard/teacher/teacher-dashboard.module': '/js/dashboard/teacher/teacher-dashboard-c4e79b1be4.module',
+			'directives/RemFormDirectives': '/js/directives/RemFormDirectives-65b5810a5b',
+			'directives/animatedCarousel': '/js/directives/animatedCarousel-3b85e5c584',
+			'directives/arrowKeyInput': '/js/directives/arrowKeyInput-39127ecffc',
+			'directives/dashboardDirectives': '/js/directives/dashboardDirectives-7ddeacf7ef',
+			'directives/dial-gauge.directive': '/js/directives/dial-gauge-a1d239345e.directive',
+			'directives/error-messages': '/js/directives/error-messages-81e2d04424',
+			'directives/remilonPageNumbers': '/js/directives/remilonPageNumbers-0dc1a43c04',
+			'directives/remilonTreeBoxes': '/js/directives/remilonTreeBoxes-f13de27108',
+			'directives/sortableTable': '/js/directives/sortableTable-0ca8747ca4',
+			'directives/studyFormDirectives': '/js/directives/studyFormDirectives-9810c39565',
+			'earnCredit': '/js/earnCredit-e86abb44b2',
+			'enroll/enroll-success-overlay.directive': '/js/enroll/enroll-success-overlay-61560896a5.directive',
+			'enrollment/competencies.directive': '/js/enrollment/competencies-41e8640c36.directive',
+			'enrollment/enrolled-course-list-item.directive': '/js/enrollment/enrolled-course-list-item-e55311b4ed.directive',
+			'enrollment/enrolled-courses.controller': '/js/enrollment/enrolled-courses-65fabcc33c.controller',
+			'enrollment/enrolled-courses.directive': '/js/enrollment/enrolled-courses-22b3b8607c.directive',
+			'enrollment/enrolled-courses.service': '/js/enrollment/enrolled-courses-6132f940ba.service',
+			'enrollment/recommended-courses.controller': '/js/enrollment/recommended-courses-cf1225d221.controller',
+			'enrollment/recommended-courses.directive': '/js/enrollment/recommended-courses-6b7a23b002.directive',
+			'enrollment/recommended-courses.service': '/js/enrollment/recommended-courses-95487d0220.service',
+			'errorPage': '/js/errorPage-9a00a70634',
+			'essay-review/essay-review.controller': '/js/essay-review/essay-review-e125599fc4.controller',
+			'exam/practice-exam-logged-out.controller': '/js/exam/practice-exam-logged-out-1f56e2892f.controller',
+			'exam/practice-exam-results-feedback.directive': '/js/exam/practice-exam-results-feedback-c5ca4b4b42.directive',
+			'exam/practice-exam-timer.directive': '/js/exam/practice-exam-timer-0661d2f77d.directive',
+			'exam/practice-test-dropdown.directive': '/js/exam/practice-test-dropdown-ed6c731f3d.directive',
+			'exams/practice-exam-results.module': '/js/exams/practice-exam-results-9832cff303.module',
+			'excanvas.min': '/js/excanvas-304cb5e244.min',
+			'feedback/feedback-inline.directive': '/js/feedback/feedback-inline-e723cc5dbf.directive',
+			'feedback/feedback-standalone.app': '/js/feedback/feedback-standalone-ae7e8db0ce.app',
+			'feedback/feedback.service': '/js/feedback/feedback-1eb43df295.service',
+			'feedback/testimonial-list.controller': '/js/feedback/testimonial-list-719f00a3bd.controller',
+			'forum/forum-recent-discussions.directive': '/js/forum/forum-recent-discussions-bcef3b7411.directive',
+			'global/announcements.directive': '/js/global/announcements-aefbe1960e.directive',
+			'global/global-events.app': '/js/global/global-events-0ff975f154.app',
+			'global/locked-feature-modal-uib.controller': '/js/global/locked-feature-modal-uib-8da99c45e2.controller',
+			'global/locked-feature-modal.controller': '/js/global/locked-feature-modal-4640990607.controller',
+			'google/google-parse-tags-config': '/js/google/google-parse-tags-config-7d1a73ee71',
+			'handlebars/handlebars-v2.0.0': '/js/handlebars/handlebars-v2-664baaa4ba.0.0',
+			'highlight-notes.bundle': '/js/highlight-notes-13ee4f6f0d.bundle',
+			'instant-answer.bundle': '/js/instant-answer-5462d9263b.bundle',
+			'interactiveWidgets/pagination': '/js/interactiveWidgets/pagination-9b07b0bc84',
+			'jqueryPlugins/smooth-scroll-init': '/js/jqueryPlugins/smooth-scroll-init-69f7d700ac',
+			'leadforms/nonClientThanks': '/js/leadforms/nonClientThanks-3556888f28',
+			'leadforms/thankYou': '/js/leadforms/thankYou-d78ecf0dc0',
+			'logging/eventLogging': '/js/logging/eventLogging-412f64d5fe',
+			'logging/eventLoggingInit': '/js/logging/eventLoggingInit-d223f35a08',
+			'logging/studyOrgAffiliate': '/js/logging/studyOrgAffiliate-07529854b7',
+			'logging/trck': '/js/logging/trck-46b34a2c62',
+			'logging/visible/track-visible.directive': '/js/logging/visible/track-visible-6d2d49b3c4.directive',
+			'logging/visible/visibility-tester': '/js/logging/visible/visibility-tester-b015a41c00',
+			'logging/visible/visibility-tester.service': '/js/logging/visible/visibility-tester-8b988224fb.service',
+			'login-modal/login-modal-event-handler.controller': '/js/login-modal/login-modal-event-handler-455f2be1da.controller',
+			'login-modal/login-modal.controller': '/js/login-modal/login-modal-31abf2332e.controller',
+			'member-profile.bundle': '/js/member-profile-ac50627390.bundle',
+			'member/authentication/feature-check.service': '/js/member/authentication/feature-check-a1e32fe6a0.service',
+			'member/billing/current-membership.directive': '/js/member/billing/current-membership-228e59d200.directive',
+			'member/billing/pause-account.app': '/js/member/billing/pause-account-4ed01cac0b.app',
+			'member/billing/pause-account.directive': '/js/member/billing/pause-account-5fb55fbdea.directive',
+			'member/billing/pause-account.service': '/js/member/billing/pause-account-4c75dba069.service',
+			'member/billing/teacher-license-expiration-popup.controller': '/js/member/billing/teacher-license-expiration-popup-ed336d0524.controller',
+			'member/info/member-info.service': '/js/member/info/member-info-71fbed189e.service',
+			'member/info/persona.directive': '/js/member/info/persona-1a7a9b7df7.directive',
+			'member/member': '/js/member/member-d3b255d447',
+			'member/profile/profile.service': '/js/member/profile/profile-dc735518ad.service',
+			'members-EP': '/js/members-EP-c1087ee2d8',
+			'members': '/js/members-cf5b2c5c51',
+			'membership/account-type': '/js/membership/account-type-42bc34aa51',
+			'membership/billing-account-details.directive': '/js/membership/billing-account-details-8b94aede97.directive',
+			'membership/billing-history.app': '/js/membership/billing-history-7ea71ccfb6.app',
+			'membership/billing-history.controller': '/js/membership/billing-history-21535b2171.controller',
+			'membership/billing-history.service': '/js/membership/billing-history-6876f69815.service',
+			'membership/cancel-membership.app': '/js/membership/cancel-membership-fc38ebf20d.app',
+			'membership/cancel-membership.controller': '/js/membership/cancel-membership-89820ec549.controller',
+			'membership/multi-month-onboarding.app': '/js/membership/multi-month-onboarding-3733759128.app',
+			'membership/multi-month-onboarding.controller': '/js/membership/multi-month-onboarding-d72f5dbc7e.controller',
+			'membership/past-due-banner.directive': '/js/membership/past-due-banner-8cd46df1c9.directive',
+			'membership/resume-membership.app': '/js/membership/resume-membership-67ff096970.app',
+			'membership/resume-membership.controller': '/js/membership/resume-membership-2b712bba34.controller',
+			'mobile-promotion/appDownloadBar': '/js/mobile-promotion/appDownloadBar-b08877eff7',
+			'monitoring/monitoring-dependencies-table.directive': '/js/monitoring/monitoring-dependencies-table-960337c249.directive',
+			'monitoring/monitoring-dependencies.app': '/js/monitoring/monitoring-dependencies-48b577852d.app',
+			'monitoring/monitoring-dependencies.service': '/js/monitoring/monitoring-dependencies-c197e9d94e.service',
+			'nodeInfo': '/js/nodeInfo-53a8821b9a',
+			'notification/remilonNotification': '/js/notification/remilonNotification-0d42fd7590',
+			'pagination': '/js/pagination-8b727c9dcf',
+			'participationScore/course-participation-snapshot.service': '/js/participationScore/course-participation-snapshot-eb266c4471.service',
+			'polyfill': '/js/polyfill-ddf04d1d4b',
+			'ppcTestPrep/ppc-test-prep-directory.module': '/js/ppcTestPrep/ppc-test-prep-directory-84216f218d.module',
+			'print/print.app': '/js/print/print-b42a656912.app',
+			'proctor/exam-readiness-form.directive': '/js/proctor/exam-readiness-form-7b6d5e54f2.directive',
+			'proctor/examChecklist': '/js/proctor/examChecklist-3d90097278',
+			'proctor/proctor': '/js/proctor/proctor-278fd8030a',
+			'proctor/proctorExamDecorator': '/js/proctor/proctorExamDecorator-2b2ee986a3',
+			'proctor/proctoredExamFeedback': '/js/proctor/proctoredExamFeedback-2679b1dd7b',
+			'proctor/purchase-additional-proctored-exam.directive': '/js/proctor/purchase-additional-proctored-exam-6c22b1c33c.directive',
+			'proctor/purchaseAdditionalProctoredExam': '/js/proctor/purchaseAdditionalProctoredExam-c1a9a4907f',
+			'recent-activity.bundle': '/js/recent-activity-cbde51891a.bundle',
+			'redesign/CTAs/articleFloatingBar': '/js/redesign/CTAs/articleFloatingBar-5b11d2e59e',
+			'redesign/CTAs/articleFloatingElement': '/js/redesign/CTAs/articleFloatingElement-0483245ae6',
+			'redesign/CTAs/floatingBar': '/js/redesign/CTAs/floatingBar-4257e9eda2',
+			'redesign/CTAs/floatingBarResearch': '/js/redesign/CTAs/floatingBarResearch-2756ae8d33',
+			'redesign/CTAs/formCarousel': '/js/redesign/CTAs/formCarousel-9bdaed7c1a',
+			'redesign/CTAs/returnAbandon': '/js/redesign/CTAs/returnAbandon-a5af680fcb',
+			'redesign/CTAs/returnVisitor': '/js/redesign/CTAs/returnVisitor-e241fbb782',
+			'redesign/CTAs/surveyWindow': '/js/redesign/CTAs/surveyWindow-aa7d8ad08f',
+			'redesign/CTAs/userGoal': '/js/redesign/CTAs/userGoal-49ec619e68',
+			'redesign/OnboardingApp': '/js/redesign/OnboardingApp-7d4897e369',
+			'redesign/aboutAdrian': '/js/redesign/aboutAdrian-eea8d8ef0e',
+			'redesign/about_us_map': '/js/redesign/about_us_map-474fb4a65c',
+			'redesign/ajaxForm-EP': '/js/redesign/ajaxForm-EP-62ac6ef75b',
+			'redesign/blogNewsletterSignup': '/js/redesign/blogNewsletterSignup-0b93f15778',
+			'redesign/changeEmail': '/js/redesign/changeEmail-300c73e58c',
+			'redesign/changePhoneNumber': '/js/redesign/changePhoneNumber-12e2c2a76a',
+			'redesign/changeUsername': '/js/redesign/changeUsername-a1dbf1d51e',
+			'redesign/cm/contentMarketing': '/js/redesign/cm/contentMarketing-5ae580a919',
+			'redesign/collectReview': '/js/redesign/collectReview-2e3ea4df3c',
+			'redesign/course/Course': '/js/redesign/course/Course-0833f506e6',
+			'redesign/course/knowledgeGraph': '/js/redesign/course/knowledgeGraph-e6490bbd02',
+			'redesign/courseIndex': '/js/redesign/courseIndex-dda396d9b4',
+			'redesign/courseInfo': '/js/redesign/courseInfo-81d37e9831',
+			'redesign/courseNavigator': '/js/redesign/courseNavigator-39edbdaa82',
+			'redesign/ctaBarEmail': '/js/redesign/ctaBarEmail-774fb356f6',
+			'redesign/dashboard/controllers/ActivityController': '/js/redesign/dashboard/controllers/ActivityController-5b7e369fa6',
+			'redesign/dashboard/controllers/AskTheExpertController': '/js/redesign/dashboard/controllers/AskTheExpertController-e19303c36e',
+			'redesign/dashboard/controllers/GettingStartedSimpleController': '/js/redesign/dashboard/controllers/GettingStartedSimpleController-126fa20d3a',
+			'redesign/dashboard/controllers/HighlightNotesTabController': '/js/redesign/dashboard/controllers/HighlightNotesTabController-fbefc56ba8',
+			'redesign/dashboard/controllers/InstitutionReportController': '/js/redesign/dashboard/controllers/InstitutionReportController-cd3a9953d3',
+			'redesign/dashboard/controllers/LicenseReportController': '/js/redesign/dashboard/controllers/LicenseReportController-ca0aae1bf9',
+			'redesign/dashboard/controllers/OnboardingController': '/js/redesign/dashboard/controllers/OnboardingController-12dddc1adb',
+			'redesign/dashboard/controllers/TeacherDashboardController': '/js/redesign/dashboard/controllers/TeacherDashboardController-9970a69438',
+			'redesign/dashboard/controllers/instant-answers-single-question.controller': '/js/redesign/dashboard/controllers/instant-answers-single-question-83fa885a9b.controller',
+			'redesign/dashboard/dashboard-mobile-nav': '/js/redesign/dashboard/dashboard-mobile-nav-7528170472',
+			'redesign/dashboard/dashboardCourseProgress': '/js/redesign/dashboard/dashboardCourseProgress-c34792a15d',
+			'redesign/dashboard/dashboardUi': '/js/redesign/dashboard/dashboardUi-c0f87c647d',
+			'redesign/dashboard/lib/searchBox': '/js/redesign/dashboard/lib/searchBox-dd8ff0b858',
+			'redesign/dashboard/lib/util': '/js/redesign/dashboard/lib/util-ff106acc27',
+			'redesign/dashboard/modules/Exam': '/js/redesign/dashboard/modules/Exam-147b9ee5f8',
+			'redesign/dashboard/modules/GettingStarted': '/js/redesign/dashboard/modules/GettingStarted-2e04d2e264',
+			'redesign/dashboard/modules/SwitchUser': '/js/redesign/dashboard/modules/SwitchUser-1f8502c7e6',
+			'redesign/dashboard/modules/instant-answers-editor.directive': '/js/redesign/dashboard/modules/instant-answers-editor-037c40186b.directive',
+			'redesign/dashboard/services/StudyTrainerService': '/js/redesign/dashboard/services/StudyTrainerService-5bd7190b70',
+			'redesign/dashboard/services/TeacherShareService': '/js/redesign/dashboard/services/TeacherShareService-9b0e85d40e',
+			'redesign/defaultGlobalUserApp': '/js/redesign/defaultGlobalUserApp-be738db5dd',
+			'redesign/directives/FadeOutIn': '/js/redesign/directives/FadeOutIn-c3ae55bb56',
+			'redesign/directives/word-cloud.directive': '/js/redesign/directives/word-cloud-758690494f.directive',
+			'redesign/directory': '/js/redesign/directory-c27ca4c2b1',
+			'redesign/directory/courseFilterWidget': '/js/redesign/directory/courseFilterWidget-086befa51c',
+			'redesign/dropDownSearch': '/js/redesign/dropDownSearch-e304d87d9d',
+			'redesign/exam/exam-answer.directive': '/js/redesign/exam/exam-answer-74d0599cc1.directive',
+			'redesign/exam/practiceExam': '/js/redesign/exam/practiceExam-bc304f08f0',
+			'redesign/favoriting': '/js/redesign/favoriting-19e6bd9cb7',
+			'redesign/findTextbook/findTextbook': '/js/redesign/findTextbook/findTextbook-d1337f2d0c',
+			'redesign/global': '/js/redesign/global-8f37be0a47',
+			'redesign/globalModules': '/js/redesign/globalModules-41d480cb88',
+			'redesign/homepage/homepage': '/js/redesign/homepage/homepage-98759949c4',
+			'redesign/hotjarTriggers': '/js/redesign/hotjarTriggers-83d3a0ce1e',
+			'redesign/howItWorks': '/js/redesign/howItWorks-7b1d74ed39',
+			'redesign/hub/hubAudience': '/js/redesign/hub/hubAudience-812624eddd',
+			'redesign/hub/hubAudienceArticle': '/js/redesign/hub/hubAudienceArticle-fe380417ce',
+			'redesign/instantanswers/activate-membership': '/js/redesign/instantanswers/activate-membership-392f23c663',
+			'redesign/instantanswers/instant-answers-activate-or-buy-credits-modal.controller': '/js/redesign/instantanswers/instant-answers-activate-or-buy-credits-modal-0c7a133dad.controller',
+			'redesign/instantanswers/instant-answers-buy-more-answers': '/js/redesign/instantanswers/instant-answers-buy-more-answers-ef99b397a9',
+			'redesign/instantanswers/instant-answers-modal-trigger.controller': '/js/redesign/instantanswers/instant-answers-modal-trigger-b25ecba7ec.controller',
+			'redesign/instructorMain': '/js/redesign/instructorMain-eb8f914310',
+			'redesign/lesson/controllers/LessonPostRollController': '/js/redesign/lesson/controllers/LessonPostRollController-16eb58a3ed',
+			'redesign/lesson/highlight-note.service': '/js/redesign/lesson/highlight-note-d3cfb3a0ea.service',
+			'redesign/lesson/highlightNotes': '/js/redesign/lesson/highlightNotes-98027420a4',
+			'redesign/lesson/instantAnswersPopUp': '/js/redesign/lesson/instantAnswersPopUp-967fe4ab7c',
+			'redesign/lesson/lesson': '/js/redesign/lesson/lesson-9397e177ec',
+			'redesign/lesson/linkBoldTermsToSearch': '/js/redesign/lesson/linkBoldTermsToSearch-34734efd90',
+			'redesign/lesson/quiz/QuizController': '/js/redesign/lesson/quiz/QuizController-4e078c4490',
+			'redesign/lesson/quiz/QuizTracking': '/js/redesign/lesson/quiz/QuizTracking-0e7ac6a36c',
+			'redesign/lesson/quiz/lessonQuiz': '/js/redesign/lesson/quiz/lessonQuiz-dc70fc0311',
+			'redesign/lesson/quiz/quiz': '/js/redesign/lesson/quiz/quiz-94af3e325e',
+			'redesign/lesson/transcript-click-handler': '/js/redesign/lesson/transcript-click-handler-75f66d3642',
+			'redesign/marketing/device-with-features': '/js/redesign/marketing/device-with-features-7bdc9765c9',
+			'redesign/marketing/mobileAppLandingPage': '/js/redesign/marketing/mobileAppLandingPage-c357358495',
+			'redesign/marketing/mobileAppLandingPage/checkboxOptions': '/js/redesign/marketing/mobileAppLandingPage/checkboxOptions-dc70d96c96',
+			'redesign/marketing/studyMonster': '/js/redesign/marketing/studyMonster-6404e907fe',
+			'redesign/onboarding/OnboardingChooseCourseController': '/js/redesign/onboarding/OnboardingChooseCourseController-cb3a203c8d',
+			'redesign/partial-reg-form-modal.controller': '/js/redesign/partial-reg-form-modal-b260fa821f.controller',
+			'redesign/ppc/ppcAcademyArticle': '/js/redesign/ppc/ppcAcademyArticle-8b764d42ee',
+			'redesign/proctoredExams/ProctoredExamReviewModuleController': '/js/redesign/proctoredExams/ProctoredExamReviewModuleController-aebbec0ac2',
+			'redesign/proctoredExams/ProctoredExamService': '/js/redesign/proctoredExams/ProctoredExamService-3051239187',
+			'redesign/proctoredExams/proctoredDashboardModule': '/js/redesign/proctoredExams/proctoredDashboardModule-eb1e4274b3',
+			'redesign/product': '/js/redesign/product-5aacf2d72e',
+			'redesign/productPage': '/js/redesign/productPage-a39e78da20',
+			'redesign/qualarooTriggers': '/js/redesign/qualarooTriggers-0afb1a2aeb',
+			'redesign/readMoreContent': '/js/redesign/readMoreContent-d5e357c52a',
+			'redesign/recommendations/RecommendationController': '/js/redesign/recommendations/RecommendationController-179db3ba49',
+			'redesign/recommendations/RecommendationService': '/js/redesign/recommendations/RecommendationService-239be10400',
+			'redesign/recommendations/addibleLesson': '/js/redesign/recommendations/addibleLesson-8970bc7346',
+			'redesign/recommendations/recommendationApp': '/js/redesign/recommendations/recommendationApp-dd558371f4',
+			'redesign/referFriend': '/js/redesign/referFriend-d251b991af',
+			'redesign/registration/PpcRegistrationApp': '/js/redesign/registration/PpcRegistrationApp-e37a5ea28b',
+			'redesign/registration/RegistrationFormController': '/js/redesign/registration/RegistrationFormController-6d4dc2b55e',
+			'redesign/registration/RegistrationService': '/js/redesign/registration/RegistrationService-021358c4fc',
+			'redesign/relatedContentTabs': '/js/redesign/relatedContentTabs-569b6f44c4',
+			'redesign/research/ajaxFormSubmissionModal': '/js/redesign/research/ajaxFormSubmissionModal-1ca1db7323',
+			'redesign/research/articleMain': '/js/redesign/research/articleMain-8c28279f5a',
+			'redesign/research/articleVideo': '/js/redesign/research/articleVideo-14222166ef',
+			'redesign/research/companyDynamicPage': '/js/redesign/research/companyDynamicPage-94efb691c5',
+			'redesign/research/compliance': '/js/redesign/research/compliance-242b5ca0d4',
+			'redesign/research/intlzip': '/js/redesign/research/intlzip-0d8f08f52c',
+			'redesign/research/leadformPage': '/js/redesign/research/leadformPage-aa4cbf357a',
+			'redesign/research/multiSchoolFormPage': '/js/redesign/research/multiSchoolFormPage-038e26aabd',
+			'redesign/research/research': '/js/redesign/research/research-c1f5929229',
+			'redesign/research/researchProduct': '/js/redesign/research/researchProduct-325e5b0597',
+			'redesign/research/studMobile': '/js/redesign/research/studMobile-457f939099',
+			'redesign/research/updateHashFunctions': '/js/redesign/research/updateHashFunctions-cbdeab13ef',
+			'redesign/research/videoHook': '/js/redesign/research/videoHook-19d841b3f8',
+			'redesign/research/wageChartRender': '/js/redesign/research/wageChartRender-40eb9d0401',
+			'redesign/sbp/sbp': '/js/redesign/sbp/sbp-789bb8500f',
+			'redesign/setDirectoryTestingCookie': '/js/redesign/setDirectoryTestingCookie-c01bfc2d43',
+			'redesign/setUserTestingCookie': '/js/redesign/setUserTestingCookie-ec7c6bf7bd',
+			'redesign/splitTabContent': '/js/redesign/splitTabContent-011130cbe5',
+			'redesign/stickyModule': '/js/redesign/stickyModule-d30fa677b5',
+			'redesign/studyAnswer/StudyAnswersIndex': '/js/redesign/studyAnswer/StudyAnswersIndex-ec6e84babe',
+			'redesign/studyAnswer/allStudyAnswers': '/js/redesign/studyAnswer/allStudyAnswers-9fb1b7c6b0',
+			'redesign/studyAnswer/studyAnswer': '/js/redesign/studyAnswer/studyAnswer-69ab2699c0',
+			'redesign/temp/pagination': '/js/redesign/temp/pagination-8b727c9dcf',
+			'redesign/textWrapImages': '/js/redesign/textWrapImages-c9c393a2a3',
+			'redesign/workingScholars': '/js/redesign/workingScholars-ec11018b4b',
+			'registration-utils.bundle': '/js/registration-utils-14f32cf7b5.bundle',
+			'registration/angularFormConstants': '/js/registration/angularFormConstants-2435cb957c',
+			'registration/angularFormDirectives': '/js/registration/angularFormDirectives-3d88f4a8d6',
+			'registration/applyCoupon': '/js/registration/applyCoupon-18c3828bf4',
+			'registration/billingTooltips': '/js/registration/billingTooltips-8f7f9591d8',
+			'registration/homeschool-promo.app': '/js/registration/homeschool-promo-a387be0f9e.app',
+			'registration/license-code-signup.app': '/js/registration/license-code-signup-b6ea723811.app',
+			'registration/license-code-signup.controller': '/js/registration/license-code-signup-112820d7a9.controller',
+			'registration/license/add-license-to-account.controller': '/js/registration/license/add-license-to-account-f67e341eeb.controller',
+			'registration/license/boomerangRegistration': '/js/registration/license/boomerangRegistration-4115ee8a61',
+			'registration/license/license-code-input.directive': '/js/registration/license/license-code-input-de7cd7c403.directive',
+			'registration/manage-membership/manage-membership.app': '/js/registration/manage-membership/manage-membership-b71becac33.app',
+			'registration/manage-membership/manage-membership.controller': '/js/registration/manage-membership/manage-membership-239a90c2eb.controller',
+			'registration/partial-reg-form/preselect-reg-form-answers.service': '/js/registration/partial-reg-form/preselect-reg-form-answers-cdeae8fbca.service',
+			'registration/post-registration/post-reg-teacher-upgrade.controller': '/js/registration/post-registration/post-reg-teacher-upgrade-b1927a868e.controller',
+			'registration/post-registration/post-registration-survey.app': '/js/registration/post-registration/post-registration-survey-a44caef97a.app',
+			'registration/privacyIframes': '/js/registration/privacyIframes-8120fb70da',
+			'registration/reg-form/reg-form-modal.controller': '/js/registration/reg-form/reg-form-modal-da451bcd39.controller',
+			'registration/reg-form/reg-form.controller': '/js/registration/reg-form/reg-form-cdc212a565.controller',
+			'registration/registration-form-settings.provider': '/js/registration/registration-form-settings-5c861ddcb3.provider',
+			'registration/registration-form-util.service': '/js/registration/registration-form-util-bd46bb799d.service',
+			'registration/registrationForm': '/js/registration/registrationForm-3e872c4743',
+			'registration/selectFirstInput': '/js/registration/selectFirstInput-d6589f2e25',
+			'registration/simpleSubscriberSignup': '/js/registration/simpleSubscriberSignup-fc00c04aca',
+			'registration/subscriberSignup': '/js/registration/subscriberSignup-475df7b38f',
+			'registration/subscription.service': '/js/registration/subscription-5b3786012f.service',
+			'registration/teacher-splash-screen.app': '/js/registration/teacher-splash-screen-35d0e73ab3.app',
+			'registration/teacher-splash-screen.directive': '/js/registration/teacher-splash-screen-c8de9e75fd.directive',
+			'registration/teacherGroupInfoRequest': '/js/registration/teacherGroupInfoRequest-86567c9170',
+			'registration/updateBilling': '/js/registration/updateBilling-7b15740297',
+			'registration/upgradeSubscription': '/js/registration/upgradeSubscription-a50c5c5d9a',
+			'remspect/remspect.directive': '/js/remspect/remspect-e353eadd7d.directive',
+			'remtest/sschain': '/js/remtest/sschain-5d00b84003',
+			'research/clientSupport/contact-support-boomerang.controller': '/js/research/clientSupport/contact-support-boomerang-d4c6b1b89e.controller',
+			'research/hubs/research-hubs.page': '/js/research/hubs/research-hubs-28f29f552b.page',
+			'research/multiselect/SchoolSearchModule': '/js/research/multiselect/SchoolSearchModule-1d0cf66b6b',
+			'research/multiselect/multiselectSchoolSearch': '/js/research/multiselect/multiselectSchoolSearch-a55c2f49ff',
+			'research/partners/landingPage': '/js/research/partners/landingPage-ce02d102d3',
+			'research/pre-match-form/pre-match-form': '/js/research/pre-match-form/pre-match-form-4aee9f15fc',
+			'research/pre-match-form/pre-match-search': '/js/research/pre-match-form/pre-match-search-d0c2e1ab7f',
+			'research/qualifier/programLinksPrequalifier': '/js/research/qualifier/programLinksPrequalifier-0e12ad94dd',
+			'research/refineSearch/locationFilters': '/js/research/refineSearch/locationFilters-aa5056ca54',
+			'research/refineSearch/oneQuestionAtAtime': '/js/research/refineSearch/oneQuestionAtAtime-165a68bfb8',
+			'research/refineSearch/submitCombinedRefineForms': '/js/research/refineSearch/submitCombinedRefineForms-faf10f2ca3',
+			'school/school-credit-search.app': '/js/school/school-credit-search-2d9152c47e.app',
+			'school/school-credit-search.controller': '/js/school/school-credit-search-55ee8dfde8.controller',
+			'school/school-credit-search.service': '/js/school/school-credit-search-52f8155649.service',
+			'search/select-search.directive': '/js/search/select-search-eba856f2de.directive',
+			'search/text-search.service': '/js/search/text-search-651073bf11.service',
+			'sitesearch/site-search.app': '/js/sitesearch/site-search-1509a5a806.app',
+			'sitesearch/site-search.controller': '/js/sitesearch/site-search-f73514b38c.controller',
+			'ssSimplifiedSearch': '/js/ssSimplifiedSearch-f96f8ad0a9',
+			'ssSubjectArea': '/js/ssSubjectArea-fa3862eeb0',
+			'stripeKey': '/js/stripeKey-c4f64f31f1',
+			'stripeKeyTest': '/js/stripeKeyTest-90e8218830',
+			'studyGoals/study-goal-controls.directive': '/js/studyGoals/study-goal-controls-3a0ccddc33.directive',
+			'studyGoals/study-goals.service': '/js/studyGoals/study-goals-6bfae6e35a.service',
+			'support/freshdeskStandalone': '/js/support/freshdeskStandalone-af7a238ff1',
+			'support/report-an-error.directive': '/js/support/report-an-error-fdf24fd779.directive',
+			'support/report-an-error.service': '/js/support/report-an-error-50cf668950.service',
+			'teacherLandingPage/teacher-landing-page-search.controller': '/js/teacherLandingPage/teacher-landing-page-search-5bfc5911ae.controller',
+			'teacherLandingPage/teacher-landing-page.app': '/js/teacherLandingPage/teacher-landing-page-0c16ff6619.app',
+			'testPrep/teacher-certification-hub.module': '/js/testPrep/teacher-certification-hub-b15258bd9c.module',
+			'testPrep/test-prep-hub.module': '/js/testPrep/test-prep-hub-8bb0660d36.module',
+			'tesuEarnCredit': '/js/tesuEarnCredit-4f67c9f75a',
+			'tutorial/dashboard/dashboard-tutorial.directive': '/js/tutorial/dashboard/dashboard-tutorial-3c7bd20d7c.directive',
+			'tutorial/tutorial-item': '/js/tutorial/tutorial-item-88ee7ef876',
+			'tutorial/tutorial.directive': '/js/tutorial/tutorial-4cfb6d0e5e.directive',
+			'tutorial/tutorial.service': '/js/tutorial/tutorial-8f94b5c0a7.service',
+			'util/animate-on-scroll': '/js/util/animate-on-scroll-2c29601bf3',
+			'util/bubbleField': '/js/util/bubbleField-4df5accfe7',
+			'util/circular-progress.directive': '/js/util/circular-progress-b33127a75e.directive',
+			'util/circularProgress': '/js/util/circularProgress-28322dcbb0',
+			'util/cookieManipulator': '/js/util/cookieManipulator-40a42daddb',
+			'util/copy-values.service': '/js/util/copy-values-807d41d192.service',
+			'util/data-viz.app': '/js/util/data-viz-a5ed32f73e.app',
+			'util/data-viz': '/js/util/data-viz-0a2825f2a0',
+			'util/debug-tools': '/js/util/debug-tools-6b26dd0b96',
+			'util/defaultErroredImages': '/js/util/defaultErroredImages-70fd65a1b9',
+			'util/dropdown.directive': '/js/util/dropdown-82f8cbfde0.directive',
+			'util/go-to-tab-and-highlight.directive': '/js/util/go-to-tab-and-highlight-d205d556a9.directive',
+			'util/highlightElementOnClick': '/js/util/highlightElementOnClick-70d692dcf4',
+			'util/javaFormEncode': '/js/util/javaFormEncode-619fa7b899',
+			'util/moment-local-data/locale-data.en': '/js/util/moment-local-data/locale-data-6c088aa253.en',
+			'util/pluralize.directive': '/js/util/pluralize-b9377a7f1d.directive',
+			'util/qualaroo': '/js/util/qualaroo-c1733ea4c8',
+			'util/qualarooResearch': '/js/util/qualarooResearch-5e2a039eb3',
+			'util/remspect': '/js/util/remspect-7ca64c6008',
+			'util/scroll-on-click.directive': '/js/util/scroll-on-click-313489fb91.directive',
+			'util/scrolling-sidebar.directive': '/js/util/scrolling-sidebar-a7300f192a.directive',
+			'util/simpleJqueryForm': '/js/util/simpleJqueryForm-77f488a2e7',
+			'util/smoothJazzScroll': '/js/util/smoothJazzScroll-4404bd70cd',
+			'util/study-graph': '/js/util/study-graph-0c81f16a13',
+			'util/support-article-link.directive': '/js/util/support-article-link-f49792ce0f.directive',
+			'util/target-viewport.directive': '/js/util/target-viewport-b6468a999c.directive',
+			'util/text-input.directive': '/js/util/text-input-3ffe9d8fec.directive',
+			'util/to-the-top': '/js/util/to-the-top-425e39d660',
+			'util/typed-map': '/js/util/typed-map-75c5c0a63a',
+			'util/user-rating.directive': '/js/util/user-rating-a0d16df3a8.directive',
+			'util/value-pro': '/js/util/value-pro-3fab01295a',
+			'util/value-wrapper': '/js/util/value-wrapper-5e48335491',
+			'util/virtualOnClick': '/js/util/virtualOnClick-71ece30b0f',
+			'util/window-location.service': '/js/util/window-location-3e14362ae0.service',
+			'video/initEmbeds': '/js/video/initEmbeds-62233c4ae1',
+			'video/remVideo': '/js/video/remVideo-e7a1b75fdc',
+			'video/teacher-video-overlay.service': '/js/video/teacher-video-overlay-74448308a5.service',
+			'video/teacherNotes/teacher-notes-plugin': '/js/video/teacherNotes/teacher-notes-plugin-b38e898dc4',
+			'video/teacherNotes/teacher-notes-plugin.service': '/js/video/teacherNotes/teacher-notes-plugin-76737f31c6.service',
+			'video/video-lesson-tracking.service': '/js/video/video-lesson-tracking-f8109b8f55.service',
+
+		},
+		map: {
+			//These modules have common names used by other modules, so we need a mapping from the study.com "lib/" convention to the module's AMD name.
+			'*': {
+				'lib/underscore': 'underscore',
+				'lib/lscache': 'lscache',
+				'lib/moment': 'moment',
+				'angularDependency': 'angular/util/angularExceptionLogger',
+				'util/value-proxy': 'util/value-pro',
+				"eventLogging": "logging/eventLogging"
+			},
+			'lib': {
+				'angularDependency': 'angularDependency'
+			},
+			'angular/util/angularExceptionLogger': {
+				'angularDependency': 'angularDependency'
+			},
+			'lib/angular/rzslider': {
+				'angular': 'angularDependency'
+			}
+		},
+		shim: {
+			//angular doesn't require jquery, as it has it's own jQLite when jquery is missing. Our code assumes it has access to full jquery, though .
+			"angularDependency": {
+				deps: ["jquery"],
+				exports: "angular"
+			},
+			"bootstrap": ["jquery"],
+			
+			"lib/angular-storage": ["angularDependency"],
+			"lib/angular/animate": ["angularDependency"],
+			"lib/angular/cookie": ["angularDependency"],
+			"lib/angular/drag-and-drop-lists": ["angularDependency"],
+			"lib/angular/draganddrop": ["angularDependency"],
+			"lib/angular/loading-bar": ["angularDependency"],
+			"lib/angular/resource": ["angularDependency"],
+			"lib/angular/touch": ["angularDependency"],
+			"lib/angular/ui-bootstrap": ["angularDependency", "lib/angular/animate", "lib/angular/touch", "lib/jquery/bootstrap"],
+			"lib/angular/ui-router": ["angularDependency"],
+			"lib/angular/ui-utils": ["angularDependency"],
+			"lib/code-prettify": {
+				exports: "PR"
+			},
+			"lib/freshWidget": {
+				exports: "FreshWidget"
+			},
+			"lib/google/api": ["google/google-parse-tags-config"],
+			"lib/jquery/bootstrap": ["jquery"],
+			"lib/jquery/bootstrap/jasny": ["lib/jquery/bootstrap"],
+			"lib/jquery/jqplot": ["jquery"],
+			"lib/jquery/jqplot/bars": ["lib/jquery/jqplot"],
+			"lib/jquery/lazyload": ["jquery"],
+			"lib/jquery/mask/jquery.mask": ["jquery"],
+			"lib/jquery/legacy/hint": ["jquery"],
+			"lib/jquery/legacy/migrate": ["jquery"],
+			"lib/jquery/legacy/tools": ["jquery", "lib/jquery/legacy/migrate"],
+			"lib/jquery/legacy/tools/tooltip": ["lib/jquery/legacy/tools"],
+			"lib/jquery/purl": ["jquery"],
+			"lib/jquery/ui": ["jquery"],
+			"lib/jquery-mask": ["jquery"],
+			"lib/modernizr": {
+				exports: "Modernizr"
+			},
+			"lib/ngMask": ["angularDependency"],
+			"lib/Q": {
+				exports: "Q"
+			},
+			"lib/stripe": {
+				exports: "Stripe",
+				init: function () {
+					if (env.indexOf("prod") !== -1) {
+						//noinspection JSUnresolvedFunction,JSUnresolvedVariable
+						this.Stripe.setPublishableKey("pk_live_iliKBs0kFwP1aXfKSfAYB0JT");
+					}
+					else {
+						//noinspection JSUnresolvedFunction,JSUnresolvedVariable
+						this.Stripe.setPublishableKey("pk_test_am41P9owJPqEG8VYW31ifWEY");
+					}
+				}
+			},
+			"lib/accept": {
+				exports: "Accept",
+				init: function() {
+					if (env.indexOf("prod") !== -1) {
+						//noinspection JSUnresolvedFunction,JSUnresolvedVariable
+						Accept.authData = {
+							apiLoginID: '5dm2LT7w',
+							clientKey: '7KTJUj8Yd3Ukn6VLPxDb39bwbtH7PskHAwNwg64DYCCxf2Aef5cM3UAvS9CqeAHS'
+						};
+					}
+					else {
+						//noinspection JSUnresolvedFunction,JSUnresolvedVariable
+						Accept.authData = {
+							apiLoginID: '4Mj2k2kRbsBg',
+							clientKey: '2Z2xH2h4DQYKUTb9x4rD2HXpkm285HL93YT6qfBPxY7xH7z564GyNgwcknQtd7jv'
+						};
+					}
+					return Accept;
+				}
+			},
+			"lib/tinymceui": ["angularDependency", "lib/tinymce"],
+			"lib/toastr": ["jquery"],
+			"lib/usmap": ["lib/raphael"],
+			"lib/wistia": {
+				deps: ["jquery"],
+				exports: "Wistia"
+			},
+			
+			/*importanté: inlineMath and displayMath are the delimiters. they have to match whats being used in the CMS. so if you change here, change in CMS as well*/
+			"mathjax": {
+				exports: "MathJax",
+				init: function () {
+					MathJax.Hub.Config(
+					 {
+						 jax: ["input/TeX", "output/CommonHTML"],
+						 extensions: ["tex2jax.js"],
+						 TeX: {extensions: ["AMSmath.js", "AMSsymbols.js", "noErrors.js", "noUndefined.js"]},
+						 asciimath2jax: {
+							 delimiters: [["{am}", "{/am}"]]
+						 },
+						 tex2jax: {
+							 displayMath: [["$$", "$$"]],
+							 inlineMath: [["{eq}", "{/eq}"]],
+							 processEnvironments: false,
+							 skipTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+						 },
+						 messageStyle: "none",
+						 showMathMenu: false,
+						 showMathMenuMSIE: false
+					 }
+					);
+					MathJax.Hub.Startup.onload();
+					return MathJax;
+				}
+			}
+		}
+	});
+})();

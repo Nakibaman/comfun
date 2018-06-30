@@ -1,0 +1,49 @@
+define(["require", "exports", "angularDependency", "angularDependency", "classroom/classroom.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("create-classroom-form.directive", ["classroom.service"]);
+    var CreateClassroomFormValues = (function () {
+        function CreateClassroomFormValues() {
+            this.classroomName = "";
+            this.school = "";
+        }
+        return CreateClassroomFormValues;
+    }());
+    exports.CreateClassroomFormValues = CreateClassroomFormValues;
+    var CreateClassroomFormController = (function () {
+        function CreateClassroomFormController(CLASSROOM_NAME_MIN_LENGTH, CLASSROOM_NAME_MAX_LENGTH) {
+            this.CLASSROOM_NAME_MIN_LENGTH = CLASSROOM_NAME_MIN_LENGTH;
+            this.CLASSROOM_NAME_MAX_LENGTH = CLASSROOM_NAME_MAX_LENGTH;
+            if (!this.classroomNameLabel) {
+                this.classroomNameLabel = CreateClassroomFormController.DEFAULT_CLASSROOM_NAME_LABEL;
+            }
+        }
+        CreateClassroomFormController.prototype.isClassroomNameValid = function () {
+            var value = this.formNgModel.classroomName;
+            return value && (value.length >= this.CLASSROOM_NAME_MIN_LENGTH) && (value.length <= this.CLASSROOM_NAME_MAX_LENGTH);
+        };
+        CreateClassroomFormController.DEFAULT_CLASSROOM_NAME_LABEL = "Name";
+        CreateClassroomFormController.$inject = ["CLASSROOM_NAME_MIN_LENGTH", "CLASSROOM_NAME_MAX_LENGTH"];
+        return CreateClassroomFormController;
+    }());
+    exports.CreateClassroomFormController = CreateClassroomFormController;
+    module.directive("createClassroomForm", function () {
+        return {
+            restrict: "E",
+            templateUrl: "/templates/classrooms/teacher/manage/create-classroom-form.tpl",
+            scope: {
+                cancelFn: "&",
+                classroomNameLabel: "@",
+                formNgModel: '=',
+                includeSchoolInput: '@',
+                submitFn: '&',
+                submitButtonText: '@'
+            },
+            bindToController: true,
+            controller: CreateClassroomFormController,
+            controllerAs: "createClassroomFormCtrl"
+        };
+    });
+});
+
+//# sourceMappingURL=create-classroom-form.directive.js.map

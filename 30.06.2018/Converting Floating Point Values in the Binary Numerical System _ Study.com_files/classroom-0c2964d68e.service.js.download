@@ -1,0 +1,214 @@
+define(["require", "exports", "angularDependency", "util/value-proxy", "angularDependency", "angular/util/http-post-params-as-form.provider", "util/value-proxy"], function (require, exports, angular, ValueProxy) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("classroom.service", ["study.http-post-params-as-form"]);
+    var CLASSROOM_NAME_MIN_LENGTH = 4;
+    var CLASSROOM_NAME_MAX_LENGTH = 100;
+    var CLASSROOM_NAME_INPUT_PATTERN = ".{" + CLASSROOM_NAME_MIN_LENGTH + "," + CLASSROOM_NAME_MAX_LENGTH + "}";
+    var CLASSROOM_NAME_INPUT_REGEX = new RegExp("^" + CLASSROOM_NAME_INPUT_PATTERN + "$");
+    var MAX_SEATS_PER_TEACHER = 250;
+    module.constant("CLASSROOM_NAME_MIN_LENGTH", CLASSROOM_NAME_MIN_LENGTH);
+    module.constant("CLASSROOM_NAME_MAX_LENGTH", CLASSROOM_NAME_MAX_LENGTH);
+    module.constant("CLASSROOM_NAME_INPUT_PATTERN", CLASSROOM_NAME_INPUT_PATTERN);
+    module.constant("CLASSROOM_NAME_ERROR_MESSAGE", "Classroom names must be at least " + CLASSROOM_NAME_MIN_LENGTH + " characters and less than " + CLASSROOM_NAME_MAX_LENGTH + " characters");
+    module.constant("MAX_SEATS_PER_TEACHER", MAX_SEATS_PER_TEACHER);
+    var ClassroomService = (function () {
+        function ClassroomService($http, $q, httpPostParamsAsFormConfig) {
+            this.codeToClassroomProxyMap = {};
+            this.$http = $http;
+            this.$q = $q;
+            this.httpPostParamsAsFormConfig = httpPostParamsAsFormConfig;
+            this.teacherClassroomsProxy = new ValueProxy([], function () {
+                return this.$http.get("/member/classrooms/list.ajax")
+                    .then(function (response) {
+                    return response.data;
+                })["catch"](this.transformError.bind(this));
+            }.bind(this));
+            this.studentClassroomsProxy = new ValueProxy([], function () {
+                return this.$http.get("/member/classrooms/student/list.ajax")
+                    .then(function (response) {
+                    return response.data;
+                })["catch"](function (response) {
+                    var error = "Unknown Error";
+                    return this.$q.reject(error);
+                }.bind(this));
+            }.bind(this));
+        }
+        ClassroomService.prototype.getTeacherClassrooms = function () {
+            return this.teacherClassroomsProxy.getValue();
+        };
+        ;
+        ClassroomService.prototype.reloadTeacherClassrooms = function () {
+            return this.teacherClassroomsProxy.reloadValue();
+        };
+        ;
+        ClassroomService.prototype.isClassroomNameInCorrectFormat = function (classroomName) {
+            return CLASSROOM_NAME_INPUT_REGEX.test(classroomName);
+        };
+        ;
+        ClassroomService.prototype.isClassroomNameInUse = function (classroomName) {
+            var classrooms = this.teacherClassroomsProxy.value;
+            return classrooms && classrooms.map(function (classroom) {
+                return classroom.displayName;
+            }).indexOf(classroomName) > -1;
+        };
+        ;
+        ClassroomService.prototype.canCreateClassroom = function () {
+            return this.teacherClassroomsProxy.value && this.teacherClassroomsProxy.value.length < MAX_SEATS_PER_TEACHER;
+        };
+        ;
+        ClassroomService.prototype.canAddStudentsToClassroom = function () {
+            return this.classroomSeatsAvailable() > 0;
+        };
+        ;
+        ClassroomService.prototype.getClassroomProxyByCode = function (code) {
+            var classroomProxy = this.codeToClassroomProxyMap[code];
+            if (classroomProxy) {
+                return classroomProxy;
+            }
+            classroomProxy = new ValueProxy({}, function () {
+                return this.$http.get("/member/classrooms/load-classroom.ajax", {
+                    params: {
+                        code: code
+                    }
+                })
+                    .then(function (response) {
+                    this.addDisplayNameToStudentList(response.data.students);
+                    return response.data;
+                }.bind(this))["catch"](function (response) {
+                    var error = "Unknown Error";
+                    return this.$q.reject(error);
+                }.bind(this));
+            }.bind(this));
+            this.codeToClassroomProxyMap[code] = classroomProxy;
+            return classroomProxy;
+        };
+        ;
+        ClassroomService.prototype.reloadClassroomByCode = function (code) {
+            return this.getClassroomProxyByCode(code).reloadValue();
+        };
+        ;
+        ClassroomService.prototype.createClassroom = function (classroom) {
+            return this.$http.post("/member/classrooms/create.ajax", classroom, this.httpPostParamsAsFormConfig)["catch"](this.transformError.bind(this))
+                .then(this.reloadTeacherClassrooms.bind(this))
+                .then(function (classrooms) {
+                for (var i = 0; i < classrooms.length; i++) {
+                    if (classrooms[i].displayName === classroom.displayName) {
+                        return classrooms[i];
+                    }
+                }
+                return this.$q.reject("Failed to find newly created classroom in classrooms list");
+            }.bind(this))["catch"](function () {
+                return this.$q.reject("Failed to load classrooms. Unable to get created classroom");
+            }.bind(this));
+        };
+        ;
+        ClassroomService.prototype.updateClassroom = function (classroom) {
+            return this.$http.post("/member/classrooms/update.ajax", classroom, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                var reloads = [];
+                reloads.push(this.reloadTeacherClassrooms());
+                var individualClassroomProxy = this.codeToClassroomProxyMap[classroom.code];
+                if (individualClassroomProxy) {
+                    reloads.push(individualClassroomProxy.reloadValue());
+                }
+                return this.$q.all(reloads).then(function () { return classroom; });
+            }.bind(this))["catch"](this.transformError.bind(this));
+        };
+        ;
+        ClassroomService.prototype.deleteClassroom = function (classroom) {
+            return this.$http.post("/member/classrooms/delete.ajax", classroom, this.httpPostParamsAsFormConfig)
+                .then(function (response) {
+                this.reloadTeacherClassrooms();
+                return response;
+            }.bind(this))["catch"](this.transformError.bind(this));
+        };
+        ;
+        ClassroomService.prototype.transformError = function (response) {
+            var responseCode = response.status;
+            var errorMessage = null;
+            if (responseCode === 400) {
+                errorMessage = "Missing required parameter";
+            }
+            else if (responseCode === 403) {
+                errorMessage = "You can only have 5 classrooms. Please delete a classroom before creating another.";
+            }
+            else if (responseCode === 409) {
+                errorMessage = "This classroom already exists! Please enter a unique name.";
+            }
+            else if (responseCode === 500) {
+                errorMessage = "Sorry, there seems to be a problem with our servers. Please try again later.";
+            }
+            return this.$q.reject(errorMessage);
+        };
+        ;
+        ClassroomService.prototype.joinClassroom = function (classroomCode) {
+            return this.$http.post("/academy/register/classroom/join.ajax", { code: classroomCode }, this.httpPostParamsAsFormConfig)["catch"](function (response) {
+                var error = "Unknown";
+                if (response.status === 400) {
+                    error = "EmptyCode";
+                }
+                else if (response.status === 403) {
+                    error = "ClassroomFull";
+                }
+                else if (response.status === 404) {
+                    error = "InvalidCode";
+                }
+                else if (response.status === 409) {
+                    error = "AlreadyInClass";
+                }
+                return this.$q.reject(error);
+            }.bind(this));
+        };
+        ;
+        ClassroomService.prototype.leaveClassroom = function (classroomId) {
+            return this.$http.post("/member/classrooms/student/leave.ajax", { classroomId: classroomId }, this.httpPostParamsAsFormConfig)["catch"](function (response) {
+                var error = "Unknown Error";
+                if (response.status === 404) {
+                    error = "You are not Member of the classroom.";
+                }
+                return this.$q.reject(error);
+            }.bind(this));
+        };
+        ;
+        ClassroomService.prototype.addDisplayNameToStudentList = function (students) {
+            angular.forEach(students, function (student) {
+                student.displayName = this.getStudentDisplayName(student);
+            }.bind(this));
+        };
+        ;
+        ClassroomService.prototype.getStudentDisplayName = function (student) {
+            if (!student) {
+                return "--";
+            }
+            if (!student.profile || (!student.profile.firstName && !student.profile.lastName)) {
+                return student.emailAddress;
+            }
+            return student.profile.firstName + " " + student.profile.lastName;
+        };
+        ;
+        ClassroomService.prototype.classroomSeatsAvailable = function () {
+            return MAX_SEATS_PER_TEACHER - this.totalClassroomSeatsUsed();
+        };
+        ClassroomService.prototype.totalClassroomSeatsUsed = function () {
+            var uniqueStudents = {};
+            for (var _i = 0, _a = this.teacherClassroomsProxy.value; _i < _a.length; _i++) {
+                var classroom = _a[_i];
+                for (var _b = 0, _c = classroom.students; _b < _c.length; _b++) {
+                    var student = _c[_b];
+                    if (!(student.memberId in uniqueStudents)) {
+                        uniqueStudents[student.memberId] = student.memberId;
+                    }
+                }
+            }
+            return Object.keys(uniqueStudents).length;
+        };
+        ;
+        ClassroomService.$inject = ["$http", "$q", "httpPostParamsAsFormConfig"];
+        return ClassroomService;
+    }());
+    exports.ClassroomService = ClassroomService;
+    module.service("classroomService", ClassroomService);
+});
+
+//# sourceMappingURL=classroom.service.js.map

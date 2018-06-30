@@ -1,0 +1,111 @@
+define(["require", "exports", "jquery", "angularDependency"], function (require, exports, $, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var TRANSFORM_REQUEST_FUNCTION = function (data, headersGetter) {
+        if (data === undefined) {
+            return data;
+        }
+        return $.param(data);
+    };
+    var TRANSFORM_REQUEST_FUNCTION_NO_FUNCTIONS_CALLED = function (data, headersGetter) {
+        if (data === undefined) {
+            return data;
+        }
+        var serializer = new StudyHttpParamSerializerJQLike();
+        return serializer.serializeLikeJQuery(data);
+    };
+    var POST_CONFIG_WILL_CALL_FUNCTIONS = {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
+        transformRequest: TRANSFORM_REQUEST_FUNCTION
+    };
+    var POST_CONFIG_WILL_NOT_CALL_FUNCTIONS = {
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+        },
+        transformRequest: TRANSFORM_REQUEST_FUNCTION_NO_FUNCTIONS_CALLED
+    };
+    var HttpPostParamsAsFormProvider = (function () {
+        function HttpPostParamsAsFormProvider($httpProvider) {
+            this.$get = ["$httpProvider",
+                function httpPostParamsAsFormFactory() {
+                    return {};
+                }
+            ];
+            this.$httpProvider = $httpProvider;
+        }
+        HttpPostParamsAsFormProvider.prototype.configureHttpPostRequestDefaults = function () {
+            this.$httpProvider.defaults.headers.post["Content-Type"] = POST_CONFIG_WILL_CALL_FUNCTIONS.headers["Content-Type"];
+            this.$httpProvider.defaults.transformRequest = [TRANSFORM_REQUEST_FUNCTION];
+        };
+        ;
+        return HttpPostParamsAsFormProvider;
+    }());
+    exports.HttpPostParamsAsFormProvider = HttpPostParamsAsFormProvider;
+    var StudyHttpParamSerializerJQLike = (function () {
+        function StudyHttpParamSerializerJQLike() {
+        }
+        StudyHttpParamSerializerJQLike.prototype.serializeLikeJQuery = function (params) {
+            if (!params) {
+                return '';
+            }
+            var parts = [];
+            this.serialize(parts, params, '', true);
+            return parts.join('&');
+        };
+        StudyHttpParamSerializerJQLike.prototype.serialize = function (parts, toSerialize, prefix, topLevel) {
+            if (toSerialize === null || angular.isUndefined(toSerialize))
+                return;
+            if (angular.isArray(toSerialize)) {
+                angular.forEach(toSerialize, function (value, index) {
+                    this.serialize(parts, value, prefix + '[' + (angular.isObject(value) ? index : '') + ']');
+                }.bind(this));
+            }
+            else if (angular.isObject(toSerialize) && !angular.isDate(toSerialize)) {
+                this.forEachSorted(toSerialize, function (value, key) {
+                    this.serialize(parts, value, prefix +
+                        (topLevel ? '' : '[') +
+                        key +
+                        (topLevel ? '' : ']'));
+                }.bind(this));
+            }
+            else {
+                parts.push(this.encodeUriQuery(prefix) + '=' + this.encodeUriQuery(this.serializeValue(toSerialize)));
+            }
+        };
+        StudyHttpParamSerializerJQLike.prototype.serializeValue = function (value) {
+            if (angular.isObject(value)) {
+                return angular.isDate(value) ? value.toISOString() : angular.toJson(value);
+            }
+            return value;
+        };
+        StudyHttpParamSerializerJQLike.prototype.forEachSorted = function (obj, iterator, context) {
+            var keys = this.sortedKeys(obj);
+            for (var i = 0; i < keys.length; i++) {
+                iterator.call(context, obj[keys[i]], keys[i]);
+            }
+            return keys;
+        };
+        StudyHttpParamSerializerJQLike.prototype.sortedKeys = function (obj) {
+            return Object.keys(obj).sort();
+        };
+        StudyHttpParamSerializerJQLike.prototype.encodeUriQuery = function (val, pctEncodeSpaces) {
+            return encodeURIComponent(val)
+                .replace(/%40/gi, '@')
+                .replace(/%3A/gi, ':')
+                .replace(/%24/g, '$')
+                .replace(/%2C/gi, ',')
+                .replace(/%3B/gi, ';')
+                .replace(/%20/g, (pctEncodeSpaces ? '%20' : '+'));
+        };
+        return StudyHttpParamSerializerJQLike;
+    }());
+    exports.StudyHttpParamSerializerJQLike = StudyHttpParamSerializerJQLike;
+    var module = angular.module("study.http-post-params-as-form", []);
+    module.provider("httpPostParamsAsForm", HttpPostParamsAsFormProvider);
+    module.constant("httpPostParamsAsFormConfig", POST_CONFIG_WILL_CALL_FUNCTIONS);
+    module.constant("httpPostParamsAsFormConfigNoFunctions", POST_CONFIG_WILL_NOT_CALL_FUNCTIONS);
+});
+
+//# sourceMappingURL=http-post-params-as-form.provider.js.map

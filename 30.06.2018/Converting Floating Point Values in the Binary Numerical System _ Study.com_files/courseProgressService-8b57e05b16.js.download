@@ -1,0 +1,155 @@
+(function () {
+    'use strict';
+
+    /**
+     * @param {function(...)} angular
+     * @param {function(...)} $
+     * @param {function(...)} _
+     */
+    function init(angular, $) {
+        /**
+         * @constructor
+         * @param {AcademyAssetService} AcademyAssetService - Used to retrieve course for % calculations
+         * @param {$http} $http - ng http service
+         * @param {$q} $q - ng promises
+         * @param {MemoizedCache} cache
+         * @param {$rootScope} $rootScope
+         */
+        function CourseProgressService(AcademyAssetService, $http, $q, cache, $rootScope) {
+            this.assetService = AcademyAssetService;
+            this.$http = $http;
+            this.$q = $q;
+            this._cache = cache;
+            this.$rootScope = $rootScope;
+        }
+
+        CourseProgressService.prototype.RELOAD_TRIGGER = "reload-course-progress";
+        CourseProgressService.prototype.COURSE_FIELD_SELECTION = ["title", "uri", "lessonCount_i", "leafCount_i", "imageUriSmall_s", "creditEligible", "certificateEligible", "knowledgeCheckEnabled"];
+        CourseProgressService.prototype.LESSON_FIELD_SELECTION = ["title", "uri", "videoPreviewImageUri_s", "assessmentUris", "type", "description", "lessonIndex_i", "topicIndex_i", "topics_s"];
+        CourseProgressService.prototype.ALL_PROGRESS_CACHE_KEY = "progress.all";
+
+        /**
+         * Trigger a reload for course progress for the given course asset id, null to reload all progress for member
+         * @param {number} courseAcademyAssetId
+         */
+        CourseProgressService.prototype.triggerReloadForCourse = function (courseAcademyAssetId) {
+            this.$rootScope.$broadcast(this.RELOAD_TRIGGER, courseAcademyAssetId);
+        };
+
+        /**
+         * @param {number} [academyAssetId] - Course academy asset id to query progress for, null to get all courses with progress
+         * @param {string} [fieldSelection] - Comma separated list of fields to select in addition to the defaults (topics, lessons, nextQuizAssetId).
+         * @param {boolean} [skipCache] - true to force an ajax call to the server even if a value is cached
+         * @return promise - Resolves with a list of course progress objects. If rejected, it is rejected with "ERROR" or "DENIED"
+         */
+        CourseProgressService.prototype.getProgress = function (academyAssetId, fieldSelection, skipCache) {
+            var cached = this._cache.get(this.ALL_PROGRESS_CACHE_KEY);
+
+            if (cached && !skipCache) {
+                return cached;
+            }
+
+            var deferred = this.$q.defer();
+            this._getProgressInternal(deferred, academyAssetId, fieldSelection);
+
+            this._cache.set(this.ALL_PROGRESS_CACHE_KEY, deferred.promise);
+            return deferred.promise;
+
+        };
+
+        /**
+         * @param {number} [retries=3] - Maximum number of retry attempts.
+         * @param {number} [academyAssetId] - Course academy asset id to query progress for, null to get all courses with progress
+         * @param {string} [fieldSelection] - Comma separated list of fields to select in addition to the defaults (topics, lessons, nextQuizAssetId).
+         * @param {Deferred} deferred - Deferred to resolve after a successful call or all attempts have been exhausted
+         * @private
+         */
+        CourseProgressService.prototype._getProgressInternal = function (deferred, academyAssetId, fieldSelection, retries) {
+            if (retries === undefined || retries === null) {
+                retries = 3;
+            }
+            retries--;
+
+            var params = {};
+
+            if (academyAssetId) {
+                params.academyAssetId = academyAssetId;
+            }
+
+            if (fieldSelection) {
+                params._fields = fieldSelection;
+            }
+
+            this.$http.get("/member/course-progress/list.ajax", {params: params})
+                .success($.proxy(this._processProgress, this, deferred))
+                .error($.proxy(function (data, status) {
+                    if (status === 403) {
+                        deferred.reject("DENIED");
+                    }
+                    else if (retries === 0) {
+                        deferred.reject("ERROR");
+                    }
+                    else {
+                        this._getProgressInternal(deferred, academyAssetId, fieldSelection, retries);
+                    }
+                }, this));
+        };
+
+        /**
+         * @param {number} academyAssetId - The id of the course to "stop" progress for. This is really just a show/hide operation, nothing's lost.
+         * @param {boolean} inProgress - true to set the course to inProgress status, false to mark course as not in progress.
+         * @return HttpPromise Result of the ajax call to hide. Can be safely ignored.
+         */
+        CourseProgressService.prototype.setProgressStatus = function (academyAssetId, inProgress) {
+            return this.$http.post("/member/course-progress/course-progress-status.ajax", {academyAssetId: academyAssetId, inProgress: inProgress},
+                { //hack - the server expects form encoded, but ng only sends json. Need custom transformer to support old for test duration :(
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                    transformRequest: function (data) {return $.param(data);}
+                });
+        };
+
+        CourseProgressService.prototype.loadLesson = function (academyAssetId) {
+			  return this.assetService.getAssets("lesson", [academyAssetId], this.LESSON_FIELD_SELECTION);
+		  };
+        
+        CourseProgressService.prototype._processProgress = function (deferred, data) {
+            var promises = [];
+
+            if (data.error === 'FEATURE_DENIED') {
+                deferred.reject("DENIED");
+                return;
+            }
+
+            angular.forEach(data, function (progressItem) {
+                var currCourseId = progressItem.academyAssetId;
+
+                promises.push(this.assetService.getAssets("course", currCourseId, this.COURSE_FIELD_SELECTION).then(function (course) {
+                    progressItem.course = course;
+                }));
+
+                if (progressItem.nextViewAcademyAssetId) {
+                    promises.push(this.assetService.getAssets("lesson", progressItem.nextViewAcademyAssetId, this.LESSON_FIELD_SELECTION, currCourseId).then(function (lesson) {
+                        progressItem.nextLesson = lesson;
+                    }));
+                }
+
+                if (progressItem.nextQuizAssetId) {
+                    promises.push(this.assetService.getAssets("lesson", progressItem.nextQuizAssetId, this.LESSON_FIELD_SELECTION, currCourseId).then(function (lesson) {
+                        progressItem.nextQuiz = lesson;
+                    }));
+                }
+            }, this);
+
+
+
+            var superPromise = this.$q.all(promises);
+            superPromise.then(function () {deferred.resolve(data);});
+        };
+
+        CourseProgressService.$inject = ["academyAssetService", "$http", "$q", "MemoizedCache", "$rootScope"];
+
+ 			return angular.module("CourseProgressService", []).service("CourseProgressService", CourseProgressService);
+    }
+
+    define(['angularDependency', 'jquery'], init);
+})();

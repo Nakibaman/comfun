@@ -1,0 +1,325 @@
+define(["require", "exports", "angularDependency", "classroom/assignment.service", "jquery", "lib/moment", "lib/toastr", "angularDependency", "angular/modal/study-modal.service", "classroom/assignment.service", "classroom/classroom.service", "classroom/teacher/classroom/classroom-modal.service", "classroom/teacher/classroom/google-no-classrooms-cta.directive", "classroom/student-invite.directive", "classroom/student-name.directive", "dashboard/account/account-type.directive", "directives/arrowKeyInput", "compatibility/polyfills", "jquery", "lib/angular/ui-utils", "lib/jquery/bootstrap/datetimepicker", "lib/moment", "lib/toastr", "member/info/member-info.service", "member/info/persona.directive", "remspect/remspect.directive"], function (require, exports, angular, assignment_service_1, $, moment, toastr) {
+    "use strict";
+    exports.__esModule = true;
+    var TeacherAssignController = (function () {
+        function TeacherAssignController($filter, $scope, assignmentService, classroomService, classroomModalService, memberInfoService, studyModalService, classroomNameInputPattern, classroomNameMinLength, classroomNameMaxLength) {
+            this.ASSIGNMENT_TYPE_CLASSROOM = assignment_service_1.AssignmentType.CLASSROOM;
+            this.ASSIGNMENT_TYPE_STUDENT = assignment_service_1.AssignmentType.INDIVIDUAL;
+            this.ADD_STUDENT_URL_PART_1 = "/member/my-dashboard.html?studentEmail=";
+            this.ADD_STUDENT_URL_PART_2 = "#/classrooms";
+            this.DUE_DATE_FORMAT = "YYYY-MM-DD";
+            this.RECIPIENTS_STEP = 0;
+            this.DUE_DATE_STEP = 1;
+            this.PROMPT_STEP = 2;
+            this.createdAssignments = [];
+            this.isDatePickerInitialized = false;
+            this.isLoggedIn = false;
+            this.showInviteProTip = true;
+            this.state = "IN_PROGRESS";
+            this.allowEmptyCourseId = false;
+            this.$filter = $filter('filter');
+            this.$scope = $scope;
+            this.assignmentService = assignmentService;
+            this.classroomService = classroomService;
+            this.classroomModalService = classroomModalService;
+            this.studyModalService = studyModalService;
+            this.classroomNameInputPattern = classroomNameInputPattern;
+            this.classroomNameMinLength = classroomNameMinLength;
+            this.classroomNameMaxLength = classroomNameMaxLength;
+            this.teacherClassroomsProxy = this.classroomService.teacherClassroomsProxy;
+            this.students = [];
+            this.filteredStudents = [];
+            this.assignmentType = assignment_service_1.AssignmentType.CLASSROOM;
+            this.hasAtLeastOneClassroom = false;
+            this.isCreatingClassroom = false;
+            this.stepName = 0;
+            this.max = new Date();
+            this.max.setMonth(new Date().getMonth() + 6);
+            this.max.setHours(23, 59, 59, 999);
+            memberInfoService.memberInfoProxy.getValue().then(function (memberInfo) {
+                this.isLoggedIn = memberInfo.isLoggedIn;
+                this.retrieveClassrooms();
+            }.bind(this));
+            this.setupClassroomWatcher();
+            this.setupSearchWatcher();
+            this.reset();
+        }
+        TeacherAssignController.prototype.assignmentDisplayType = function () {
+            if ("EXAM" === this.contentType) {
+                return "exam";
+            }
+            if ("TOPIC" === this.resourceType) {
+                return "chapter";
+            }
+            return "lesson";
+        };
+        TeacherAssignController.prototype.setupClassroomWatcher = function () {
+            this.$scope.$watchCollection(function () {
+                return this.teacherClassroomsProxy.value;
+            }.bind(this), function (updatedClassrooms) {
+                this.hasAtLeastOneClassroom = updatedClassrooms.length > 0;
+                angular.forEach(updatedClassrooms, function (classroom) {
+                    angular.forEach(classroom.students, function (student) {
+                        var studentWithClassroomId = angular.copy(student);
+                        studentWithClassroomId.classroomId = classroom.id;
+                        if (this.students.indexOf(studentWithClassroomId) < 0) {
+                            this.students.push(studentWithClassroomId);
+                        }
+                    }, this);
+                }, this);
+            }.bind(this));
+        };
+        TeacherAssignController.prototype.retrieveClassrooms = function () {
+            if (this.isLoggedIn) {
+                this.teacherClassroomsProxy.getValue().then(function (classrooms) {
+                    this.$scope.$applyAsync(function () {
+                        for (var _i = 0, classrooms_1 = classrooms; _i < classrooms_1.length; _i++) {
+                            var classroom = classrooms_1[_i];
+                            if (classroom.students.length > 0) {
+                                this.showInviteProTip = false;
+                            }
+                        }
+                    }.bind(this));
+                }.bind(this));
+            }
+        };
+        TeacherAssignController.prototype.setupSearchWatcher = function () {
+            this.$scope.$watch(function () {
+                return this.searchQuery;
+            }.bind(this), this.filterStudents.bind(this));
+        };
+        TeacherAssignController.prototype.setupDatePicker = function () {
+            if (this.isDatePickerInitialized) {
+                return;
+            }
+            this.isDatePickerInitialized = true;
+            var datePicker = $(this.getDatePickerSelector());
+            datePicker.datetimepicker({
+                maxDate: this.max,
+                format: this.DUE_DATE_FORMAT,
+                icons: {
+                    date: "icon icon-calendar",
+                    previous: "icon icon-chevron-left",
+                    next: "icon icon-chevron-right"
+                }
+            });
+            datePicker.find("input").on("click", function () {
+                datePicker.data("DateTimePicker").show();
+            });
+            this.$scope.$watch(function () {
+                return this.dueDateString;
+            }.bind(this), function (value) {
+                this.setDueDate(value);
+            }.bind(this));
+        };
+        TeacherAssignController.prototype.reset = function () {
+            this.instructions = "";
+            this.dueDate = null;
+            this.stepName = 0;
+            this.searchIndex = 0;
+            this.isStillUsingDefaultPrompt = true;
+            this.dueDateString = "";
+            this.recipientErrors = {};
+            this.recipients = {
+                classroom: null,
+                students: []
+            };
+            this.classroom = {};
+            this.createClassroomErrorMessage = null;
+            this.showCreateClassroomSuccess = false;
+            this.state = "IN_PROGRESS";
+            this.createdAssignments.length = 0;
+        };
+        TeacherAssignController.prototype.goToStep = function (step) {
+            if (step === this.PROMPT_STEP && !this.dueDate) {
+                this.stepName = this.DUE_DATE_STEP;
+            }
+            else {
+                this.stepName = step;
+            }
+            if (this.stepName === this.DUE_DATE_STEP) {
+                this.setupDatePicker();
+            }
+        };
+        TeacherAssignController.prototype.filterStudents = function () {
+            var filteredStudents = this.$filter(this.students, function (student) {
+                return this.recipients.students.indexOf(student) === -1;
+            }.bind(this));
+            this.filteredStudents = this.$filter(filteredStudents, this.searchQuery);
+        };
+        TeacherAssignController.prototype.addStudent = function (student) {
+            if (student && student.emailAddress) {
+                this.searchQuery = "";
+                this.searchIndex = 0;
+                this.recipients.students.push(student);
+            }
+        };
+        TeacherAssignController.prototype.removeStudent = function (student) {
+            var index = this.recipients.students.indexOf(student);
+            if (index > -1) {
+                this.recipients.students.splice(index, 1);
+            }
+        };
+        TeacherAssignController.prototype.generateStateClassesForStep = function (step) {
+            return {
+                'done': this.stepName > step,
+                'current': this.stepName === step,
+                'upcoming': this.stepName < step
+            };
+        };
+        TeacherAssignController.prototype.generateDefaultPrompt = function () {
+            if (this.isStillUsingDefaultPrompt) {
+                if (this.resourceType === 'TOPIC') {
+                    if (this.contentType === 'EXAM') {
+                        this.instructions = "Please complete this chapter exam by midnight on " + this.dueDate.format("LL");
+                    }
+                    else {
+                        this.instructions = "Please watch all the lessons and complete all the quizzes in this chapter by midnight on " + this.dueDate.format("LL");
+                    }
+                }
+                else {
+                    this.instructions = "Please watch this video and complete the quiz by midnight on " + this.dueDate.format("LL");
+                }
+            }
+        };
+        TeacherAssignController.prototype.setDueDate = function (dateString) {
+            var dueDate = moment(dateString, this.DUE_DATE_FORMAT);
+            this.dateError = "";
+            if (dueDate.isBefore(moment(), 'day')) {
+                this.dateError = "Due date must be after today";
+            }
+            else if (dueDate.isValid()) {
+                dueDate.startOf('day');
+                this.dueDate = dueDate;
+                this.generateDefaultPrompt();
+            }
+            else {
+                this.dueDate = null;
+                this.dueDateString = "";
+            }
+        };
+        TeacherAssignController.prototype.createAssignment = function () {
+            var classroomIds = [];
+            var memberIdsAndEmails = {};
+            if (assignment_service_1.AssignmentType.CLASSROOM === this.assignmentType) {
+                classroomIds.push(this.recipients.classroom.id);
+                angular.forEach(this.recipients.classroom.students, function (student) {
+                    memberIdsAndEmails[student.memberId] = student.emailAddress;
+                });
+            }
+            else if (assignment_service_1.AssignmentType.INDIVIDUAL === this.assignmentType) {
+                angular.forEach(this.recipients.students, function (student) {
+                    if (classroomIds.indexOf(student.classroomId) === -1) {
+                        classroomIds.push(student.classroomId);
+                    }
+                    memberIdsAndEmails[student.memberId] = student.emailAddress;
+                });
+            }
+            var dueDate = this.dueDate.endOf("day").valueOf();
+            var assignmentData = {
+                resourceType: this.resourceType,
+                assignmentType: this.assignmentType,
+                contentType: this.contentType,
+                courseAssetId: this.courseAssetId,
+                allowEmptyCourseId: this.allowEmptyCourseId,
+                instructions: this.instructions,
+                dueDate: dueDate,
+                assignmentDate: moment().valueOf()
+            };
+            if (this.academyAssetId) {
+                assignmentData.academyAssetId = this.academyAssetId;
+            }
+            else {
+                assignmentData.resourceUri = this.resourceUri;
+            }
+            this.assignmentService.createAssignments(classroomIds, memberIdsAndEmails, assignmentData)
+                .then(function (responseMap) {
+                var hasError = false;
+                angular.forEach(responseMap, function (response, classroomId) {
+                    if (response.error) {
+                        hasError = true;
+                        this.recipientErrors[classroomId] = response.message;
+                    }
+                    else {
+                        this.recipients.classroom = null;
+                        this.createdAssignments.push(response.assignment);
+                    }
+                }.bind(this));
+                if (hasError) {
+                    this.goToStep(0);
+                    toastr.error("There was a problem creating your assignment. Please review your recipients and try again. " +
+                        "If the problem persists, contact our customer support team.", "Error", {
+                        positionClass: 'toast-top-center'
+                    });
+                }
+                else {
+                    if (this.createdAssignments.length > 0) {
+                        this.shareLink = assignment_service_1.AssignmentService.createAssignmentShareLinkFromAssignment(this.createdAssignments[0]);
+                    }
+                    this.state = "ASSIGNMENT_CREATED";
+                }
+            }.bind(this));
+        };
+        TeacherAssignController.prototype.openInviteStudentsModal = function () {
+            var modalController = ["$scope", function ($scope) {
+                    $scope.classroom = null;
+                    $scope.canChangeClassroom = true;
+                }.bind(this)];
+            var modalInstance = this.studyModalService.openModal(modalController, this.studyModalService.SIZE_MEDIUM, '/templates/classrooms/teacher/modal/add-student-modal.tpl', "inviteStudentModal");
+            this.closeIfModal();
+        };
+        TeacherAssignController.prototype.openClassroomInviteModal = function (emailAddress) {
+            var modalConfig = {
+                modalState: "email",
+                emailAddresses: emailAddress
+            };
+            this.classroomModalService.openClassroomInviteModal(modalConfig);
+            this.closeIfModal();
+        };
+        ;
+        TeacherAssignController.prototype.createClassroom = function () {
+            this.createClassroomErrorMessage = null;
+            this.isCreatingClassroom = true;
+            this.classroomService.createClassroom(this.classroom)
+                .then(function () {
+                this.showCreateClassroomSuccess = true;
+            }.bind(this))["catch"](function (errorMessage) {
+                this.createClassroomErrorMessage = errorMessage;
+            }.bind(this))["finally"](function () {
+                this.isCreatingClassroom = false;
+            }.bind(this));
+        };
+        TeacherAssignController.prototype.convertAssetTypeToDisplayType = function (assetType, contentType) {
+            switch (assetType) {
+                case 'ACADEMY_DIRECTORY':
+                    return "Directory Page";
+                case 'ACADEMY_ARTICLE':
+                    return "Article";
+                case 'COURSE':
+                    return "Course";
+                case 'FLASHCARD_SET':
+                    return "Flashcard Set";
+                case 'TOPIC':
+                    if (contentType === "EXAM") {
+                        return "Chapter Exam";
+                    }
+                    else {
+                        return "Chapter";
+                    }
+                case 'TEXT':
+                    return "Lesson";
+            }
+            return "Lesson";
+        };
+        TeacherAssignController.prototype.convertAssetTypeToIconType = function (assetType, contentType) {
+            if (assetType === "TOPIC" && contentType === "EXAM") {
+                return "icon-final_exam";
+            }
+            return "icon-article";
+        };
+        return TeacherAssignController;
+    }());
+    exports.TeacherAssignController = TeacherAssignController;
+});
+
+//# sourceMappingURL=teacher-assign.controller.js.map

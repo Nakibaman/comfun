@@ -1,0 +1,26 @@
+define(["require", "exports", "angularDependency", "angularDependency"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("classroom-modal.controller", []);
+    var ClassroomModalController = (function () {
+        function ClassroomModalController($scope, CLASSROOM_NAME_MAX_LENGTH, CLASSROOM_NAME_MIN_LENGTH, classroomToEdit, isCreatingNewClassroom) {
+            this.$scope = $scope;
+            this.CLASSROOM_NAME_MAX_LENGTH = CLASSROOM_NAME_MAX_LENGTH;
+            this.CLASSROOM_NAME_MIN_LENGTH = CLASSROOM_NAME_MIN_LENGTH;
+            this.classroom = classroomToEdit;
+            this.isCreatingNewClassroom = isCreatingNewClassroom;
+        }
+        ClassroomModalController.prototype.isTextInputValid = function (value) {
+            return value && value.length >= this.CLASSROOM_NAME_MIN_LENGTH && value.length <= this.CLASSROOM_NAME_MAX_LENGTH;
+        };
+        ClassroomModalController.prototype.isClassroomValid = function () {
+            return this.isTextInputValid(this.classroom.displayName);
+        };
+        ClassroomModalController.$inject = ["$scope", "CLASSROOM_NAME_MAX_LENGTH", "CLASSROOM_NAME_MIN_LENGTH", "classroomToEdit", "isCreatingNewClassroom"];
+        return ClassroomModalController;
+    }());
+    exports.ClassroomModalController = ClassroomModalController;
+    module.controller("ClassroomModalController", ClassroomModalController);
+});
+
+//# sourceMappingURL=classroom-modal.controller.js.map

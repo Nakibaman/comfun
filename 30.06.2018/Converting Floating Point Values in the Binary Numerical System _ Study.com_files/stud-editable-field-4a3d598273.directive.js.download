@@ -1,0 +1,203 @@
+define(["require", "exports", "angular/modal/study-modal.service", "angularDependency", "angularDependency", "angular/modal/study-modal.service"], function (require, exports, study_modal_service_1, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var EditFieldType;
+    (function (EditFieldType) {
+        EditFieldType["INPUT"] = "INPUT";
+        EditFieldType["TEXT_AREA"] = "TEXT_AREA";
+        EditFieldType["DATE_PICKER"] = "DATE_PICKER";
+    })(EditFieldType || (EditFieldType = {}));
+    var EditableFieldController = (function () {
+        function EditableFieldController($filter, $scope, studyModalService) {
+            this.editMode = false;
+            this.duplicateTitleError = false;
+            this.titleIsBlank = false;
+            this.titleIsTooShort = false;
+            this.$filter = $filter;
+            this.$scope = $scope;
+            this.studyModalService = studyModalService;
+        }
+        EditableFieldController.prototype.init = function (attrs) {
+            var _this = this;
+            this.isDisplayAsHtml = this.extractBooleanAttributeWithDefault(attrs, "displayHtml", false);
+            this.isEditInOverlay = this.extractBooleanAttributeWithDefault(attrs, "editInOverlay", false);
+            this.isRequired = this.extractBooleanAttributeWithDefault(attrs, "required", false);
+            this.$scope.$watch("editCtrl.field", function (newValue, oldValue, scope) {
+                if (_this.displayFilterName) {
+                    _this.displayValue = _this.$filter(_this.displayFilterName)(_this.field);
+                }
+                else if (_this.dateFilterFormat) {
+                    _this.displayValue = _this.$filter("date")(_this.field, _this.dateFilterFormat);
+                }
+                else {
+                    _this.displayValue = _this.field;
+                }
+            });
+            if (!this.editInputType) {
+                this.editInputType = EditFieldType.INPUT;
+            }
+        };
+        EditableFieldController.prototype.extractBooleanAttributeWithDefault = function (attrs, attrName, defaultValue) {
+            if (attrs[attrName] === undefined) {
+                return defaultValue;
+            }
+            return attrs[attrName].toLowerCase() === 'true';
+        };
+        EditableFieldController.prototype.showEditMode = function () {
+            if (!this.persistedValue) {
+                this.persistedValue = this.field;
+            }
+            if (this.isEditInOverlay) {
+                this.openEditModal();
+            }
+            else {
+                this.editMode = true;
+            }
+        };
+        EditableFieldController.prototype.persistEdit = function () {
+            if (this.isRequired && !this.field) {
+                this.revertEdit();
+                return;
+            }
+            if (this.onSave) {
+                this.onSave()
+                    .then(function () {
+                    this.persistedValue = this.field;
+                    this.hideEditMode();
+                }.bind(this))["catch"](function (response) {
+                    this.titleIsBlank = response['error'] === EditableFieldController.ERRORS.BLANK_TITLE;
+                    this.titleIsTooShort = response['error'] === EditableFieldController.ERRORS.SHORT_TITLE;
+                }.bind(this));
+            }
+            else {
+                this.persistedValue = this.field;
+                this.hideEditMode();
+            }
+        };
+        EditableFieldController.prototype.resetValidationErrors = function () {
+            this.duplicateTitleError = false;
+            this.titleIsBlank = false;
+            this.titleIsTooShort = false;
+        };
+        EditableFieldController.prototype.revertEdit = function () {
+            this.hideEditMode();
+            this.field = this.persistedValue;
+            this.titleIsBlank = false;
+            this.titleIsTooShort = false;
+        };
+        EditableFieldController.prototype.hideEditMode = function () {
+            this.editMode = false;
+        };
+        EditableFieldController.prototype.openEditModal = function () {
+            var modalSize = study_modal_service_1.StudyModalService.SIZE_SMALL;
+            var isValidModalSize = this.overlaySize && (this.overlaySize == study_modal_service_1.StudyModalService.SIZE_SMALL ||
+                this.overlaySize == study_modal_service_1.StudyModalService.SIZE_MEDIUM ||
+                this.overlaySize == study_modal_service_1.StudyModalService.SIZE_LARGE);
+            if (isValidModalSize) {
+                modalSize = this.overlaySize;
+            }
+            var modalSettings = {
+                bindToController: true,
+                controller: EditableFieldOverlayController,
+                controllerAs: 'modalCtrl',
+                templateUrl: "/templates/angular/util/directives/stud-editable-field-overlay.tpl",
+                size: modalSize,
+                windowClass: "edit-field-overlay",
+                resolve: {
+                    scopeData: function () {
+                        return {
+                            parentCtrl: this,
+                            onSave: this.onSave,
+                            required: this.isRequired,
+                            cnamePrefix: this.cnamePrefix,
+                            title: this.overlayTitle
+                        };
+                    }.bind(this)
+                }
+            };
+            this.studyModalService.openModalByConfig(modalSettings)
+                .result
+                .then(function () {
+                this.persistedValue = this.field;
+            }.bind(this))["catch"](function () {
+                this.field = this.persistedValue;
+            }.bind(this));
+        };
+        EditableFieldController.ERRORS = {
+            GENERIC: "An error occurred",
+            BLANK_TITLE: "Title is blank",
+            SHORT_TITLE: "Title is too short",
+            DUPLICATE_TITLE: "There is already a course with this title",
+            INVALID: "Failed to send a valid request",
+            NOT_FOUND: "Error reaching service",
+            DENIED: "Failed to fulfill request"
+        };
+        EditableFieldController.$inject = ["$filter", "$scope", "studyModalService"];
+        return EditableFieldController;
+    }());
+    var EditableFieldOverlayController = (function () {
+        function EditableFieldOverlayController($scope, scopeData) {
+            this.$scope = $scope;
+            angular.extend(this, scopeData);
+        }
+        EditableFieldOverlayController.prototype.saveEditAndCloseOnSuccess = function () {
+            if (this.required && !this.parentCtrl.field) {
+                this.errorMessage = "Field is required";
+                return;
+            }
+            if (this.onSave) {
+                this.onSave()
+                    .then(function () {
+                    this.persistedValue = this.field;
+                    this.closeOverlayWithSuccessResult();
+                }.bind(this))["catch"](function (response) {
+                    var errorMessage = response["error"];
+                    if (!errorMessage) {
+                        errorMessage = "error saving";
+                    }
+                    this.errorMessage = errorMessage;
+                }.bind(this));
+            }
+            else {
+                this.closeOverlayWithSuccessResult();
+            }
+        };
+        EditableFieldOverlayController.prototype.closeOverlayWithSuccessResult = function () {
+            this.$scope.$close();
+        };
+        EditableFieldOverlayController.$inject = ["$scope", "scopeData"];
+        return EditableFieldOverlayController;
+    }());
+    var module = angular.module("stud-editable-field.directive", ["study.modal"]);
+    module.directive('studEditableField', function () {
+        return {
+            restrict: 'E',
+            templateUrl: "/templates/angular/util/directives/stud-editable-field.tpl",
+            scope: {
+                cnamePrefix: '@',
+                defaultText: '@',
+                dateFilterFormat: '@?',
+                datePickerMinDate: '=?',
+                datePickerMaxDate: '=?',
+                displayFilterName: '@?',
+                displayAsHtml: '@?',
+                editInOverlay: '@',
+                editInputType: '@?',
+                field: '=',
+                onSave: '&',
+                overlaySize: '@?',
+                overlayTitle: '@',
+                required: '@',
+                testId: '@'
+            },
+            bindToController: true,
+            controller: EditableFieldController,
+            controllerAs: "editCtrl",
+            link: function (scope, element, attrs, controller) {
+                controller.init(attrs);
+            }
+        };
+    });
+});
+
+//# sourceMappingURL=stud-editable-field.directive.js.map

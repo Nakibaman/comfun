@@ -1,0 +1,640 @@
+(function () {
+   "use strict";
+
+   function init($, angular, toastr) {
+	
+		/*
+		 * Inject dependencies and create module
+		 */
+		CustomCourseController["$inject"] = ["$scope", "$rootScope", "CustomCourseService", "CUSTOM_COURSE_OPEN_DROPDOWN_EVENT"];
+		
+      /**
+       * @param $scope
+       * @param customCourseService
+       * @constructor
+       */
+      function CustomCourseController($scope, $rootScope, customCourseService, CUSTOM_COURSE_OPEN_DROPDOWN_EVENT) {
+         this.$scope = $scope;
+         this.$rootScope = $rootScope;
+         this.customCourseService = customCourseService;
+         this.CUSTOM_COURSE_OPEN_DROPDOWN_EVENT = CUSTOM_COURSE_OPEN_DROPDOWN_EVENT;
+
+         this.courseList = [];
+         this.selectedCourse = null;
+         this.selectedTopic = null;
+         this.initialized = false;
+         this.currentLessonAcademyAssetId = null;
+         this.newTopicTitle = '';
+         this.newCourseTitle = '';
+         this.itemToRemove = null;
+         this.duplicateTitleError = false;
+         this.setShowSuccess(false);
+         this.lastSavedLesson = null;
+         this.lastSavedLessonDestination = {};
+			this.modalErrorMessage = '';
+			this.isDropdownOpen = false;
+
+         this.$scope.courseDateOrder = function (course) {
+            return Date.parse(course.datePublished);
+         };
+
+         // todo move this code once it works
+         // leave dropdown open on click
+         var self = this;
+         $("#customCourseDropdownMenu").click(function (event) {
+            // don't close the menu when clicking things in it
+            // also, do NOT use event.stopPropagation, because it prevents the tracking service from ever hearing about the clicks inside!
+            $('#customCourseDropdown').data("lastClickInMenu", true);
+         });
+         $("#customCourseDropdownMenu").keyup(function (event) {
+            $('#customCourseDropdown').data("lastClickInMenu", null);
+         });
+         $('#customCourseDropdown').on('hide.bs.dropdown', function (event) {
+            if ($(this).data("lastClickInMenu")) {
+               $(this).data("lastClickInMenu", null);
+               return false;
+            }
+
+            // todo clear state here
+            self.clearState();
+         });
+         $("#customCourseDropdown .closeModal").click(function () {
+            $(this).data("lastClickInMenu", null);
+            $('#customCourseDropdownTrigger').dropdown('toggle');
+            return false;
+         });
+         
+         this.initToggleDropdown();
+      }
+      
+      CustomCourseController.prototype.initToggleDropdown = function() {
+      	this.closeDropdownFunction = function(event) {
+      		if (this.isDropdownOpen) {
+					var isClickOutsideDropdown = $(event.target).parents("#customCourseDropdownMenu").length === 0;
+					if (isClickOutsideDropdown) {
+						$(document).off("click", this.closeDropdownFunction);
+				
+						this.$scope.$applyAsync(function() {
+							this.closeDropdown();
+						}.bind(this));
+					}
+				}
+			}.bind(this);
+   
+			this.$rootScope.$on(this.CUSTOM_COURSE_OPEN_DROPDOWN_EVENT, function() {
+				this.$scope.$applyAsync(function() {
+					if (!this.isDropdownOpen) {
+						this.openDropdown();
+					}
+				}.bind(this));
+			}.bind(this));
+		};
+      
+      CustomCourseController.prototype.openDropdown = function() {
+      	this.isDropdownOpen = true;
+      	
+      	// clicks outside of the dropdown should close it
+			$(document).on("click", this.closeDropdownFunction);
+		};
+		
+		CustomCourseController.prototype.closeDropdown = function() {
+			this.isDropdownOpen = false;
+			this.clearState();
+		};
+
+      CustomCourseController.prototype.clearState = function () {
+         this.setSelectedCourse(null);
+         this.newTopicTitle = '';
+         this.newCourseTitle = '';
+         this.itemToRemove = null;
+         this.duplicateTitleError = false;
+         this.lastSavedLesson = null;
+
+         this.$scope.$applyAsync();
+      };
+
+      CustomCourseController.prototype._COURSE_LIMIT = 10;
+      CustomCourseController.prototype._TOPICS_IN_COURSE_LIMIT = 50;
+      CustomCourseController.prototype._LESSONS_IN_COURSE_LIMIT = 50;
+
+      /*
+       * init function
+       */
+      CustomCourseController.prototype.init = function (currentLessonAcademyAssetId) {
+         if (currentLessonAcademyAssetId) {
+            this.currentLessonAcademyAssetId = parseInt(currentLessonAcademyAssetId);
+         }
+
+         this._loadCourseList();
+      };
+
+      /*
+       * Creation functions
+       */
+      CustomCourseController.prototype.addCurrentLessonToTopic = function (course, topic) {
+         this.customCourseService.addLessonToTopic(this.currentLessonAcademyAssetId, topic.academyAssetTreeId).then(
+          $.proxy(function (response) {
+             if (response && !response['error']) {
+                this._loadCourseList();
+                this.lastSavedLessonDestination = {course: course, topic: topic};
+                this.setShowSuccess(true);
+             }
+             else {
+                this._showErrorToast(response);
+             }
+          }, this),
+          $.proxy(this._showErrorToast, this));
+      };
+
+      /*
+       * Creation functions
+       */
+      CustomCourseController.prototype.addCurrentLessonToEmptyCourse = function (course) {
+         this.customCourseService.addLessonToEmptyCourse(this.currentLessonAcademyAssetId, course.academyAssetTreeId).then(
+          $.proxy(function (response) {
+             if (response && !response['error']) {
+                this._loadCourseList();
+                this.lastSavedLessonDestination = {
+                   course: course,
+                   topic: {
+                      title: 'Chapter 1' // default chapter title
+                   }
+                };
+                this.setShowSuccess(true);
+             }
+             else {
+                this._showErrorToast(response);
+             }
+          }, this),
+          $.proxy(this._showErrorToast, this));
+      };
+
+      CustomCourseController.prototype.createTopic = function () {
+         this.customCourseService.createTopic(this.selectedCourse.academyAssetTreeId, this.newTopicTitle, this.selectedCourse.topics.length + 1)
+          .then(
+           $.proxy(function (response) {
+              if (response && !response['error']) {
+                 this._loadCourseList();
+                 $('#createCustomTopicModal').modal('hide');
+                 this.newTopicTitle = '';
+              }
+              else {
+                 this._showErrorToast(response);
+              }
+           }, this),
+           $.proxy(function (response) {
+              this._showErrorToast(response);
+              this.handleInvalidTitle(response);
+           }, this));
+      };
+
+      CustomCourseController.prototype.createCourse = function () {
+         this._createCourseInternal();
+      };
+
+      CustomCourseController.prototype.createCourseWithCurrentLesson = function () {
+         this._createCourseInternal(this.currentLessonAcademyAssetId);
+      };
+
+      CustomCourseController.prototype._createCourseInternal = function (firstLessonAcademyAssetId) {
+         var courseTitle = this.newCourseTitle;
+         this.customCourseService.createCourse(courseTitle, firstLessonAcademyAssetId).then(
+          $.proxy(function (response) {
+             if (response && !response['error']) {
+
+                if (firstLessonAcademyAssetId) {
+                   this.lastSavedLessonDestination = {
+                      course: {
+                         academyAssetTreeId: response,
+                         title: courseTitle
+                      },
+                      topic: {
+                         title: 'Chapter 1' // default chapter title
+                      }
+                   };
+                }
+
+                this.setSelectedCourse({
+                   academyAssetTreeId: response,
+                   title: this.newCourseTitle,
+                   topics: [],
+                   datePublished: new Date()
+                });
+
+                this._loadCourseList();
+                this.setShowSuccess(true);
+                $('#createCustomCourseModal').modal('hide');
+                this.newCourseTitle = '';
+             }
+             else {
+                this._showErrorToast(response);
+             }
+
+          }, this), $.proxy(this._showErrorToast, this));
+      };
+
+      CustomCourseController.prototype.handleInvalidTitle = function (response) {
+         if (response.status === 400) {
+            if (response.data.titleIsBlank) {
+               this.titleIsBlank = true;
+            }
+            else if (response.data.titleIsTooShort) {
+               this.titleIsTooShort = true;
+            }
+            else {
+               this._showErrorToast(response);
+            }
+         }
+         else {
+            this._showErrorToast(response);
+         }
+      };
+
+      /*
+       * Removal functions
+       */
+      CustomCourseController.prototype.removalPrompt = function (item) {
+         this.itemToRemove = item;
+         $('#removeItemModal').modal('show');
+      };
+
+      CustomCourseController.prototype.removalCancel = function () {
+         $('#removeItemModal').modal('hide');
+         this.itemToRemove = null;
+      };
+
+      CustomCourseController.prototype.confirmItemRemoval = function () {
+
+         $('#removeItemModal').modal('hide');
+
+         this.customCourseService.removeItem(this.itemToRemove.academyAssetTreeId, this.itemToRemove.type)
+          .then(
+           $.proxy(function (response) {
+              if (response && !response['error']) {
+                 this._loadCourseList();
+              }
+           }, this),
+           $.proxy(this._showErrorToast, this));
+
+         // clear selected course
+         if ('COURSE' === this.itemToRemove.type) {
+            this.setSelectedCourse(null);
+         }
+
+         // clear removal state
+         this.itemToRemove = null;
+      };
+
+      /*
+       * Convenience functions for information about courses/topics
+       */
+      CustomCourseController.prototype.isCurrentLessonInCourse = function (course) {
+
+         for (var i = 0; i < course.topics.length; i++) {
+
+            var topic = course.topics[i];
+            if (this.isCurrentLessonInTopic(topic)) {
+               return true;
+            }
+         }
+
+         return false;
+      };
+
+      CustomCourseController.prototype.isCurrentLessonInTopic = function (topic) {
+
+         for (var i = 0; i < topic.lessons.length; i++) {
+
+            var lesson = topic.lessons[i];
+            if (lesson.academyAssetId === this.currentLessonAcademyAssetId) {
+               return true;
+            }
+         }
+
+         return false;
+      };
+
+      CustomCourseController.prototype.getLessonCount = function (course) {
+         var lessonCount = 0;
+
+         if (course.mDynamicIntFields && course.mDynamicIntFields.lessonCount) {
+            lessonCount = course.mDynamicIntFields.lessonCount;
+         }
+         else if (course.topics && course.topics.length > 0) {
+            for (var i = 0; i < course.topics.length; i++) {
+               var lessons = course.topics[i].lessons;
+               lessonCount += lessons ? lessons.length : 0;
+            }
+         }
+
+         return lessonCount;
+      };
+
+      CustomCourseController.prototype.setAddLessonsUrl = function (course) {
+         if (course && course.resourceName) {
+            this.addLessonsUrl = "/academy/custom/choose-lesson/" + course.resourceName + ".html";
+         }
+         else {
+            this.addLessonsUrl = '';
+         }
+      };
+
+      CustomCourseController.prototype.resetValidationErrors = function () {
+         this.duplicateTitleError = false;
+         this.titleIsBlank = false;
+         this.titleIsTooShort = false;
+      };
+
+      CustomCourseController.prototype.setSelectedCourse = function (course) {
+         this.setSelectedTopic(course, null);
+         this.setAddLessonsUrl(course);
+      };
+      CustomCourseController.prototype.setSelectedTopic = function (course, topic) {
+         this.setShowSuccess(false);
+         this.selectedCourse = course;
+         this.selectedTopic = topic;
+      };
+
+      CustomCourseController.prototype.displayTopicOptionsOrAddCurrentLessonToOnlyTopic = function (course) {
+
+         // no topics
+         if (course.topics.length === 0) {
+            this.addCurrentLessonToEmptyCourse(course);
+         }
+         // only one topic
+         else if (course.topics.length === 1) {
+            this.addCurrentLessonToTopic(course, course.topics[0]);
+         }
+         // show topic options
+         else {
+            this.setSelectedCourse(course);
+         }
+      };
+
+      CustomCourseController.prototype.setShowSuccess = function (show) {
+         this.showSuccess = show;
+         $('#customCourseDropdown').data("lastClickInMenu", null);
+      };
+
+      /*
+       * Lesson page modes
+       */
+      CustomCourseController.prototype.isStateShowSuccessMessage = function () {
+         return this.initialized && this.showSuccess;
+      };
+
+      CustomCourseController.prototype.isStateShowCreateCourseForm = function () {
+         return this.initialized && !this.showSuccess && !this.selectedCourse && this.courseList.length === 0;
+      };
+
+      CustomCourseController.prototype.isStateShowAvailableCourses = function () {
+         return this.initialized && !this.showSuccess && !this.selectedCourse && this.courseList.length > 0;
+      };
+
+      CustomCourseController.prototype.isStateShowAvailableTopics = function () {
+         return this.initialized && !this.showSuccess && this.selectedCourse;
+      };
+
+      /**
+       * Update ajax call
+       * @private
+       */
+      CustomCourseController.prototype.update = function (item) {
+         var requestData = {
+            academyAssetTreeId: item.academyAssetTreeId,
+            type: item.type,
+            parentAcademyAssetTreeId: item.parentAcademyAssetTreeId,
+            sequence: this.getSequence(item),
+            title: item.title,
+            description: item.description
+         };
+
+         return this.customCourseService.updateCourse(requestData).then(
+          $.proxy(function (response) {
+             if (!response || response['error']) {
+                this._showErrorToast(response);
+             }
+          }, this),
+          $.proxy(this._showErrorToast, this)
+         );
+      };
+
+      /**
+       * Load custom courses for current member
+       * @private
+       */
+      CustomCourseController.prototype._loadCourseList = function () {
+         this.customCourseService.getCourseList().then($.proxy(function (response) {
+            if (response && !response['error']) {
+               this.courseList = response;
+
+               for (var i = 0; i < this.courseList.length; i++) {
+
+                  var course = this.courseList[i];
+
+                  course.datePublishedRaw = course.datePublished;
+                  course.datePublished = Date.parse(course.datePublishedRaw);
+
+                  // update displayed course reference
+                  if (this.selectedCourse && this.selectedCourse.academyAssetTreeId === course.academyAssetTreeId) {
+
+                     this.selectedCourse = course;
+                     this.setAddLessonsUrl(course);
+
+                     if (this.selectedTopic) {
+                        for (var j = 0; j < course.topics.length; j++) {
+                           var topic = course.topics[j];
+                           if (this.selectedTopic.academyAssetTreeId === topic.academyAssetTreeId) {
+                              this.selectedTopic = topic;
+                           }
+                        }
+                     }
+                  }
+
+                  // update last saved lesson destination course reference
+                  if (this.lastSavedLessonDestination.course && this.lastSavedLessonDestination.course.academyAssetTreeId
+                   === course.academyAssetTreeId) {
+                     this.lastSavedLessonDestination.course = course;
+                     
+                     // update the last saved topic if needed
+							if (this.lastSavedLessonDestination.topic && this.lastSavedLessonDestination.topic.title) {
+								for (var j=0; j < course.topics.length; j++) {
+									var topic = course.topics[j];
+									if (topic.title === this.lastSavedLessonDestination.topic.title) {
+										this.lastSavedLessonDestination.topic = topic;
+										break;
+									}
+								}
+							}
+                  }
+               }
+            }
+            else {
+               this._showErrorToast(response);
+            }
+            this.initialized = true;
+
+         }, this), $.proxy(function (response) {
+            this._showErrorToast(response);
+            this.initialized = true;
+         }, this));
+      };
+
+      /*
+       * Drag-n-drop re-ordering handlers
+       */
+      CustomCourseController.prototype.handleTopicReorder = function (topic, index) {
+
+         // splice here to remove item from previous position (prevent duplicates from appearing)
+         this.selectedCourse.topics.splice(index, 1);
+
+         // find all topics whose sequence has changed
+         for (var i = 0; i < this.selectedCourse.topics.length; i++) {
+
+            var currTopic = this.selectedCourse.topics[i];
+            this._updateSequence(currTopic, i + 1);
+         }
+      };
+
+      CustomCourseController.prototype.handleLessonReorder = function (lesson, previousTopic, index) {
+
+         // splice here to remove item from previous position (prevent duplicates from appearing)
+         previousTopic.lessons.splice(index, 1);
+
+         // update sequences
+         this._updateLessonsInTopicWithNewSequence(previousTopic);
+
+         //var topic = this._findDestinationTopic(lesson);
+         //
+         //// lesson moved to different topic
+         //if (topic.academyAssetTreeId !== previousTopic.academyAssetTreeId) {
+         //
+         //   lesson.parentAcademyAssetTreeId = topic.academyAssetTreeId;
+         //   this._updateLessonsInTopicWithNewSequence(topic);
+         //}
+      };
+
+      CustomCourseController.prototype._showErrorToast = function (error) {
+         var errorMessage = error['error'];
+         this.titleIsBlank = errorMessage === this.customCourseService.ERRORS.BLANK_TITLE;
+         this.titleIsTooShort = errorMessage === this.customCourseService.ERRORS.SHORT_TITLE;
+         this.duplicateTitleError = errorMessage === this.customCourseService.ERRORS.DUPLICATE_TITLE;
+
+         // showing a toast for these errors is undesired, error message will show below input instead
+         if (!this.titleIsBlank && !this.titleIsTooShort && !this.duplicateTitleError) {
+            toastr.error("Please try refreshing the page", errorMessage, {
+               positionClass: 'toast-top-center'
+            });
+         } else {
+				this.modalErrorMessage = errorMessage + ". " + error['errorDetail'];
+			}
+      };
+
+      /**
+       * Update lessons in topic with new sequence
+       */
+      CustomCourseController.prototype._updateLessonsInTopicWithNewSequence = function (topic) {
+
+         // find all lessons whose sequence has changed
+         for (var i = 0; i < topic.lessons.length; i++) {
+
+            var currLesson = topic.lessons[i];
+            this._updateSequence(currLesson, i + 1);
+         }
+      };
+
+      /**
+       * find topic that lesson was moved to
+       */
+      CustomCourseController.prototype._findDestinationTopic = function (movedLesson) {
+
+         // iterate topics
+         for (var topicIndex = 0; topicIndex < this.selectedCourse.topics.length; topicIndex < 0) {
+
+            var topic = this.selectedCourse.topics[topicIndex];
+
+            // iterate lessons
+            for (var lessonIndex = 0; lessonIndex < topic.lessons.length; lessonIndex++) {
+
+               var lesson = topic.lessons[lessonIndex];
+
+               if (movedLesson.academyAssetTreeId === lesson.academyAssetTreeId) {
+
+                  return topic;
+               }
+            }
+         }
+
+         return null;
+      };
+
+      CustomCourseController.prototype.isUnderCourseLimit = function () {
+         return this.courseList.length < this._COURSE_LIMIT;
+      };
+
+      CustomCourseController.prototype.isUnderTopicLimit = function (course) {
+         return course && course.topics.length < this._TOPICS_IN_COURSE_LIMIT;
+      };
+
+      CustomCourseController.prototype.isUnderLessonLimit = function (course) {
+         return this.getLessonCount(course) < this._LESSONS_IN_COURSE_LIMIT;
+      };
+
+      CustomCourseController.prototype.showQuotasFilled = function () {
+         if (this.isUnderCourseLimit()) {
+            return false;
+         }
+         for (var ci in this.courseList) {
+            if (this.isUnderLessonLimit(this.courseList[ci])) {
+               return false;
+            }
+         }
+         return true;
+      };
+
+      CustomCourseController.prototype.showCurrentLessonExistsInAllCourses = function () {
+         if (this.isUnderCourseLimit()) {
+            return false;
+         }
+         for (var ci in this.courseList) {
+            if (!this.isCurrentLessonInCourse(this.courseList[ci])) {
+               return false;
+            }
+         }
+         return true;
+      };
+
+      CustomCourseController.prototype._updateSequence = function (item, newSequence) {
+
+         var previousSequence = this.getSequence(item);
+
+         // sequence changed
+         if (previousSequence !== newSequence) {
+
+            // update with new sequence
+            item.sequence = newSequence;
+            this.update(item);
+         }
+      };
+
+      /**
+       * Lame helper function to handle the way the BaseAcademyObject was serialized
+       */
+      CustomCourseController.prototype.getSequence = function (item) {
+         if (item.sequence !== undefined) {
+            return item.sequence;
+         }
+
+         return item.mDynamicIntFields.sequence;
+      };
+
+      var module = angular.module("customCourse", ["dndLists", "CustomCourse.service", "stud-editable-field.directive"]);
+      module.controller("CustomCourseController", CustomCourseController);
+      module.constant("CUSTOM_COURSE_OPEN_DROPDOWN_EVENT", "toggleCustomCourseDropdown");
+		
+
+      return module;
+   }
+   
+   define(['jquery', 'angularDependency', 'lib/toastr', 'academy/custom/CustomCourseService', 'angular/util/directives/stud-editable-field.directive', 'lib/angular/drag-and-drop-lists'], init);
+})();

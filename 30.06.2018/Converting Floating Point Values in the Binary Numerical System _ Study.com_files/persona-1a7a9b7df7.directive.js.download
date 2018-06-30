@@ -1,0 +1,33 @@
+define(["require", "exports", "angularDependency", "angularDependency", "member/info/member-info.service"], function (require, exports, angular) {
+    "use strict";
+    exports.__esModule = true;
+    var module = angular.module("persona.directive", ["member-info.service"]);
+    module.directive("persona", ["MemberInfoService", function (memberInfoService) {
+            return {
+                restrict: "E",
+                transclude: true,
+                link: function (scope, element, attrs, ctrl, transclude) {
+                    var desiredPersona = attrs.is;
+                    var undesiredPersonaListString = attrs.notInList;
+                    var undesiredPersonaList = [];
+                    if (undesiredPersonaListString) {
+                        undesiredPersonaList = undesiredPersonaListString.split(",");
+                    }
+                    memberInfoService.memberInfoProxy.getValue()
+                        .then(function (memberInfo) {
+                        var isDesiredPersona = (desiredPersona == null) ? true : desiredPersona === memberInfo.persona;
+                        var isUndesiredPersona = undesiredPersonaList.indexOf(memberInfo.persona) !== -1;
+                        if (isDesiredPersona && !isUndesiredPersona) {
+                            transclude(function (clone) {
+                                element.append(clone);
+                            });
+                        }
+                    })["catch"](function () {
+                        console.log("failed to get persona info for persona directive");
+                    });
+                }
+            };
+        }]);
+});
+
+//# sourceMappingURL=persona.directive.js.map

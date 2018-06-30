@@ -1,0 +1,288 @@
+define(["require", "exports", "jquery", "angularDependency", "jquery", "lib/angular/ui-router", "tutorial/tutorial.service"], function (require, exports, $) {
+    "use strict";
+    exports.__esModule = true;
+    var LOCATION_BOTTOM = "bottom";
+    var LOCATION_LEFT = "left";
+    var LOCATION_RIGHT = "right";
+    var LOCATION_TOP = "top";
+    var TutorialItem = (function () {
+        function TutorialItem($q, $scope, $state, tutorialService) {
+            this.isDisplaying = false;
+            this.setHasBeenHidden = false;
+            this.doNotRecordView = false;
+            this.$q = $q;
+            this.$scope = $scope;
+            this.$state = $state;
+            this.tutorialService = tutorialService;
+            this.key = $scope.key;
+            this.setKey = $scope.setKey;
+            this.doNotRecordView = !!$scope.doNotRecordView;
+            $scope.cname = $scope.key.toLocaleLowerCase().replace("-", "_");
+            $scope.item = this;
+            this.tutorialService.registerItem(this);
+            $(window).resize(function () {
+                if (this.isDisplaying) {
+                    $scope.$apply(this.show.bind(this));
+                }
+            }.bind(this));
+        }
+        TutorialItem.prototype.closeAndMarkAsSeen = function (event) {
+            this.close(event);
+            if (!this.doNotRecordView) {
+                this.tutorialService.markItemAsViewed(this);
+            }
+        };
+        TutorialItem.prototype.closeAndDoNotShowAgain = function (event) {
+            this.close(event);
+            this.tutorialService.markSetAsViewed(this.setKey);
+        };
+        TutorialItem.prototype.closeAndShowTutorialLater = function (event) {
+            this.close(event);
+            this.tutorialService.temporarilyHideSet(this.setKey);
+        };
+        TutorialItem.prototype.showItemWhenConditionsMet = function () {
+            if (!this.$scope.readyToShowPromise) {
+                this.$scope.readyToShowPromise = this.$q.when(true);
+            }
+            this.$scope.readyToShowPromise
+                .then(function (itemShouldBeShown) {
+                if (!this.tutorialService.hasSeenItem(this) && (typeof itemShouldBeShown === 'undefined' || itemShouldBeShown)) {
+                    this.show();
+                }
+            }.bind(this));
+        };
+        TutorialItem.prototype.abortShowing = function () {
+            this.setHasBeenHidden = true;
+        };
+        TutorialItem.prototype.show = function () {
+            var timeWaited = 0;
+            var screenWidth = $(window.document).width();
+            if (screenWidth < TutorialItem.MIN_SCREEN_WIDTH_FOR_DISPLAYING_ITEMS) {
+                return;
+            }
+            var checkIfExist = window.setInterval(function () {
+                if ($(this.$scope.selector).length > 0) {
+                    clearInterval(checkIfExist);
+                    this.$scope.$apply(this.generatePopover.bind(this));
+                }
+                else {
+                    timeWaited += TutorialItem.INTERVAL;
+                }
+                if (timeWaited > TutorialItem.MAX_WAIT_TIME) {
+                    clearInterval(checkIfExist);
+                }
+            }.bind(this), TutorialItem.INTERVAL);
+        };
+        TutorialItem.prototype.close = function (event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            this.isDisplaying = false;
+            var $body = $('body');
+            $body.css({ overflow: 'auto' });
+            $body.attr('data-cname', '');
+        };
+        TutorialItem.prototype.generatePopover = function () {
+            var $body = $('body');
+            var focusItem = $(this.$scope.selector);
+            var screenWidth = $(window.document).width();
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var scrollDistance;
+            if (screenWidth < TutorialItem.MEDIUM_SIZE_SCREEN) {
+                scrollDistance = TutorialItem.MEDIUM_SIZE_SCREEN_SCROLL_DISTANCE;
+            }
+            else {
+                scrollDistance = TutorialItem.LARGE_SIZE_SCREEN_SCROLL_DISTANCE;
+            }
+            var newScrollTop = Math.max(offset.top - scrollDistance, 0);
+            $body.animate({ scrollTop: newScrollTop }, {
+                done: function () {
+                    this.$scope.$apply(function () {
+                        $body.css({ overflow: 'hidden' });
+                        $body.attr('data-cname', 'tutorial_open');
+                        this.currentDirection = this.$scope.direction;
+                        if (TutorialItem.shouldPopoverBeForcedToTop(this.currentDirection, focusItem, screenWidth)) {
+                            this.currentDirection = LOCATION_TOP;
+                        }
+                        if (TutorialItem.shouldPopoverBeForcedToBottom(this.currentDirection, focusItem)) {
+                            this.currentDirection = LOCATION_BOTTOM;
+                        }
+                        if (!this.isDisplaying) {
+                            this.registerDismissClick();
+                        }
+                        this.maskSections = this.createMaskSections(focusItem, scrollDistance);
+                        this.tooltipPosition = this.createPopover(focusItem, screenWidth);
+                        this.isDisplaying = true;
+                    }.bind(this));
+                }.bind(this)
+            });
+        };
+        TutorialItem.prototype.registerDismissClick = function () {
+            var clickListenerToCloseTutorialItem = function (event) {
+                var isClickOutsideDropdown = $(event.target).parents("[data-tutorial-key='" + this.$scope.key + "']").length === 0;
+                if (isClickOutsideDropdown) {
+                    this.$scope.$applyAsync(function () {
+                        this.closeAndMarkAsSeen(event);
+                    }.bind(this));
+                }
+                else {
+                    this.registerDismissClick();
+                }
+            }.bind(this);
+            $(document).one("click", clickListenerToCloseTutorialItem);
+        };
+        TutorialItem.prototype.createMaskSections = function (focusItem) {
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var cutoutWidth = TutorialItem.getCutoutWidth(focusItem);
+            var cutoutHeight = TutorialItem.getCutoutHeight(focusItem);
+            offset.top -= $(window).scrollTop();
+            return [
+                {
+                    extraClass: "top-left-corner",
+                    position: {
+                        top: 0 + 'px',
+                        left: 0 + 'px',
+                        width: offset.left + 'px',
+                        height: offset.top + 'px'
+                    }
+                },
+                {
+                    extraClass: "top-border",
+                    showToolTip: this.currentDirection === "top",
+                    position: {
+                        top: 0 + 'px',
+                        left: offset.left + 'px',
+                        width: cutoutWidth + 'px',
+                        height: offset.top + 'px'
+                    }
+                },
+                {
+                    extraClass: "top-right-corner",
+                    position: {
+                        top: 0 + 'px',
+                        left: (offset.left + cutoutWidth) + 'px',
+                        width: TutorialItem.FULL_SCREEN_WIDTH,
+                        height: offset.top + 'px'
+                    }
+                },
+                {
+                    extraClass: "right-border",
+                    showToolTip: this.currentDirection === "left",
+                    position: {
+                        top: offset.top + 'px',
+                        left: 0 + 'px',
+                        width: offset.left + 'px',
+                        height: cutoutHeight + 'px'
+                    }
+                },
+                {
+                    extraClass: "left-border",
+                    showToolTip: this.currentDirection === "right",
+                    position: {
+                        top: offset.top + 'px',
+                        left: (offset.left + cutoutWidth) + 'px',
+                        width: TutorialItem.FULL_SCREEN_WIDTH,
+                        height: cutoutHeight + 'px'
+                    }
+                },
+                {
+                    extraClass: "bottom-left-corner",
+                    position: {
+                        top: (offset.top + cutoutHeight) + 'px',
+                        left: 0 + 'px',
+                        width: offset.left + 'px',
+                        height: TutorialItem.FULL_SCREEN_HEIGHT
+                    }
+                },
+                {
+                    extraClass: "bottom-border",
+                    showToolTip: this.currentDirection === "bottom",
+                    position: {
+                        top: (offset.top + cutoutHeight) + 'px',
+                        left: offset.left + 'px',
+                        width: cutoutWidth + 'px',
+                        height: TutorialItem.FULL_SCREEN_HEIGHT
+                    }
+                },
+                {
+                    extraClass: "bottom-right-corner",
+                    position: {
+                        top: (offset.top + cutoutHeight) + 'px',
+                        left: (offset.left + cutoutWidth) + 'px',
+                        width: TutorialItem.FULL_SCREEN_WIDTH,
+                        height: TutorialItem.FULL_SCREEN_HEIGHT
+                    }
+                }
+            ];
+        };
+        TutorialItem.prototype.createPopover = function (focusItem, screenWidth) {
+            return {
+                top: (this.determinePopoverTopPx(focusItem) - $(window).scrollTop()) + 'px',
+                left: this.determinePopoverLeftPx(focusItem, screenWidth) + 'px'
+            };
+        };
+        TutorialItem.shouldPopoverBeForcedToTop = function (direction, focusItem, screenWidth) {
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var cutoutWidth = TutorialItem.getCutoutWidth(focusItem);
+            var popoverPlusCutoutWidth = offset.left + cutoutWidth + TutorialItem.POPOVER_WIDTH;
+            var popoverIsTooLargeForLeftSide = (TutorialItem.POPOVER_WIDTH > offset.left);
+            var popoverTooLargeForRightSide = (popoverPlusCutoutWidth > screenWidth);
+            return (LOCATION_LEFT === direction) && popoverIsTooLargeForLeftSide
+                || (LOCATION_RIGHT === direction) && popoverTooLargeForRightSide;
+        };
+        TutorialItem.shouldPopoverBeForcedToBottom = function (direction, focusItem) {
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var topOffsetIsTooCloseToTop = (TutorialItem.MIN_DISTANCE_FROM_TOP >= offset.top);
+            return (LOCATION_TOP === direction) && topOffsetIsTooCloseToTop;
+        };
+        TutorialItem.prototype.determinePopoverTopPx = function (focusItem) {
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var cutoutHeight = TutorialItem.getCutoutHeight(focusItem);
+            if (LOCATION_LEFT === this.currentDirection || LOCATION_RIGHT === this.currentDirection) {
+                return offset.top;
+            }
+            if (LOCATION_BOTTOM === this.currentDirection) {
+                return (offset.top + cutoutHeight);
+            }
+            return Math.max(offset.top, 0);
+        };
+        TutorialItem.prototype.determinePopoverLeftPx = function (focusItem, screenWidth) {
+            var offset = TutorialItem.getOffsetForElement(focusItem);
+            var cutoutWidth = TutorialItem.getCutoutWidth(focusItem);
+            if (LOCATION_LEFT === this.currentDirection) {
+                return (offset.left - TutorialItem.POPOVER_WIDTH);
+            }
+            if (LOCATION_RIGHT === this.currentDirection) {
+                return (offset.left + cutoutWidth);
+            }
+            return offset.left;
+        };
+        TutorialItem.getOffsetForElement = function (focusItem) {
+            var offset = focusItem.offset();
+            offset.top -= TutorialItem.CUTOUT_PADDING;
+            offset.left -= TutorialItem.CUTOUT_PADDING;
+            return offset;
+        };
+        TutorialItem.getCutoutHeight = function (focusItem) {
+            return focusItem.outerHeight() + 2 * TutorialItem.CUTOUT_PADDING;
+        };
+        TutorialItem.getCutoutWidth = function (focusItem) {
+            return focusItem.outerWidth() + 2 * TutorialItem.CUTOUT_PADDING;
+        };
+        TutorialItem.CUTOUT_PADDING = 6;
+        TutorialItem.INTERVAL = 250;
+        TutorialItem.LARGE_SIZE_SCREEN_SCROLL_DISTANCE = 400;
+        TutorialItem.MAX_WAIT_TIME = 3000;
+        TutorialItem.MEDIUM_SIZE_SCREEN = 992;
+        TutorialItem.MEDIUM_SIZE_SCREEN_SCROLL_DISTANCE = 200;
+        TutorialItem.MIN_SCREEN_WIDTH_FOR_DISPLAYING_ITEMS = 768;
+        TutorialItem.POPOVER_WIDTH = 430;
+        TutorialItem.FULL_SCREEN_WIDTH = "100vw";
+        TutorialItem.FULL_SCREEN_HEIGHT = "100vh";
+        TutorialItem.MIN_DISTANCE_FROM_TOP = 100;
+        return TutorialItem;
+    }());
+    exports.TutorialItem = TutorialItem;
+});
+
+//# sourceMappingURL=tutorial-item.js.map
