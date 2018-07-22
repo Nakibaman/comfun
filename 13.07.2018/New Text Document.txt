@@ -1,0 +1,13 @@
+
+Number System Convertion
+B,O,D,H   ------>  B,O,D,H
+
+2's complement use
+10-6
+10+(-6)
+-3-5
+-3+(-5)
+
++3 2's -3
++5 2's -5
+-8 2's +8
