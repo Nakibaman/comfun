@@ -1,0 +1,22 @@
+1. - Definition of Computer. Functionalities of Computer.
+   - Generations of Computer. (Descriptive)
+   - Applications of Computer.
+
+2. - Definition of Operating Systems. Functions of Operating System.
+   - Types of Operating Systems. (Descriptive)
+   - Definition of Virus and Antivirus. 
+
+3. - Number System Basics. (Binary, Octal, Decimal and Hexadecimal Number system and their base numbers).
+   - Number System Convertion. (Similar to CT Questions)
+   - (1-20) Representation in Binary, Octal, Decimal and Hexadecimal.
+
+4. - Calculation using 2's complement. (Similar to CT Questions)
+   - A question regarding Binary Arithmetic.
+
+
+For any problem or query contact
+Nakib Aman Turzo
+Lecturer, Dept of CSE
+Varendra University
+Cell : 01762910933
+Email: nakibaman@gmail.com
