@@ -1,0 +1,203 @@
+//classie工具函数
+(function (window) {
+    function classReg(className) {
+        return new RegExp("(^|\\s+)" + className + "(\\s+|$)");
+    }
+    var hasClass, addClass, removeClass;
+    if ("classList" in document.documentElement) {
+        hasClass = function (elem, c) {
+            return elem.classList.contains(c);
+        };
+        addClass = function (elem, c) {
+            elem.classList.add(c);
+        };
+        removeClass = function (elem, c) {
+            elem.classList.remove(c);
+        };
+    } else {
+        hasClass = function (elem, c) {
+            return classReg(c).test(elem.className);
+        };
+        addClass = function (elem, c) {
+            if (!hasClass(elem, c)) {
+                elem.className = elem.className + " " + c;
+            }
+        };
+        removeClass = function (elem, c) {
+            elem.className = elem.className.replace(classReg(c), " ");
+        };
+    }
+    function toggleClass(elem, c) {
+        var fn = hasClass(elem, c) ? removeClass : addClass;
+        fn(elem, c);
+    }
+    var classie = {
+        // full names
+        hasClass: hasClass,
+        addClass: addClass,
+        removeClass: removeClass,
+        toggleClass: toggleClass,
+        // short names
+        has: hasClass,
+        add: addClass,
+        remove: removeClass,
+        toggle: toggleClass
+    };
+    window.classie = classie;
+})(window);
+
+(function () {
+    //添加js函数
+    function addJs(path,callback){
+        var body = document.body;
+        var script = document.createElement('script');
+        script.src = path;
+        script.onload=callback;
+        body.appendChild(script);
+    }
+    //解决IE8兼容
+    if (!document.getElementsByClassName) {
+        //解决ie8之类不支持getElementsByClassName
+        document.getElementsByClassName = function (className, element) {
+            var children = (element || document).getElementsByTagName('*');
+            var elements = new Array();
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                var classNames = child.className.split(' ');
+                for (var j = 0; j < classNames.length; j++) {
+                    if (classNames[j] == className) {
+                        elements.push(child);
+                        break;
+                    }
+                }
+            }
+            return elements;
+        };
+    }
+
+    //导航栏项目鼠标移入移出
+    var navItemCons = document.getElementsByClassName('nav_tm_itemcon'),
+         navItems = document.getElementsByClassName('nav_tm_item'),
+        contentItems = document.getElementsByClassName('nav_cb_item'),
+        contentCon = document.getElementsByClassName('nav_content')[0],
+        contentBody = document.getElementsByClassName('nav_content_body')[0],
+        navTimer;
+
+    for (var i = 0; i < navItems.length; i++) {
+        (function (i) {
+            navItems[i].onmouseenter = function () {
+                if (i < contentItems.length) {
+                    clearTimeout(navTimer);
+                    for (var j = 0; j < contentItems.length; j++) {
+                        contentItems[j].style.display='none';
+                    }
+                    classie.remove(contentItems[i],'animatedout');
+                    classie.add(contentItems[i],'animatedin');
+                    contentItems[i].style.display='block';
+                } else {
+                    return;
+                }
+                contentCon.style.maxHeight = '500px';
+
+                //变更navfoot中more按钮的href和text
+                if(i===0||i===1){
+                    var moreBtn=document.getElementsByClassName('nav_cf_btn');
+                    if(i===0){
+                        moreBtn[0].style.display='block';
+                        moreBtn[1].style.display='none';
+                    }else{
+                        moreBtn[1].style.display='block';
+                        moreBtn[0].style.display='none';
+                    }
+                }
+            };
+            navItemCons[i].onmouseleave = function () {
+                if (i < contentItems.length) {
+                    navTimer = setTimeout(function () {
+                        contentCon.style.maxHeight = '0px';
+                        classie.remove(contentItems[i],'animatedin');
+                        classie.add(contentItems[i],'animatedout');
+                    }, 100);
+
+                }
+            };
+            contentCon.onmouseenter= function () {
+                clearTimeout(navTimer);
+            };
+            contentCon.onmouseleave = function () {
+                navTimer = setTimeout(function () {
+                    contentCon.style.maxHeight = '0px';
+                }, 100)
+            };
+
+        })(i)
+    }
+
+    //开启关闭搜索栏
+    var navSearchIcon = document.getElementById('nav-search'),
+        navCloseSearch = document.getElementById('nav-closesearch'),
+        navMenu = document.getElementsByClassName('nav_top_menu')[0],
+        navIcons = document.getElementsByClassName('nav_top_icon')[0],
+        navSearchArea = document.getElementsByClassName('nav_top_search')[0],
+        navSearchIpt = document.getElementsByClassName('nav_ts_ipt')[0];
+
+    navSearchIcon.onclick = function () {
+        navMenu.style.display = 'none';
+        navIcons.style.display = 'none';
+        navSearchArea.style.display = 'block';
+        navSearchIpt.focus();
+    };
+
+    navCloseSearch.onclick = function () {
+        navMenu.style.display = 'table';
+        navIcons.style.display = 'block';
+        navSearchArea.style.display = 'none';
+    };
+    //搜索栏事件
+    var submitSearchIcon=document.getElementsByClassName('nav_ts_search')[0],
+        navSearchForm=document.getElementById('nav-search-form');
+        submitSearchIcon.onclick=function(){
+            navSearchForm.submit();
+        };
+    //显示关闭隐藏移动菜单
+    var listBtn = document.getElementsByClassName('nav_ti_list')[0],
+        closeBtn = document.getElementsByClassName('mobmenu_title_close')[0],
+        closeTxt=document.getElementsByClassName('mobmenu_title_closetxt')[0],
+        mobMenu = document.getElementsByClassName('mobmenu')[0];
+    listBtn.onclick = function () {
+        mobMenu.style.left = 0;
+    };
+    closeBtn.onclick = function () {
+        mobMenu.style.left = '100%';
+    };
+    closeTxt.onclick = function () {
+        mobMenu.style.left = '100%';
+    };
+
+    //移动端菜单栏展开收起
+    var mobTitleOne = document.getElementsByClassName('mobmenu_lone_title'),
+        mobContents = document.getElementsByClassName('mobmenu_lone_ltwo'),
+        ifSpread;
+
+    for (var m = 0; m < mobTitleOne.length; m++) {
+        (function (m) {
+            mobTitleOne[m].onclick = function () {
+                var maxheight=(mobContents[m].currentStyle? mobContents[m].currentStyle : window.getComputedStyle(mobContents[m])).maxHeight;
+                if (maxheight === '0px') {
+                    ifSpread = false;
+                } else {
+                    ifSpread = true;
+                }
+                for (var n = 0; n < mobContents.length; n++) {
+                    mobContents[n].style.maxHeight = 0;
+                }
+                if (ifSpread) {
+                    mobContents[m].style.maxHeight = '0px';
+                } else {
+                    var h=mobContents[m].children.length*46+'px';
+                    mobContents[m].style.maxHeight = h;
+                }
+            }
+        })(m)
+    }
+})(window);

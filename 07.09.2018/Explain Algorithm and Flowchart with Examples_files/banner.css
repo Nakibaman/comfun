@@ -1,0 +1,136 @@
+.navigation {
+  background: #1d293a;
+  height: 110px;
+  line-height: 100px;
+  width: 100%;
+  z-index: 1;
+}
+.navigation .navMenu a {
+  float: left;
+  color: #fff;
+  font-weight: bold;
+  margin-right: 20px;
+}
+.navigation .navMenu a:hover {
+  text-decoration: underline;
+}
+.navigation .navMenu ul {
+  float: left;
+  margin-top: 4px;
+}
+.navigation .navMenu li {
+  display: inline-block;
+  height: 15px;
+  width: 15px;
+  background: url("../images/star_img.png") no-repeat scroll 0px -3px transparent;
+}
+.navigation .navMenu .on {
+  background-position: 0px -31px;
+}
+.navigation .navMenu .half {
+  background-position: 0px -58px;
+}
+#btn-try2 {
+  background: none repeat scroll 0% 0% #fb8649;
+  color: #fff;
+  margin: 37px 10px 0 0;
+  border-radius: 3px;
+  line-height: 35px;
+  position: relative;
+  display: inline-block;
+  padding: 0px 15px;
+  font-weight: bold;
+  transition: all 0.3s ease 0s;
+  float: right;
+}
+#btn-try2:hover {
+  background: none repeat scroll 0% 0% #ff5801;
+  text-decoration: none;
+}
+#btn-buy {
+  background: none repeat scroll 0% 0% #f75a50;
+  color: #fff;
+  margin: 37px 10px 0 0;
+  border-radius: 3px;
+  line-height: 35px;
+  display: inline-block;
+  padding: 0 15px;
+  font-weight: bold;
+  transition: all 0.3s ease 0s;
+  float: right;
+}
+#btn-buy:hover {
+  background: none repeat scroll 0% 0% #fd3225;
+  text-decoration: none;
+}
+#btn-buy span {
+  display: inline-block;
+  padding: 0px 10px;
+  margin-left: 10px;
+  border-left: 1px solid #de5148;
+}
+.navigation h1 {
+  float: left;
+  color: white;
+}
+@media all and (max-width: 504px) {
+  .sidebar {
+    display: none;
+  }
+  .navigation h1 {
+    font-size: 1.6em;
+  }
+  .navigation .wrap a {
+    padding: 0px;
+  }
+  .navigation {
+    height: 0px;
+    line-height: 0px;
+  }
+  .container {
+    padding: 0px;
+  }
+  .context {
+    float: left;
+    width: 100%;
+    margin-right: 30px;
+    padding: 0px;
+  }
+  #btn-try2 {
+    display: none;
+  }
+  #btn-try2:hover {
+    display: none;
+  }
+  #btn-buy {
+    display: none;
+  }
+  #btn-buy:hover {
+    display: none;
+  }
+  #btn-buy span {
+    display: none;
+  }
+  .product_left {
+    display: none;
+  }
+  .context h1 {
+    font-size: 1.6em;
+    color: #2322323;
+  }
+  .context h3 img {
+    max-width: 90%;
+    height: auto;
+  }
+  .main_right {
+    float: left;
+    width: 100%;
+    line-height: 30px;
+  }
+  .mainbuy h2 {
+    padding: 0px;
+  }
+  .mainbuy p {
+    padding: 0px;
+  }
+}
