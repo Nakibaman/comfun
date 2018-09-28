@@ -1,0 +1,21 @@
+1 a.Define Program and Programming Languages.
+  b.Write the types of computer language. (Machine language, Assembly language, High level language)
+  c.Examples                                                                        01.09.2018
+
+2 a.Compiler vs interpreater and defination .
+  b.Define source program and object program.
+  c.steps of program execution.
+  d.How java program is compiled (JIT).                                             01.09.2018
+
+3 a.Define Database.
+  b.Who are the database users.               
+  c.Define Field, Record, Primary key, Foreign key.
+  d.Database relationship types. (One to one, one to many, many to many)            08.09.2018
+
+4 a.Define Computer network.
+  b.Network topology.(Ring, Bus, Star)
+  c.LAN, MAN, WAN, PAN                                                              Self Study
+
+5 a.Define Algorithm, Flowchart, Pseudocode.
+  b.Flowchart of a problem                                                     CT2+ 07.09.2018
+  
